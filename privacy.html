@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<!--
+  APPLICATION MODE
+  ================
+  Where applications go is decided by apply-mode.css, which both this page and
+  privacy.html link. That is the only file to edit, so the two pages cannot
+  disagree about which service handles the data.
+-->
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privatumas | Butkus Coaching</title>
+<meta name="description" content="Ką Butkus Coaching renka, kai pateiki paraišką treniravimui, kas dar tai mato, kiek laiko saugoma ir kaip tai ištrinti.">
+<link rel="canonical" href="https://dalius-b.github.io/butkuscoaching/privacy.html">
+<meta name="theme-color" content="#101010">
+<meta name="robots" content="index, follow">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img, svg { display: block; max-width: 100%; }
+ul { list-style: none; }
+
+:root {
+  --ink: #101010; --ink-soft: #4B4C46;
+  --paper: #E8E8E3; --surface: #F2F2EE;
+  --volt: #FFDD44;
+  --hair-ink: rgba(16,16,16,0.14);
+  --hair-paper: rgba(232,232,227,0.16);
+  --soft-paper: rgba(232,232,227,0.64);
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --s-50: 4px; --s-75: 8px; --s-100: 12px; --s-200: 16px; --s-300: 24px;
+  --s-400: 32px; --s-500: 40px; --s-600: 48px; --s-700: 64px; --s-800: 80px;
+  --r-sm: 6px; --r-lg: 16px; --r-pill: 999px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --shell: 1240px; --nav-h: 64px;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--nav-h) + 24px); -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--display); font-weight: 400; font-stretch: 100%;
+  font-size: 1.125rem; line-height: 1.6;
+  color: var(--ink); background: var(--paper);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+::selection { background: var(--volt); color: var(--ink); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.on-ink :focus-visible { outline-color: var(--volt); }
+
+.shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: var(--s-300); }
+
+h1, h2, .display {
+  font-family: var(--display); font-weight: 800; font-stretch: 115%;
+  text-transform: uppercase; line-height: 0.94; letter-spacing: -0.012em; text-wrap: balance;
+}
+p { text-wrap: pretty; }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 100; background: var(--ink); color: var(--paper); }
+.nav-inner { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: var(--s-300); }
+.wordmark {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-stretch: 108%;
+  font-size: 1.25rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1;
+  min-height: 44px; padding-block: var(--s-100);
+}
+.wordmark i { font-style: normal; color: var(--volt); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-75);
+  min-height: 44px; padding: var(--s-75) var(--s-200);
+  font-family: var(--display); font-size: 0.875rem; font-weight: 700;
+  font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none; border-radius: var(--r-pill); white-space: nowrap;
+  background: var(--volt); color: var(--ink);
+  transition-property: background-color, scale; transition-duration: 160ms; transition-timing-function: var(--ease-out);
+}
+.btn:hover { background: #FFE873; }
+.btn:active { scale: 0.96; }
+.btn:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
+.lbl-short { display: none; }
+
+/* head block */
+.head { background: var(--ink); color: var(--paper); padding-block: clamp(var(--s-600), 7vw, var(--s-800)); }
+.label {
+  display: inline-flex; align-items: center; gap: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--soft-paper);
+}
+.head h1 { font-size: clamp(2.25rem, 6vw, 4.5rem); margin-top: var(--s-300); }
+.head .deck { font-size: 1.25rem; color: var(--soft-paper); max-width: 54ch; margin-top: var(--s-300); }
+.stamp { margin-top: var(--s-400); padding-top: var(--s-300); border-top: 1px solid var(--hair-paper);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.16em; color: var(--soft-paper); }
+
+/* prose */
+.doc { padding-block: clamp(var(--s-700), 8vw, var(--s-800)); }
+.doc-inner { max-width: 720px; }
+.doc section + section { margin-top: var(--s-700); }
+.doc h2 { font-size: clamp(1.5rem, 2.6vw, 1.875rem); margin-bottom: var(--s-200); }
+.doc p { color: var(--ink-soft); max-width: 66ch; }
+.doc p + p { margin-top: var(--s-200); }
+.doc a { color: var(--ink); text-decoration-thickness: from-font; text-underline-offset: 3px; }
+.doc ul { margin-top: var(--s-200); display: flex; flex-direction: column; gap: var(--s-100); }
+/* block, not flex: a flex list item makes every <b> its own flex item and
+   pulls the bold lead away from the sentence it belongs to. */
+.doc li { display: block; position: relative; padding-left: 20px; color: var(--ink-soft); font-size: 1rem; }
+.doc li::before { content: ""; position: absolute; left: 0; top: 9px; width: 7px; height: 7px; background: var(--volt); border-radius: var(--r-pill); box-shadow: 0 0 0 1px var(--ink); }
+.doc li b { color: var(--ink); font-weight: 600; }
+
+.panel { background: var(--surface); border-radius: var(--r-lg); padding: var(--s-400); margin-top: var(--s-300);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 8px 24px -16px rgba(16,16,16,0.30); }
+.panel h3 { font-family: var(--display); font-size: 0.75rem; font-weight: 700; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: var(--s-200); }
+.panel ul { margin-top: 0; }
+
+.none li::before { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ink-soft); }
+
+/* footer */
+.foot { background: var(--ink); color: var(--paper); padding-block: var(--s-500); }
+.lane { height: 3px; width: 100%; margin-bottom: var(--s-500);
+  background: repeating-linear-gradient(90deg, var(--volt) 0 26px, transparent 26px 52px); opacity: 0.5; }
+.foot-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-300); }
+.foot-links { display: flex; flex-wrap: wrap; gap: var(--s-300); }
+.foot-links a, .foot-ig {
+  display: inline-flex; align-items: center; gap: var(--s-75); min-height: 44px;
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.14em; text-decoration: none; color: var(--soft-paper);
+  transition-property: color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.foot-links a:hover, .foot-ig:hover { color: var(--volt); }
+.foot-ig svg { width: 18px; height: 18px; fill: currentColor; }
+.foot-bot { margin-top: var(--s-400); padding-top: var(--s-300); border-top: 1px solid var(--hair-paper);
+  display: flex; flex-wrap: wrap; gap: var(--s-200) var(--s-400); justify-content: space-between; }
+.foot-bot p { font-size: 0.875rem; color: var(--soft-paper); }
+
+.skip { position: absolute; left: var(--s-200); top: -100px; z-index: 200;
+  background: var(--volt); color: var(--ink); padding: var(--s-100) var(--s-300); border-radius: var(--r-pill);
+  font-family: var(--display); font-size: 0.875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; text-decoration: none;
+  transition-property: top; transition-duration: 200ms; transition-timing-function: var(--ease-out); }
+.skip:focus { top: var(--s-200); }
+
+/* below ~414px the wordmark and the full button label do not both fit the bar */
+@media (max-width: 460px) {
+  .nav-inner { gap: var(--s-200); }
+  .wordmark { font-size: 1.125rem; }
+  .lbl-long { display: none; }
+  .lbl-short { display: inline; }
+}
+@media (max-width: 620px) {
+  .foot-top { flex-direction: column; align-items: flex-start; }
+  .panel { padding: var(--s-300); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+</style>
+<link rel="stylesheet" href="apply-mode.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Pereiti prie turinio</a>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="index.html">Butkus<i>/</i>Coaching</a>
+    <a class="btn" href="index.html#apply"><span class="lbl-long">Pateik paraišką</span><span class="lbl-short">Paraiška</span></a>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="head on-ink">
+    <div class="shell">
+      <p class="label">Privatumas</p>
+      <h1>Kas nutinka su tuo, ką man pasakai.</h1>
+      <p class="deck">Šiame puslapyje nėra gudrybių. Užpildai paraišką, ji pasiekia Dalių, ir daugiau niekas su ja nevyksta.</p>
+      <p class="stamp">Paskutinį kartą atnaujinta 2026 m. rugsėjo 5 d.</p>
+    </div>
+  </div>
+
+  <div class="doc">
+    <div class="shell doc-inner">
+
+      <section>
+        <h2>Kas atsakingas</h2>
+        <p>Butkus Coaching, kurį vykdo Dalius Butkus. Jei nori, kad kas nors iš šio puslapio būtų įvykdyta, parašyk <a href="https://instagram.com/dalius_butkus" target="_blank" rel="noopener">@dalius_butkus</a> Instagram'e arba atsakyk į bet kurį el. laišką, kurį jau gavai dėl savo paraiškos.</p>
+      </section>
+
+      <section class="when-google">
+        <h2>Kur yra paraiškos anketa</h2>
+        <p>Paraiškos anketa yra „Google Forms“ anketa. Paspaudus bet kurį paraiškos mygtuką šioje svetainėje, ji atsidaro naujame skirtuke „Google“ domene, ir niekas, ką ten įrašai, per šią svetainę visai nepraeina. Šis puslapis nieko nerenka.</p>
+        <p>Tai, ką ten užpildai, saugoma „Google“ sistemose ir pasiekia Dalių per jo „Google“ paskyrą. Tą žingsnį reglamentuoja pačios „Google“ privatumo sąlygos, o kaip ji tvarko tavo duomenis, ši svetainė nekontroliuoja.</p>
+        <p>Dalis anketos klausimų susiję su tavo sveikata ir fizine forma. Niekada neprivalai rašyti daugiau, nei nori.</p>
+      </section>
+
+      <section class="when-web3">
+        <h2>Ką renka paraiškos anketa</h2>
+        <p>Tik tai, kas į ją įrašoma. Fone niekas nerenkama, paslėptų laukų nėra.</p>
+        <div class="panel">
+          <h3>Laukai</h3>
+          <ul>
+            <li><b>Tu:</b> vardas, el. paštas, kurį variantą renkiesi, amžius, ūgis ir svoris.</li>
+            <li><b>Tavo tikslas:</b> ko nori ir kodėl tai tau svarbu dabar.</li>
+            <li><b>Tavo treniruočių istorija:</b> patirties lygis, ar anksčiau sekei programą, kas veikė ir kas ne.</li>
+            <li><b>Tavo grafikas:</b> dienos per savaitę, treniruotės trukmė ir kur treniruojiesi.</li>
+            <li><b>Traumos ir sveikata:</b> dabartinės traumos ar skausmai, ankstesnės traumos, diskomfortą sukeliantys judesiai ir sveikatos būklės ar vaistai.</li>
+            <li><b>Tavo gyvenimas ir maistas:</b> darbas, miego valandos, streso lygis, žingsniai per dieną, mitybos apribojimai ir kas tau sunkiausia mityboje.</li>
+            <li><b>Darbas kartu:</b> ko tikiesi iš trenerio, ar sutinki siųsti savaitinius svorio atnaujinimus ir progreso nuotraukas, ir kaip radai svetainę.</li>
+          </ul>
+        </div>
+        <p>Nemaža dalis to yra sveikatos informacija: traumos, vaistai, svoris, miegas ir stresas. Pagal BDAR tokiems duomenims reikia tavo aiškaus sutikimo, o ne prielaidos, ir būtent tam skirtas sutikimo langelis anketos pabaigoje. Niekas nėra privaloma, išskyrus tai, ką anketa pažymi kaip būtina, o kai klausimas tau netinka, gali tiesiog taip ir parašyti.</p>
+        <p>Sutikimas siųsti savaitinius svorio atnaujinimus ar progreso nuotraukas yra klausimas, o ne reikalavimas. Atsakymas „ne“ paraiškos nesustabdo, o per šią svetainę nuotraukų niekada neprašoma.</p>
+      </section>
+
+      <section>
+        <h2>Kam tai naudojama</h2>
+        <p>Tavo paraiškai perskaityti, nuspręsti, ar treniravimas tinka, ir susisiekti su tavimi. Tai nenaudojama adresų sąrašui kurti, nenaudojama reklamai ir niekam nėra perduodama ar parduodama.</p>
+      </section>
+
+      <section>
+        <h2>Kas dar tai tvarko</h2>
+        <p>Šios paslaugos reikalingos, kad svetainė apskritai veiktų. Nė vienai iš jų tavo paraiška neduodama jokiems kitiems tikslams.</p>
+        <ul>
+          <li class="when-google"><b>Google Forms</b> talpina pačią anketą ir saugo atsakymus pagal „Google“, o ne šias sąlygas.</li>
+          <li class="when-web3"><b>Web3Forms</b> priima anketą ir persiunčia ją el. paštu. Tai pašto dėžutė tarp puslapio ir el. pašto.</li>
+          <li><b>GitHub Pages</b> talpina svetainę. Kaip ir bet kuris žiniatinklio serveris, jis fiksuoja užklausas, įskaitant IP adresus, savo žurnaluose.</li>
+          <li><b>Google Fonts</b> tiekia puslapio naudojamą šriftą. Jį įkeliant tavo naršyklė susisiekia su „Google“ ir neišvengiamai atskleidžia tavo IP adresą.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Ko ši svetainė nedaro</h2>
+        <p>Verta pasakyti aiškiai, nes dauguma svetainių to negali.</p>
+        <div class="panel">
+          <h3>Čia to nėra</h3>
+          <ul class="none">
+            <li>Jokių slapukų. Svetainė jų visai nenaudoja, todėl nėra ir slapukų juostos.</li>
+            <li>Jokios analitikos, jokių sekimo pikselių, jokio sesijų įrašinėjimo.</li>
+            <li>Jokios reklamos ir jokių trečiųjų šalių reklamos ar rinkodaros skriptų.</li>
+            <li>Nieko nesaugoma tavo naršyklėje. Jokios vietinės ar sesijos saugyklos.</li>
+            <li>Jokios paskyros, jokio slaptažodžio, jokio profilio.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>Kiek laiko saugoma</h2>
+        <p>Tavo paraiška saugoma, kol ji svarstoma, ir kol dirbame kartu, jei nuspręsi tęsti. Jei netęsi, ji lieka anketos atsakymuose <span class="when-web3">ir pašto dėžutėje </span>tol, kol paprašysi ją pašalinti. Paprašyk, ir ji bus ištrinta.</p>
+      </section>
+
+      <section>
+        <h2>Ko gali prašyti</h2>
+        <p>Jei esi ES arba JK, įstatymai suteikia tau šias teises. Praktikoje jos taikomos visiems, nes informacijos kiekis toks mažas, kad nėra priežasties to nedaryti.</p>
+        <ul>
+          <li><b>Kopijos</b> to, kas buvo pateikta.</li>
+          <li><b>Pataisymo</b>, jei kas nors neteisinga.</li>
+          <li><b>Ištrynimo</b> bet kada ir nenurodant priežasties.</li>
+          <li><b>Sutikimo atšaukimo</b>, kuris sustabdo bet kokį tolesnį bendravimą.</li>
+          <li><b>Skundo</b> savo šalies duomenų apsaugos institucijai, jei gautas atsakymas nepakankamas.</li>
+        </ul>
+        <p>Kreipkis per aukščiau nurodytą Instagram paskyrą arba atsakymu į bet kurį jau gautą el. laišką, ir tai bus sutvarkyta.</p>
+      </section>
+
+      <section>
+        <h2>Jei šis puslapis pasikeis</h2>
+        <p>Kartu pasikeis ir data viršuje. Atskiro archyvo nėra, bet visa šio puslapio istorija yra vieša <a href="https://github.com/Dalius-B/butkuscoaching" target="_blank" rel="noopener">saugykloje, iš kurios sukurta svetainė</a>, tad bet kurį pakeitimą galima pamatyti ir palyginti.</p>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer class="foot on-ink">
+  <div class="shell">
+    <div class="lane" aria-hidden="true"></div>
+    <div class="foot-top">
+      <a class="wordmark" href="index.html">Butkus<i>/</i>Coaching</a>
+      <nav class="foot-links" aria-label="Poraštė">
+        <a href="index.html#proof">Įrodymai</a>
+        <a href="index.html#method">Metodas</a>
+        <a href="index.html#included">Kas įeina</a>
+        <a href="index.html#pricing">Kainos</a>
+        <a href="index.html#faq">DUK</a>
+        <a href="privacy.html" aria-current="page">Privatumas</a>
+      </nav>
+      <a class="foot-ig" href="https://instagram.com/dalius_butkus" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.22-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.15-3.23 1.66-4.77 4.92-4.92C8.42 2.17 8.8 2.16 12 2.16Zm0-2.16C8.74 0 8.33.01 7.05.07 2.7.27.28 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.2-4.35-2.62-6.78-6.98-6.98C15.67.01 15.26 0 12 0Zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84Zm0 10.16a4 4 0 1 1 4-4 4 4 0 0 1-4 4Zm6.41-11.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44Z"/></svg>
+        @dalius_butkus
+      </a>
+    </div>
+    <div class="foot-bot">
+      <p>&copy; 2026 Butkus Coaching, Dalius Butkus</p>
+      <p>Cert III &amp; IV in Fitness (Australija) ir Europos asmeninio trenerio licencija</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+/* ============================================================================
+   THE APPLICATION SWITCH — this file is the only thing you change.
+
+   It decides, for index.html and privacy.html at once, where applications go.
+   Both pages link it, so the two can never disagree about which service
+   handles the data.
+
+   TO SWITCH
+   ---------
+   Exactly one of the two rule blocks below may be active. Comment out the one
+   you do not want and uncomment the one you do. Nothing else, in any file,
+   needs touching.
+
+   Neither block contains a comment of its own, on purpose. CSS comments cannot
+   be nested: a comment opener inside a block you are commenting out would end
+   the comment early and quietly leave the wrong rules live. For the same
+   reason, no comment in this file may contain comment delimiters as text.
+
+   WHY THE CLASSES ARE DOUBLED
+   ---------------------------
+   .when-web3.when-web3 scores (0,2,0), which outranks privacy.html's own
+   rule .doc li at (0,1,1). Written once, the rule would lose, and privacy.html
+   would name both services at the same time.
+
+   WHAT IS ALREADY PROVEN
+   ----------------------
+   On 2 September 2026 a message posted straight to the Web3Forms API with the
+   access key from index.html arrived in the inbox. So the key is real and it
+   points at the right mailbox. The key is a public identifier, not a secret.
+
+   What that test did NOT cover is the page's own submit path, which has only
+   ever run against a stubbed endpoint. Those are different things.
+
+   AFTER SWITCHING
+   ---------------
+   1. https://dalius-b.github.io/butkuscoaching/#apply shows what you expect.
+   2. privacy.html names one service, and the right one, under the heading
+      "Who else handles it".
+   3. Send one application through the live form itself, all seven steps, and
+      confirm it arrives. This is the part still unproven.
+   ========================================================================= */
+
+
+/* ---------------------------------------------------------------------------
+   GOOGLE FORM  ·  INACTIVE
+   Applications go to the Google Form. The in-page form stays in the page,
+   hidden and inert, and privacy.html describes Google as the processor.
+   --------------------------------------------------------------------------- */
+
+/*
+#applyForm,
+#formDone                { display: none; }
+.apply-google            { display: block; }
+.when-web3.when-web3     { display: none; }
+*/
+
+
+/* ---------------------------------------------------------------------------
+   IN-PAGE FORM  ·  ACTIVE
+   Applications go through the seven step form on the page, posting to
+   Web3Forms, and privacy.html describes Web3Forms as the processor.
+   --------------------------------------------------------------------------- */
+
+.when-google.when-google { display: none; }

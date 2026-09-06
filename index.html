@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<!--
+  APPLICATION MODE
+  ================
+  Where applications go is decided by apply-mode.css, which both this page and
+  privacy.html link. That is the only file to edit, so the two pages cannot
+  disagree about which service handles the data.
+-->
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Butkus Coaching | Nuotolinis asmeninis treniravimas su Daliumi Butkumi</title>
+<meta name="description" content="Nuotolinis treniravimas tiems, kurie vis pradeda iš naujo. Treniruočių programa, mitybos planas ir savaitinė ataskaita, kurią tikras treneris iš tikrųjų perskaito. Programa nuo 49 €, pilnas treniravimas nuo 124 € per mėnesį.">
+<link rel="canonical" href="https://dalius-b.github.io/butkuscoaching/">
+<meta name="theme-color" content="#101010">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Butkus Coaching: Nustok pradėti iš naujo">
+<meta property="og:description" content="Nuotolinis treniravimas, pritaikytas tavo gyvenimui. Treniruotės, mityba ir savaitinė ataskaita, kuri tikrai perskaitoma. Nuo 49 €.">
+<meta property="og:image" content="https://dalius-b.github.io/butkuscoaching/img/og-cover.jpg">
+<meta property="og:url" content="https://dalius-b.github.io/butkuscoaching/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Butkus Coaching: Nustok pradėti iš naujo">
+<meta name="twitter:description" content="Nuotolinis treniravimas, pritaikytas tavo gyvenimui. Treniruotės, mityba ir savaitinė ataskaita, kuri tikrai perskaitoma.">
+<meta name="twitter:image" content="https://dalius-b.github.io/butkuscoaching/img/og-cover.jpg">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="img/hyroxrow-1200.webp" imagesrcset="img/hyroxrow-760.webp 760w, img/hyroxrow-1200.webp 1200w" imagesizes="(max-width: 900px) 100vw, 45vw" fetchpriority="high">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+
+<script>document.documentElement.classList.add('js');</script>
+
+<style>
+/* ============================================================
+   1. RESET
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+a { color: inherit; }
+ul { list-style: none; }
+
+/* ============================================================
+   2. TOKENS
+   ============================================================ */
+:root {
+  /* colour — one accent per view: volt is a FILL, never small text */
+  --ink:        #101010;
+  --ink-2:      #1B1C19;
+  --ink-soft:   #4B4C46;   /* muted text on paper  — 7.4:1 */
+  --paper:      #E8E8E3;
+  --surface:    #F2F2EE;
+  --volt:       #FFDD44;
+  --hair-ink:   rgba(16,16,16,0.14);
+  --hair-paper: rgba(232,232,227,0.16);
+  --soft-paper: rgba(232,232,227,0.64);  /* muted text on ink — 7.6:1 */
+
+  /* type */
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+
+  /* spacing scale */
+  --s-25: 2px;  --s-50: 4px;  --s-75: 8px;  --s-100: 12px; --s-200: 16px;
+  --s-300: 24px; --s-400: 32px; --s-500: 40px; --s-600: 48px;
+  --s-700: 64px; --s-800: 80px; --s-900: 96px;
+
+  /* radius */
+  --r-sm: 6px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  --shell: 1240px;
+  --nav-h: 64px;
+}
+
+/* ============================================================
+   3. BASE
+   ============================================================ */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-h) + 24px);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  font-family: var(--display);
+  font-weight: 400;
+  font-stretch: 100%;
+  font-size: 1.125rem;      /* 18px */
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+::selection { background: var(--volt); color: var(--ink); }
+
+h1, h2, h3, .display {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 115%;
+  text-transform: uppercase;
+  line-height: 0.94;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+p { text-wrap: pretty; }
+
+/* One typeface. Hierarchy comes from Archivo's weight and width axes rather
+   than from a second family. */
+.lede, .body-text { max-width: 62ch; }
+.body-text + .body-text { margin-top: var(--s-200); }
+
+/* focus — currentColor adapts to every surface we use */
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.on-ink :focus-visible { outline-color: var(--volt); }
+.btn-primary:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.skip {
+  position: absolute; left: var(--s-200); top: -100px; z-index: 200;
+  background: var(--volt); color: var(--ink); padding: var(--s-100) var(--s-300);
+  border-radius: var(--r-pill); font-family: var(--display); font-size: 0.875rem;
+  font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; text-decoration: none;
+  transition-property: top; transition-duration: 200ms; transition-timing-function: var(--ease-out);
+}
+.skip:focus { top: var(--s-200); }
+
+/* ============================================================
+   4. LAYOUT PRIMITIVES
+   ============================================================ */
+.shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: var(--s-300); }
+
+.section { padding-block: clamp(var(--s-700), 9vw, var(--s-900)); }
+.section--paper   { background: var(--paper);   color: var(--ink); }
+.section--surface { background: var(--surface);  color: var(--ink); }
+.section--ink     { background: var(--ink);      color: var(--paper); }
+
+.on-ink { color: var(--paper); }
+.on-ink .muted { color: var(--soft-paper); }
+.muted { color: var(--ink-soft); }
+
+/* eyebrow label — condensed width axis, the utility voice of the family */
+.label {
+  display: inline-flex; align-items: center; gap: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600;
+  font-stretch: 84%; text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--ink-soft);
+}
+.on-ink .label { color: var(--soft-paper); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 700;
+  font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.12em;
+  background: var(--volt); color: var(--ink);
+  padding: 6px var(--s-100); border-radius: var(--r-pill);
+}
+
+.h2 { font-size: clamp(1.875rem, 3.6vw, 3.75rem); margin-block: var(--s-200) 0; }
+.section-head { max-width: 22ch; }
+.section-intro { margin-top: var(--s-300); color: var(--ink-soft); }
+.on-ink .section-intro { color: var(--soft-paper); }
+
+/* lane markers — lifted from the floor striping in the training photos */
+.lane {
+  height: 3px; width: 100%;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 26px, transparent 26px 52px);
+  opacity: 0.22;
+}
+.on-ink .lane { background: repeating-linear-gradient(90deg, var(--volt) 0 26px, transparent 26px 52px); opacity: 0.5; }
+
+/* ============================================================
+   5. BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-75);
+  min-height: 48px; padding: var(--s-100) var(--s-300);
+  font-family: var(--display); font-size: 1rem; font-weight: 700;
+  font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none; border-radius: var(--r-pill); white-space: nowrap;
+  transition-property: background-color, color, box-shadow, scale, border-color;
+  transition-duration: 160ms; transition-timing-function: var(--ease-out);
+}
+.btn:active { scale: 0.96; }
+.btn-primary { background: var(--volt); color: var(--ink); box-shadow: 0 1px 2px rgba(16,16,16,0.16); }
+.btn-primary:hover { background: #FFE873; box-shadow: 0 4px 14px rgba(16,16,16,0.22); }
+.btn-ghost { border: 1.5px solid var(--hair-ink); color: var(--ink); }
+.btn-ghost:hover { border-color: var(--ink); background: rgba(16,16,16,0.05); }
+.on-ink .btn-ghost { border-color: var(--hair-paper); color: var(--paper); }
+.on-ink .btn-ghost:hover { border-color: var(--paper); background: rgba(232,232,227,0.08); }
+.btn-sm { min-height: 44px; font-size: 0.875rem; padding: var(--s-75) var(--s-200); }
+
+/* ============================================================
+   6. NAV
+   ============================================================ */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--ink); color: var(--paper);
+  transition-property: box-shadow; transition-duration: 220ms; transition-timing-function: var(--ease-out);
+}
+.nav.is-stuck { box-shadow: 0 1px 0 rgba(232,232,227,0.14), 0 10px 30px rgba(16,16,16,0.28); }
+.nav-inner { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: var(--s-300); }
+.wordmark {
+  display: inline-flex; align-items: baseline; gap: 6px; text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-stretch: 108%;
+  font-size: 1.25rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1;
+  min-height: 44px; align-items: center; padding-block: var(--s-100);
+}
+.wordmark i { font-style: normal; color: var(--volt); }
+.nav-links { display: flex; align-items: center; gap: var(--s-300); }
+.nav-links a {
+  font-family: var(--display); font-size: 0.875rem; font-weight: 600; font-stretch: 90%;
+  text-transform: uppercase; letter-spacing: 0.13em; text-decoration: none;
+  color: var(--soft-paper); position: relative;
+  display: inline-flex; align-items: center; min-height: 44px;
+  transition-property: color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.nav-links a::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 9px; height: 2px;
+  background: var(--volt); scale: 0 1; transform-origin: left;
+  transition-property: scale; transition-duration: 220ms; transition-timing-function: var(--ease-out);
+}
+.nav-links a:hover { color: var(--paper); }
+.nav-links a:hover::after, .nav-links a.is-current::after { scale: 1 1; }
+.nav-links a.is-current { color: var(--paper); }
+.nav-right { display: flex; align-items: center; gap: var(--s-200); }
+
+.burger { display: none; width: 44px; height: 44px; position: relative; border-radius: var(--r-sm); }
+.burger span {
+  position: absolute; left: 11px; width: 22px; height: 2px; background: var(--paper); border-radius: 2px;
+  transition-property: translate, rotate, opacity;
+  transition-duration: 320ms; transition-timing-function: var(--ease-in-out);
+}
+.burger span:nth-child(1) { top: 17px; }
+.burger span:nth-child(2) { top: 25px; }
+.burger[aria-expanded="true"] span:nth-child(1) { translate: 0 4px; rotate: 45deg; }
+.burger[aria-expanded="true"] span:nth-child(2) { translate: 0 -4px; rotate: -45deg; }
+
+.drawer {
+  position: fixed; inset: var(--nav-h) 0 0; z-index: 99;
+  background: var(--ink); padding: var(--s-500) var(--s-300);
+  display: flex; flex-direction: column; gap: var(--s-100);
+  opacity: 0; visibility: hidden; translate: 0 -12px;
+  transition-property: opacity, translate, visibility;
+  transition-duration: 320ms; transition-timing-function: var(--ease-out);
+}
+.drawer.is-open { opacity: 1; visibility: visible; translate: 0 0; }
+.drawer a {
+  font-family: var(--display); font-size: 1.5rem; font-weight: 700; font-stretch: 105%;
+  text-transform: uppercase; letter-spacing: 0.02em; text-decoration: none;
+  padding: var(--s-100) 0; border-bottom: 1px solid var(--hair-paper);
+}
+.drawer .btn { margin-top: var(--s-300); }
+
+/* ============================================================
+   7. HERO
+   ============================================================ */
+.hero { background: var(--ink); color: var(--paper); display: grid; grid-template-columns: 55fr 45fr; }
+.hero-copy {
+  padding: clamp(var(--s-600), 6vw, var(--s-900)) clamp(var(--s-300), 4vw, var(--s-700))
+           clamp(var(--s-600), 6vw, var(--s-900)) max(var(--s-300), calc((100vw - var(--shell)) / 2 + var(--s-300)));
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: calc(100vh - var(--nav-h)); min-height: calc(100svh - var(--nav-h));
+}
+.hero h1 { font-size: clamp(2.25rem, 6.4vw, 6rem); font-stretch: 112%; margin-block: var(--s-300) 0; }
+.hero h1 .knock {
+  background: var(--volt); color: var(--ink);
+  padding: 0 0.12em 0.04em; margin-left: -0.06em;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.hero-lede { margin-top: var(--s-300); color: var(--soft-paper); font-size: 1.25rem; max-width: 46ch; }
+.hero-lede strong { color: var(--paper); font-weight: 600; }
+.hero-cta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-200); margin-top: var(--s-500); }
+
+.stats { display: flex; flex-wrap: wrap; gap: var(--s-500); margin-top: var(--s-700); padding-top: var(--s-300); border-top: 1px solid var(--hair-paper); }
+.stat-n {
+  font-family: var(--display); font-weight: 800; font-stretch: 105%;
+  font-size: 1.875rem; line-height: 1; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.stat-l {
+  display: block; margin-top: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.16em; color: var(--soft-paper);
+}
+.hero-cred { margin-top: var(--s-200); font-size: 0.875rem; color: var(--soft-paper); }
+.hero-media { position: relative; background: #0A0A0A; }
+.hero-media img {
+  width: 100%; height: 100%; object-fit: cover; object-position: 50% 42%;
+  filter: grayscale(0.25) contrast(1.06);
+}
+.hero-media::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--ink) 0%, rgba(16,16,16,0.35) 22%, transparent 55%);
+}
+
+/* ============================================================
+   8. PROBLEM
+   ============================================================ */
+.problem-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-300); margin-top: var(--s-600); }
+.card {
+  background: var(--surface); border-radius: var(--r-lg); padding: var(--s-400);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 8px 24px -16px rgba(16,16,16,0.30);
+}
+.section--surface .card { background: #FFFFFF; }
+.card h3 {
+  font-size: 1.25rem; font-stretch: 104%; letter-spacing: 0; line-height: 1.15;
+  margin-bottom: var(--s-100);
+}
+.card p { font-size: 1rem; color: var(--ink-soft); }
+
+/* ============================================================
+   9. MISSION — word-by-word reveal
+   ============================================================ */
+.mission { text-align: left; }
+.mission-copy {
+  font-weight: 400; font-stretch: 100%;
+  font-size: clamp(1.5rem, 4.4vw, 3.75rem); line-height: 1.16;
+  max-width: 26ch; margin-top: var(--s-400);
+  letter-spacing: -0.02em;
+}
+.mission-copy .w {
+  transition-property: color; transition-duration: 420ms; transition-timing-function: var(--ease-out);
+}
+.js .mission-copy .w { color: rgba(16,16,16,0.22); }
+.js .mission-copy .w.on { color: var(--ink); }
+.mission-copy .hl { font-family: var(--display); font-weight: 800; font-stretch: 110%; text-transform: uppercase; letter-spacing: -0.01em; }
+.mission-sign { margin-top: var(--s-500); display: flex; align-items: center; gap: var(--s-200); }
+.mission-sign .rule { height: 2px; width: 56px; background: var(--ink); flex: none; }
+
+/* ============================================================
+   10. PROOF
+   ============================================================ */
+.proof-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-400); margin-top: var(--s-600); }
+.shot { border-radius: var(--r-lg); overflow: hidden; position: relative; background: #0A0A0A; }
+.shot img { width: 100%; height: auto; }
+.shot::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: var(--r-lg);
+  outline: 1px solid rgba(255,255,255,0.10); outline-offset: -1px;
+}
+.shot-cap {
+  display: flex; align-items: baseline; gap: var(--s-100); margin-top: var(--s-100);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.16em; color: var(--soft-paper);
+}
+.proof-note { margin-top: var(--s-500); display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-600); align-items: start; }
+.pull {
+  font-size: 1.5rem; line-height: 1.45; color: var(--paper);
+  border-left: 2px solid var(--volt); padding-left: var(--s-300);
+}
+
+/* ============================================================
+   11. METHOD
+   ============================================================ */
+.method-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 38%); gap: var(--s-600); align-items: start; margin-top: var(--s-600); }
+.pillars { display: flex; flex-direction: column; gap: var(--s-300); }
+.pillar { display: grid; grid-template-columns: 48px 1fr; gap: var(--s-300); align-items: start; }
+.ico {
+  width: 48px; height: 48px; border-radius: var(--r-md);
+  background: var(--ink); color: var(--volt);
+  display: flex; align-items: center; justify-content: center; flex: none;
+}
+.ico svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.pillar h3 { font-size: 1.25rem; font-stretch: 104%; letter-spacing: 0; line-height: 1.1; margin-bottom: var(--s-75); }
+.pillar p { font-size: 1rem; color: var(--ink-soft); max-width: 52ch; }
+.method-media { border-radius: var(--r-lg); overflow: hidden; position: relative; background: #0A0A0A; }
+.method-media img { width: 100%; height: auto; }
+.method-media::after { content: ""; position: absolute; inset: 0; outline: 1px solid rgba(16,16,16,0.10); outline-offset: -1px; border-radius: var(--r-lg); }
+
+/* ============================================================
+   12. SPLIT SHEET (the 12-week line)
+   ============================================================ */
+.sheet { margin-top: var(--s-600); position: relative; }
+.sheet-rail { position: absolute; left: 7px; top: 12px; bottom: 12px; width: 2px; background: rgba(16,16,16,0.14); }
+.sheet-fill { position: absolute; inset: 0; background: var(--ink); transform-origin: top; scale: 1 0; will-change: transform; }
+.js .sheet-fill { transition-property: scale; transition-duration: 120ms; transition-timing-function: linear; }
+.split {
+  display: grid; grid-template-columns: 16px 92px 1fr; gap: var(--s-300);
+  align-items: baseline; padding-block: var(--s-300);
+  border-bottom: 1px solid var(--hair-ink);
+}
+.split:first-child { padding-top: 0; }
+.split:last-child { border-bottom: none; }
+.dot { width: 16px; height: 16px; border-radius: var(--r-pill); background: var(--paper); border: 2px solid var(--ink); align-self: start; margin-top: 4px; position: relative; z-index: 1; }
+.split.is-key .dot { background: var(--volt); }
+.split-w {
+  font-family: var(--display); font-size: 0.75rem; font-weight: 700; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.16em; font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.split-b h3 { font-size: 1.125rem; font-stretch: 102%; letter-spacing: 0.01em; line-height: 1.2; }
+.split-b p { font-size: 1rem; color: var(--ink-soft); margin-top: var(--s-50); max-width: 60ch; }
+
+.track-alt { margin-top: var(--s-600); background: var(--paper); border-radius: var(--r-lg); padding: var(--s-400); }
+.section--surface .track-alt { background: var(--paper); }
+.track-alt-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-300); margin-top: var(--s-200); }
+.track-alt-steps p { font-size: 1rem; color: var(--ink-soft); }
+.track-alt-steps strong { display: block; font-family: var(--display); font-weight: 700; font-stretch: 96%; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.875rem; color: var(--ink); margin-bottom: var(--s-50); }
+
+/* ============================================================
+   13. INCLUDED
+   ============================================================ */
+.inc-grid { display: grid; grid-template-columns: 380px 1fr; gap: var(--s-700); align-items: start; margin-top: var(--s-600); }
+.inc-media { border-radius: var(--r-lg); overflow: hidden; position: relative; background: #0A0A0A; position: sticky; top: calc(var(--nav-h) + 24px); }
+.inc-media img { width: 100%; height: auto; filter: grayscale(0.2) contrast(1.04); }
+.inc-media::after { content: ""; position: absolute; inset: 0; outline: 1px solid rgba(255,255,255,0.10); outline-offset: -1px; border-radius: var(--r-lg); }
+.inc-list { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-500) var(--s-400); }
+.inc-item h3 { font-size: 1.125rem; font-stretch: 102%; letter-spacing: 0.01em; margin-block: var(--s-200) var(--s-75); line-height: 1.2; }
+.inc-item p { font-size: 1rem; color: var(--soft-paper); }
+.inc-item .ico { background: rgba(255,221,68,0.12); color: var(--volt); }
+
+/* ============================================================
+   14. PRICING
+   ============================================================ */
+.plans { display: grid; grid-template-columns: 1fr 1.25fr; gap: var(--s-400); margin-top: var(--s-600); align-items: start; }
+.plan {
+  background: var(--surface); border-radius: var(--r-lg); padding: var(--s-500);
+  display: flex; flex-direction: column; gap: var(--s-300);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 10px 30px -20px rgba(16,16,16,0.35);
+}
+.plan--featured { background: var(--ink); color: var(--paper); box-shadow: 0 2px 4px rgba(16,16,16,0.10), 0 24px 60px -28px rgba(16,16,16,0.65); }
+.plan-name { font-family: var(--display); font-size: 1.5rem; font-weight: 800; font-stretch: 108%; text-transform: uppercase; letter-spacing: 0.01em; line-height: 1; }
+.plan-price { font-family: var(--display); font-size: 3rem; font-weight: 800; font-stretch: 104%; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.plan-price span { font-stretch: 100%; font-size: 1rem; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--ink-soft); }
+.plan--featured .plan-price span { color: var(--soft-paper); }
+.plan-desc { font-size: 1rem; color: var(--ink-soft); }
+.plan--featured .plan-desc { color: var(--soft-paper); }
+.plan ul { display: flex; flex-direction: column; gap: var(--s-100); }
+.plan li { display: flex; gap: var(--s-100); align-items: flex-start; font-size: 1rem; }
+.tick { flex: none; width: 20px; height: 20px; margin-top: 3px; }
+.tick svg { width: 20px; height: 20px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.plan--featured .tick svg { stroke: var(--volt); }
+.plan-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--s-100); }
+.fine { font-size: 0.875rem; color: var(--ink-soft); }
+.plan--featured .fine { color: var(--soft-paper); }
+.pay { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-200); padding-top: var(--s-200); border-top: 1px solid var(--hair-paper); }
+.pay-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.875rem; color: var(--soft-paper); }
+.pay-item svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+.assure { margin-top: var(--s-400); display: flex; align-items: center; gap: var(--s-100); font-size: 1rem; color: var(--ink-soft); }
+.assure svg { width: 20px; height: 20px; stroke: var(--ink); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* ============================================================
+   15. FIT
+   ============================================================ */
+.fit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-400); margin-top: var(--s-600); }
+.fit-col { background: #FFFFFF; border-radius: var(--r-lg); padding: var(--s-400); }
+.fit-col--no { background: transparent; box-shadow: inset 0 0 0 1px var(--hair-ink); }
+.fit-col h3 { font-family: var(--display); font-size: 0.75rem; font-weight: 700; font-stretch: 84%; letter-spacing: 0.18em; margin-bottom: var(--s-300); }
+.fit-col ul { display: flex; flex-direction: column; gap: var(--s-200); }
+.fit-col li { display: flex; gap: var(--s-100); font-size: 1rem; align-items: flex-start; }
+.fit-col--no li { color: var(--ink-soft); }
+.fit-col li svg { width: 20px; height: 20px; margin-top: 3px; flex: none; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.fit-col--yes li svg { stroke: var(--ink); }
+.fit-col--no li svg { stroke: var(--ink-soft); }
+
+/* ============================================================
+   16. FAQ
+   ============================================================ */
+.faq { margin-top: var(--s-600); max-width: 860px; }
+.qa { border-bottom: 1px solid var(--hair-ink); }
+.qa-btn {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--s-300);
+  padding-block: var(--s-300); min-height: 56px; text-align: left;
+  font-family: var(--display); font-size: 1.125rem; font-weight: 700; font-stretch: 102%;
+  text-transform: uppercase; letter-spacing: 0.01em; line-height: 1.2;
+  transition-property: color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.qa-btn:hover { color: var(--ink-soft); }
+.qa-sign { position: relative; width: 20px; height: 20px; flex: none; }
+.qa-sign::before, .qa-sign::after {
+  content: ""; position: absolute; background: currentColor; border-radius: 2px;
+  transition-property: rotate, opacity; transition-duration: 260ms; transition-timing-function: var(--ease-out);
+}
+.qa-sign::before { top: 9px; left: 0; width: 20px; height: 2px; }
+.qa-sign::after  { left: 9px; top: 0; height: 20px; width: 2px; }
+.qa-btn[aria-expanded="true"] .qa-sign::after { rotate: 90deg; opacity: 0; }
+.js .qa-panel { height: 0; overflow: hidden; }
+.js .qa-panel { transition-property: height; transition-duration: 300ms; transition-timing-function: var(--ease-out); }
+.qa-panel-in { padding-bottom: var(--s-300); color: var(--ink-soft); max-width: 66ch; }
+
+/* ============================================================
+   17. FINAL CTA + FOOTER
+   ============================================================ */
+.finale {
+  position: relative; background: #0A0A0A; color: var(--paper);
+  padding-block: clamp(var(--s-700), 9vw, var(--s-900)); overflow: hidden;
+}
+.apply-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s-700); align-items: center; }
+.apply-points { margin-top: var(--s-400); display: flex; flex-direction: column; gap: var(--s-100); }
+.apply-points li { display: flex; gap: var(--s-100); align-items: flex-start; font-size: 1rem; color: var(--soft-paper); }
+.apply-points svg { width: 20px; height: 20px; margin-top: 2px; flex: none; stroke: var(--volt); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* --- application form --- */
+.form-card {
+  background: var(--surface); color: var(--ink);
+  border-radius: var(--r-lg); padding: var(--s-500);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25), 0 30px 70px -30px rgba(0,0,0,0.8);
+}
+.form-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-200); margin-bottom: var(--s-200); }
+.form-step-label { font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%; text-transform: uppercase; letter-spacing: 0.16em; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.progress { height: 3px; background: rgba(16,16,16,0.12); border-radius: var(--r-pill); overflow: hidden; margin-bottom: var(--s-400); }
+.progress i { display: block; height: 100%; background: var(--volt); border-radius: var(--r-pill); transform-origin: left; scale: 0.1429 1; transition-property: scale; transition-duration: 420ms; transition-timing-function: var(--ease-out); }
+/* apply-mode.css decides which of these is shown */
+.apply-google { display: none; }
+.apply-google h3 { font-size: 1.5rem; font-stretch: 106%; letter-spacing: 0.01em; margin-bottom: var(--s-200); }
+.apply-google p { color: var(--ink-soft); }
+.apply-google .btn { width: 100%; margin-top: var(--s-400); white-space: normal; text-align: center; }
+.apply-google .form-foot { margin-top: var(--s-200); }
+.apply-google .steps-note { margin-top: var(--s-300); padding-top: var(--s-300); border-top: 1px solid var(--hair-ink); font-size: 0.875rem; }
+
+.js .step[hidden] { display: none; }
+.js .btn[hidden] { display: none; }
+form[hidden], .form-done[hidden] { display: none; }
+html:not(.js) #nextBtn, html:not(.js) #backBtn,
+html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
+.step { display: flex; flex-direction: column; gap: var(--s-300); border: 0; }
+.step + .step { margin-top: var(--s-400); }
+.step legend { font-family: var(--display); font-size: 1.25rem; font-weight: 800; font-stretch: 106%; text-transform: uppercase; letter-spacing: 0.01em; margin-bottom: var(--s-200); }
+.js .step legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.field { display: flex; flex-direction: column; gap: var(--s-75); }
+.field label, .legend-inline { font-family: var(--display); font-size: 0.8125rem; font-weight: 600; font-stretch: 88%; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink); }
+/* text inputs only: this styling must never reach a checkbox or a radio,
+   or min-height: 48px turns a 20px tick box into a 48px slab */
+.field input:not([type="checkbox"]):not([type="radio"]), .field select, .field textarea {
+  font-family: var(--display); font-size: 1rem; font-stretch: 100%; color: var(--ink);
+  background: #FFFFFF; border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  padding: var(--s-100) var(--s-200); min-height: 48px; width: 100%;
+  transition-property: border-color, box-shadow; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.field textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding-block: var(--s-100); }
+.field select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%); background-position: calc(100% - 18px) 21px, calc(100% - 13px) 21px; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: var(--s-500); }
+.field input:not([type="checkbox"]):not([type="radio"]):hover, .field select:hover, .field textarea:hover { border-color: rgba(16,16,16,0.42); }
+.field input:not([type="checkbox"]):not([type="radio"]):focus-visible, .field select:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+.field [aria-invalid="true"] { border-color: #B3261E; }
+.err { font-family: var(--display); font-size: 0.8125rem; font-stretch: 92%; color: #B3261E; min-height: 0; }
+.err:empty { display: none; }
+.plan-pick { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-100); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.opt span {
+  display: block; padding: var(--s-200); border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  background: #FFFFFF; min-height: 48px;
+  font-size: 1rem; font-weight: 400; text-transform: none; letter-spacing: 0;
+  transition-property: border-color, background-color, box-shadow; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.opt b { display: block; font-family: var(--display); font-weight: 700; font-stretch: 96%; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.8125rem; }
+.opt em { font-style: normal; color: var(--ink-soft); font-size: 0.875rem; }
+.opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.opt input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink), inset 0 0 0 5px var(--volt); background: #FFFFFF; }
+.opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+/* .muted resolves to the light on-ink colour inside the form card, which sits
+   on a light surface. The form needs its own hint colour. */
+.hint { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-soft); }
+/* three small numbers side by side */
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: var(--s-200); }
+
+/* pill radios: experience, days, session length, where, yes/no */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s-75); }
+.chip-opt { position: relative; }
+.chip-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+/* .chip-opt, .check-opt and .opt are all <label>s sitting inside .field, so
+   they inherit the uppercase 13px field-label styling. Set what they should
+   look like explicitly instead of inheriting it by accident. */
+.chip-opt span {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 44px; padding: 0 var(--s-200);
+  font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-pill); background: #FFFFFF;
+  transition-property: border-color, background-color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.chip-opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.chip-opt input:checked + span { border-color: var(--ink); background: var(--volt); font-weight: 600; }
+.chip-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* 1 to 10 stress scale */
+.scale { display: flex; flex-wrap: wrap; gap: var(--s-50); }
+.scale-opt { flex: 1 1 40px; }
+.scale-opt span { padding: 0; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; gap: var(--s-200); margin-top: var(--s-75); }
+.scale-end {
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft);
+}
+
+/* tick all that apply */
+.checks { display: flex; flex-direction: column; }
+.field .check-opt { display: flex; gap: var(--s-100); align-items: flex-start; min-height: 44px; padding: var(--s-75) 0;
+  font-size: 1rem; font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.45; cursor: pointer; }
+.field .check-opt input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--ink); }
+
+.field .consent { display: flex; gap: var(--s-100); align-items: flex-start; font-size: 0.875rem; color: var(--ink-soft);
+  font-weight: 400; text-transform: none; letter-spacing: 0; line-height: 1.5; }
+.field .consent input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--ink); }
+.consent a { color: var(--ink); }
+.form-nav { display: flex; gap: var(--s-100); align-items: center; margin-top: var(--s-400); flex-wrap: wrap; }
+.form-nav .btn { flex: 1 1 auto; }
+.form-foot { margin-top: var(--s-200); font-size: 0.8125rem; color: var(--ink-soft); }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.form-status { margin-top: var(--s-300); font-size: 0.9375rem; }
+.form-status:empty { display: none; }
+.form-status.is-error { color: #B3261E; }
+.form-done { text-align: left; }
+.form-done h3 { font-size: 1.5rem; font-stretch: 106%; margin-bottom: var(--s-200); }
+.form-done p { color: var(--ink-soft); }
+.form-done .tickbig { width: 48px; height: 48px; border-radius: var(--r-pill); background: var(--volt); display: flex; align-items: center; justify-content: center; margin-bottom: var(--s-300); }
+.form-done .tickbig svg { width: 26px; height: 26px; stroke: var(--ink); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.finale-bg {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; object-position: 50% 34%;
+  filter: grayscale(0.35) contrast(1.05);
+}
+.finale::after {
+  content: ""; position: absolute; inset: 0; z-index: 1;
+  background:
+    radial-gradient(120% 85% at 50% 46%, rgba(10,10,10,0.90) 0%, rgba(10,10,10,0.62) 62%, rgba(10,10,10,0.30) 100%),
+    linear-gradient(180deg, rgba(10,10,10,0.82) 0%, rgba(10,10,10,0.58) 45%, rgba(10,10,10,0.90) 100%);
+}
+.finale > *:not(.finale-bg) { position: relative; z-index: 2; }
+.finale h2 { font-size: clamp(2.25rem, 4.4vw, 3.75rem); }
+.finale .lede { margin-top: var(--s-300); color: var(--soft-paper); font-size: 1.25rem; max-width: 46ch; }
+
+
+.foot { background: var(--ink); color: var(--paper); padding-block: var(--s-500); }
+.foot-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-300); }
+.foot-links { display: flex; flex-wrap: wrap; gap: var(--s-300); }
+.foot-links a, .foot-ig {
+  display: inline-flex; align-items: center; min-height: 44px;
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.14em; text-decoration: none; color: var(--soft-paper);
+  transition-property: color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.foot-links a:hover, .foot-ig:hover { color: var(--volt); }
+.foot-ig { display: inline-flex; align-items: center; gap: var(--s-75); min-height: 44px; }
+.foot-ig svg { width: 18px; height: 18px; fill: currentColor; }
+.foot-bot { margin-top: var(--s-400); padding-top: var(--s-300); border-top: 1px solid var(--hair-paper); display: flex; flex-wrap: wrap; gap: var(--s-200) var(--s-400); justify-content: space-between; }
+.foot-bot p { font-size: 0.875rem; color: var(--soft-paper); }
+
+/* ============================================================
+   18. MOTION
+   ============================================================ */
+@keyframes rise { from { opacity: 0; translate: 0 18px; } to { opacity: 1; translate: 0 0; } }
+.js .enter { opacity: 0; animation: rise 700ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 100ms); }
+
+.js .reveal { opacity: 0; translate: 0 24px; }
+.js .reveal.is-in {
+  opacity: 1; translate: 0 0;
+  transition-property: opacity, translate;
+  transition-duration: 800ms; transition-timing-function: var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 90ms);
+}
+
+/* ============================================================
+   19. RESPONSIVE
+   ============================================================ */
+@media (min-width: 621px) {
+  .inc-item h3 { min-height: 2.4em; }
+}
+@media (max-width: 1080px) {
+  .method-grid { grid-template-columns: minmax(0, 1fr) 34%; gap: var(--s-500); }
+  .inc-grid { grid-template-columns: 300px 1fr; gap: var(--s-500); }
+  .plans { grid-template-columns: 1fr 1.15fr; }
+}
+@media (max-width: 900px) {
+  .nav-links { display: none; }
+  .js .nav-right .btn { display: none; }
+  .js .burger { display: block; }
+  .hero { grid-template-columns: 1fr; }
+  .hero h1 { font-size: clamp(2.25rem, 11vw, 4.5rem); }
+  .hero-copy { min-height: 0; padding: var(--s-700) var(--s-300) var(--s-600); }
+  .hero-media { height: 62vh; }
+  .hero-media::after { background: linear-gradient(180deg, var(--ink) 0%, transparent 26%); }
+  .problem-grid { grid-template-columns: 1fr; }
+  .proof-grid { grid-template-columns: 1fr 1fr; gap: var(--s-200); }
+  .proof-note { grid-template-columns: 1fr; gap: var(--s-400); }
+  .method-grid { grid-template-columns: 1fr; }
+  .method-media { max-width: 420px; }
+  .inc-grid { grid-template-columns: 1fr; }
+  .inc-media { position: static; max-width: 420px; }
+  .inc-list { grid-template-columns: 1fr 1fr; }
+  .plans { grid-template-columns: 1fr; }
+  .fit-grid { grid-template-columns: 1fr; }
+  .track-alt-steps { grid-template-columns: 1fr; }
+  .apply-grid { grid-template-columns: minmax(0, 1fr); gap: var(--s-500); }
+  .mission-copy { max-width: 100%; }
+}
+/* nowrap button labels are the usual cause of a box refusing to shrink */
+@media (max-width: 400px) { .btn { white-space: normal; } }
+@media (max-width: 620px) {
+  :root { --s-900: 72px; --s-800: 64px; }
+  .hero-lede { font-size: 1.125rem; }
+  .stats { gap: var(--s-400); }
+  .hero-cta .btn { width: 100%; }
+  .inc-list { grid-template-columns: 1fr; }
+  .proof-grid { grid-template-columns: 1fr; gap: var(--s-300); }
+  .split { grid-template-columns: 16px 1fr; gap: var(--s-200) var(--s-200); }
+  .split-w { grid-column: 2; }
+  .split-b { grid-column: 2; }
+  .plan { padding: var(--s-400); }
+  .form-card { padding: var(--s-400) var(--s-300); }
+  .plan-pick { grid-template-columns: 1fr; }
+  .finale .btn { width: 100%; }
+  .foot-top { flex-direction: column; align-items: flex-start; }
+}
+
+/* ============================================================
+   20. REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .js .enter { opacity: 1; animation: none; }
+  .js .reveal { opacity: 1; translate: none; }
+  .js .mission-copy .w { color: var(--ink); }
+  .js .sheet-fill { scale: 1 1; }
+}
+</style>
+<link rel="stylesheet" href="apply-mode.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Pereiti prie turinio</a>
+
+<header class="nav" id="nav">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="#top">Butkus<i>/</i>Coaching</a>
+    <nav class="nav-links" aria-label="Skiltys">
+      <a href="#proof">Įrodymai</a>
+      <a href="#method">Metodas</a>
+      <a href="#included">Kas įeina</a>
+      <a href="#pricing">Kainos</a>
+      <a href="#faq">DUK</a>
+    </nav>
+    <div class="nav-right">
+      <a class="btn btn-primary btn-sm" href="#apply" data-plan="coaching">Pradėk dabar</a>
+      <button class="burger" id="burger" type="button" aria-expanded="false" aria-controls="drawer" aria-label="Atidaryti meniu">
+        <span></span><span></span>
+      </button>
+    </div>
+  </div>
+  <div class="drawer" id="drawer">
+    <a href="#proof">Įrodymai</a>
+    <a href="#method">Metodas</a>
+    <a href="#included">Kas įeina</a>
+    <a href="#pricing">Kainos</a>
+    <a href="#faq">DUK</a>
+    <a class="btn btn-primary" href="#apply" data-plan="coaching">Pradėk dabar</a>
+  </div>
+</header>
+
+<main id="main">
+  <span id="top"></span>
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero on-ink" aria-labelledby="hero-h">
+    <div class="hero-copy">
+      <p class="label enter" style="--i:0">Online treniravimas</p>
+      <h1 id="hero-h" class="enter" style="--i:1">Nustok<br>pradėti<br><span class="knock">iš naujo.</span></h1>
+      <p class="hero-lede enter" style="--i:2">Tu jau žinai, ką daryti. Problema niekada nebuvo informacija. Tai buvo <strong>nuoseklumas</strong>. Būtent jį aš tau padėsiu sukurti.</p>
+      <div class="hero-cta enter" style="--i:3">
+        <a class="btn btn-primary" href="#apply" data-plan="coaching">Pradėk dabar</a>
+        <a class="btn btn-ghost" href="#included">Ką gausi</a>
+      </div>
+      <div class="stats enter" style="--i:4">
+        <div>
+          <div class="stat-n">10</div>
+          <span class="stat-l">Metų treniruočių</span>
+        </div>
+        <div>
+          <div class="stat-n">24h</div>
+          <span class="stat-l">Atsakymas į klausimus</span>
+        </div>
+        <div>
+          <div class="stat-n">3</div>
+          <span class="stat-l">Ankstyvos prieigos vietos</span>
+        </div>
+      </div>
+      <p class="hero-cred enter" style="--i:5">Cert III &amp; IV in Fitness (Australija) ir Europos asmeninio trenerio licencija</p>
+    </div>
+    <div class="hero-media">
+      <img src="img/hyroxrow-1200.webp"
+           srcset="img/hyroxrow-760.webp 760w, img/hyroxrow-1200.webp 1200w"
+           sizes="(max-width: 900px) 100vw, 45vw"
+           width="1200" height="1800" fetchpriority="high"
+           alt="Dalius Butkus ilsisi ant virvės fitneso varžybų aikštelėje">
+    </div>
+  </section>
+
+  <!-- ===================== PROBLEM ===================== -->
+  <section class="section section--paper" aria-labelledby="problem-h">
+    <div class="shell">
+      <p class="label reveal">Skamba pažįstamai?</p>
+      <h2 class="h2 section-head reveal" id="problem-h" style="--i:1">Problema ne tu. Problema yra tavo sistema.</h2>
+      <div class="problem-grid">
+        <article class="card reveal" style="--i:0">
+          <h3>Tu jau pradėjai anksčiau</h3>
+          <p>Kelias savaites stengeisi, pamatei šiek tiek progreso, tada atsitiko gyvenimas ir viskas sustojo.</p>
+        </article>
+        <article class="card reveal" style="--i:1">
+          <h3>Motyvacijos nepakanka</h3>
+          <p>Pirmadienį gali nuversti kalnus, o ketvirtadienį entuziazmas jau dingęs. Motyvacija nėra planas.</p>
+        </article>
+        <article class="card reveal" style="--i:2">
+          <h3>Valgai gerai. Kartais</h3>
+          <p>Nuo pirmadienio iki penktadienio laikaisi plano. Savaitgali viskas sugriūna ir pirmadieni pradedi iš naujo.</p>
+        </article>
+        <article class="card reveal" style="--i:3">
+          <h3>Niekas nekreipia dėmesio</h3>
+          <p>Treniruojiesi be niekieno priežiūros, niekam neatsiskaitai, o kai praleidi treniruotę, nieko nenutinka.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== MISSION ===================== -->
+  <section class="section section--surface mission" aria-labelledby="mission-h">
+    <div class="shell">
+      <p class="label reveal">Visa esmė</p>
+      <h2 class="sr-only" id="mission-h">Misija, kuria remiasi treniravimas</h2>
+      <p class="mission-copy" id="missionCopy"><span class="w">Netikiu</span> <span class="w">motyvacija,</span> <span class="w">tikras</span> <span class="w">progresas</span> <span class="w">atsiranda</span> <span class="w">tada,</span> <span class="w">kai</span> <span class="w">yra</span> <span class="w">aiškus,</span> <span class="w">įgyvendinamas</span> <span class="w">planas.</span> <span class="w">Daugybę</span> <span class="w">kartų</span> <span class="w">bandžiau</span> <span class="w">laikytis</span> <span class="w">'TOBULOS'</span> <span class="w">formulės</span> <span class="w">ir</span> <span class="w">visada</span> <span class="w">atsidurdavau</span> <span class="w">ten</span> <span class="w">kur</span> <span class="w">ir</span> <span class="w">pradėjau.</span> <span class="w hl">Tada</span> <span class="w hl">supratau,</span> <span class="w hl">kad</span> <span class="w hl">ir</span> <span class="w hl">kokia</span> <span class="w hl">gera</span> <span class="w hl">tavo</span> <span class="w hl">programa</span> <span class="w hl">bus,</span> <span class="w hl">iš</span> <span class="w hl">jos</span> <span class="w hl">nebus</span> <span class="w hl">naudos,</span> <span class="w hl">jei</span> <span class="w hl">negalėsi</span> <span class="w hl">jos</span> <span class="w hl">laikytis</span> <span class="w hl">diena</span> <span class="w hl">iš</span> <span class="w hl">dienos.</span></p>
+      <div class="mission-sign reveal">
+        <span class="rule" aria-hidden="true"></span>
+        <span class="label" style="color:var(--ink)">Dalius Butkus, treneris</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PROOF ===================== -->
+  <section class="section section--ink on-ink" id="proof" aria-labelledby="proof-h">
+    <div class="shell">
+      <p class="label reveal">Mano kelionė</p>
+      <h2 class="h2 section-head reveal" id="proof-h" style="--i:1">Tas pats kūnas. Kita sistema.</h2>
+      <div class="proof-grid">
+        <figure class="reveal" style="--i:0">
+          <div class="shot">
+            <img src="img/transformationold-860.webp"
+                 srcset="img/transformationold-540.webp 540w, img/transformationold-860.webp 860w"
+                 sizes="(max-width: 620px) 92vw, (max-width: 900px) 44vw, 40vw"
+                 width="860" height="1075" loading="lazy" decoding="async"
+                 alt="Dalius Butkus, dvi progreso nuotraukos viena šalia kitos">
+          </div>
+          <figcaption class="shot-cap">Ankstesnis progresas, savos treniruotės</figcaption>
+        </figure>
+        <figure class="reveal" style="--i:1">
+          <div class="shot">
+            <img src="img/transformation-860.webp"
+                 srcset="img/transformation-540.webp 540w, img/transformation-860.webp 860w"
+                 sizes="(max-width: 620px) 92vw, (max-width: 900px) 44vw, 40vw"
+                 width="860" height="1313" loading="lazy" decoding="async"
+                 alt="Dalius Butkus, ankstesnės nuotraukos viršuje ir dabartinė nuotrauka sporto salėje apačioje">
+          </div>
+          <figcaption class="shot-cap">Kur sistema nuvedė</figcaption>
+        </figure>
+      </div>
+      <div class="proof-note">
+        <blockquote class="pull reveal">Tai ne klientų nuotraukos. Tai mano. Neprašysiu tavęs nieko, ko pats nesu padaręs.</blockquote>
+        <div class="reveal" style="--i:1">
+          <p class="body-text muted">Treniruojuosi jau daugiau nei 12 metų. Per tą laiką išgyvenau nenuoseklumą, programas, kurios neprigijo, ir laikotarpius, kai gyvenimas tiesiog perėmė visą kontrolę. Žinau skirtumą tarp noro pasikeisti ir įpročių, kurie pokytį padaro nuolatinį.</p>
+          <p class="body-text muted">Turiu Cert III ir IV in Fitness kvalifikaciją Australijoje ir Europos asmeninio trenerio licenciją. Kvalifikacija, kuri svarbesnė: padėjau žmonėms, kurie vis pradėdavo iš naujo, pagaliau sustoti.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== METHOD ===================== -->
+  <section class="section section--paper" id="method" aria-labelledby="method-h">
+    <div class="shell">
+      <p class="label reveal">Požiūris</p>
+      <h2 class="h2 section-head reveal" id="method-h" style="--i:1">Sistema, sukurta aplink tavo gyvenimą.</h2>
+      <p class="section-intro lede reveal" style="--i:2">Jokio šabloninio valgiaraščio, jokios visiems vienodos programos. Prieš ką nors keisdamas pažiūriu, ką jau valgai ir kaip jau judi, ir nuo to statome toliau. Dauguma žmonių rezultatus pamato sutvarkę du ar tris konkrečius dalykus.</p>
+      <div class="method-grid">
+        <div class="pillars">
+          <article class="pillar reveal" style="--i:0">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 9.5v5M20.5 9.5v5M8 6v12M16 6v12M8 12h8"/></svg></span>
+            <div>
+              <h3>Treniruotės, kurios progresuoja</h3>
+              <p>Visiškai individuali programa su vaizdo gidu kiekvienam pratimui, sudaryta pagal tavo grafiką, tavo sporto salę ir tavo tikslą. Visada žinai, ką daryti ir kaip tai turi atrodyti.</p>
+            </div>
+          </article>
+          <article class="pillar reveal" style="--i:1">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 11.5h17"/><path d="M4.5 11.5a7.5 7.5 0 0 0 15 0"/><path d="M9.5 4.5c1 .9-1 1.8 0 2.7M14.5 4.5c1 .9-1 1.8 0 2.7"/></svg></span>
+            <div>
+              <h3>Mityba, tinkanti realiam gyvenimui</h3>
+              <p>Jokių uždraustų produktų ir jokios kalorijų manijos. Aiški sistema, sukurta aplink tai, ką jau valgai, su priežastimi už kiekvieno sprendimo.</p>
+            </div>
+          </article>
+          <article class="pillar reveal" style="--i:2">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9.5 15 2 2 3.5-3.5"/></svg></span>
+            <div>
+              <h3>Atskaitomybė kiekvieną savaitę</h3>
+              <p>Savaitinė ataskaita, kurią aš iš tikrųjų perskaitau ir į kurią atsakau apie būtent tavo savaitę, o ne šablonu. Tu niekada nesitreniruoji be priežiūros.</p>
+            </div>
+          </article>
+        </div>
+        <div class="method-media reveal" style="--i:1">
+          <img src="img/purpleChange-900.webp"
+               srcset="img/purpleChange-560.webp 560w, img/purpleChange-900.webp 900w"
+               sizes="(max-width: 900px) 60vw, 460px"
+               width="900" height="1284" loading="lazy" decoding="async"
+               alt="Dalius Butkus treniruojasi ant irklavimo treniruoklio">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SPLIT SHEET ===================== -->
+  <section class="section section--surface" id="how" aria-labelledby="how-h">
+    <div class="shell">
+      <p class="label reveal">Kaip tai veikia</p>
+      <h2 class="h2 section-head reveal" id="how-h" style="--i:1">Savaitė po savaitės tavo tikslo link</h2>
+      <p class="section-intro lede reveal" style="--i:2">Pasirinkus pilną treniravimą, viskas vyksta pagal ritmą, tad visada žinai, kas ir kada bus toliau.</p>
+
+      <div class="sheet" id="sheet">
+        <div class="sheet-rail" aria-hidden="true"><span class="sheet-fill" id="sheetFill"></span></div>
+
+        <div class="split is-key reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">0 savaitė</span>
+          <div class="split-b"><h3>Paraiška</h3><p>Trumpa anketa. Penkios minutės apie tavo tikslus, grafiką ir treniruočių istoriją.</p></div>
+        </div>
+        <div class="split reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">0 savaitė</span>
+          <div class="split-b"><h3>Pažintinis pokalbis</h3><p>Dvidešimt minučių aptarti, kur esi dabar, ko sieki ir kas anksčiau nesuveikė.</p></div>
+        </div>
+        <div class="split reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">0 savaitė</span>
+          <div class="split-b"><h3>Tavo planas</h3><p>Iš tavo atsakymų parašau treniruočių programą ir mitybos planą. Abu gauni per 72 valandas.</p></div>
+        </div>
+        <div class="split is-key reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">1 savaitė</span>
+          <div class="split-b"><h3>Pirma treniruotė, pirma ataskaita</h3><p>Prasideda treniruotės ir savaitinis ritmas: treniruotės, mityba, miegas, energija ir nusiteikimas, peržiūrimi kiekvieną savaitę.</p></div>
+        </div>
+        <div class="split reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">4 savaitė</span>
+          <div class="split-b"><h3>Pirma peržiūra</h3><p>Programa koreguojama pagal tai, ką iš tikrųjų rodo tavo treniruotės ir savijauta.</p></div>
+        </div>
+        <div class="split reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">8 savaitė</span>
+          <div class="split-b"><h3>Antra peržiūra</h3><p>Tas pats dar kartą. Kas keturias savaites programa juda kartu su tavimi, o ne lieka ten, kur prasidėjo.</p></div>
+        </div>
+        <div class="split is-key reveal">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="split-w">12 savaitė</span>
+          <div class="split-b"><h3>Žvilgsnis atgal</h3><p>Rezultatų, savijautos, tikslų peržiūra, progreso įvertinimas, grįžtamasis ryšys.</p></div>
+        </div>
+      </div>
+
+      <div class="track-alt reveal">
+        <p class="label" style="margin-bottom:var(--s-200)">12 savaičių programa, be treniravimo</p>
+        <div class="track-alt-steps">
+          <p><strong>Užpildyk anketą</strong>Penkios minutės. Tavo tikslai, grafikas, treniruočių istorija.</p>
+          <p><strong>Gauk programą</strong>Treniruočių programa ir mitybos planas, sudaryti iš tavo atsakymų, per 72 valandas.</p>
+          <p><strong>Pradėk treniruotis</strong>Sek programą, fiksuok progresą, naudokis pratimų vaizdo biblioteka, kai tik reikia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== INCLUDED ===================== -->
+  <section class="section section--ink on-ink" id="included" aria-labelledby="inc-h">
+    <div class="shell">
+      <p class="label reveal">Kas įeina</p>
+      <h2 class="h2 section-head reveal" id="inc-h" style="--i:1">Viskas, ko reikia. Nieko, ko nereikia.</h2>
+      <div class="inc-grid">
+        <div class="inc-media reveal">
+          <img src="img/group-1000.webp"
+               srcset="img/group-640.webp 640w, img/group-1000.webp 1000w"
+               sizes="(max-width: 900px) 60vw, 380px"
+               width="1000" height="1541" loading="lazy" decoding="async"
+               alt="Dalius Butkus treniruojasi su grupe sporto salėje">
+        </div>
+        <div class="inc-list">
+          <article class="inc-item reveal" style="--i:0">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v13a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H15"/><rect x="9" y="2.5" width="6" height="4" rx="1.5"/><path d="m9.5 13.5 2 2 3.5-3.5"/></svg></span>
+            <h3>Individuali treniruočių programa</h3>
+            <p>Sudaryta pagal tavo grafiką, sporto salę ir tikslą. Dienos, pratimai ir intensyvumas nustatyti tau, o vėliau koreguojami pagal progresą.</p>
+          </article>
+          <article class="inc-item reveal" style="--i:1">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.3l3.4 2"/></svg></span>
+            <h3>Savaitinė ataskaita</h3>
+            <p>Treniruotės, mityba, miegas, energija ir nusiteikimas peržiūrimi kiekvieną savaitę, su asmeniniu atsakymu per 72 valandas.</p>
+          </article>
+          <article class="inc-item reveal" style="--i:2">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.5h7.5L18.5 8v12a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V5A1.5 1.5 0 0 1 6 3.5Z"/><path d="M13.5 3.5V8h5"/><path d="M8 13h7M8 16.5h4.5"/></svg></span>
+            <h3>Mitybos planas</h3>
+            <p>Praktiška sistema, paaiškinanti priežastį už kiekvieno sprendimo. Ne valgiaraštis, o sistema, kuri atlaiko įprastą savaitę.</p>
+          </article>
+          <article class="inc-item reveal" style="--i:3">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M10.5 9.3 15 12l-4.5 2.7V9.3Z"/></svg></span>
+            <h3>Pratimų vaizdo biblioteka</h3>
+            <p>Kiekvienas pratimas nufilmuotas ir paaiškintas, tad tiksliai žinai, kaip judesys turi atrodyti ir jaustis dar prieš keliant svorį.</p>
+          </article>
+          <article class="inc-item reveal" style="--i:4">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.5 14.5a2 2 0 0 1-2 2H8.5L4 20.5V5.5a2 2 0 0 1 2-2h12.5a2 2 0 0 1 2 2Z"/><path d="M8 8.5h8.5M8 12h5.5"/></svg></span>
+            <h3>Tiesioginis ryšys su treneriu</h3>
+            <p>Rašyk man, kai tik kas iškyla. Į klausimus atsakau per 24 valandas. Niekada nelieki vienas.</p>
+          </article>
+          <article class="inc-item reveal" style="--i:5">
+            <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3.5 20.5h17"/><path d="M7 20.5v-5M12 20.5v-9M17 20.5v-13"/></svg></span>
+            <h3>Progreso sekimas</h3>
+            <p>Svoris ir pakartojimai fiksuojami kiekvienoje treniruotėje, tad tiksliai matai, kiek sustiprėjai.</p>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PRICING ===================== -->
+  <section class="section section--paper" id="pricing" aria-labelledby="price-h">
+    <div class="shell">
+      <p class="label reveal">Kainos</p>
+      <h2 class="h2 section-head reveal" id="price-h" style="--i:1">Du keliai.</h2>
+      <div class="plans">
+        <article class="plan reveal">
+          <div>
+            <p class="label" style="margin-bottom:var(--s-100)">Savarankiškai</p>
+            <h3 class="plan-name">12 savaičių programa</h3>
+          </div>
+          <div class="plan-price">49 € <span>vienkartinis mokestis</span></div>
+          <p class="plan-desc">Tiems, kam netrūksta savos motyvacijos ir tiesiog reikia aiškaus, struktūruoto plano. Be treniravimo, tik įrankiai.</p>
+          <ul>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Individuali treniruočių programa</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Mitybos planas</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Prieiga prie pratimų vaizdo bibliotekos</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Progreso sekimo lentelė</li>
+          </ul>
+          <div class="plan-foot">
+            <a class="btn btn-ghost" href="#apply" data-plan="program">Gauk programą</a>
+            <p class="fine">Užpildyk trumpą anketą.</p>
+          </div>
+        </article>
+
+        <article class="plan plan--featured on-ink reveal" style="--i:1">
+          <div>
+            <span class="chip">Ankstyva prieiga, 3 vietos</span>
+            <h3 class="plan-name" style="margin-top:var(--s-100)">Pilnas treniravimas</h3>
+          </div>
+          <div class="plan-price">124 € <span>per mėnesį</span></div>
+          <p class="plan-desc">Tiems, kurie nori atskaitomybės, savaitinio grįžtamojo ryšio ir trenerio, stebinčio kiekvieną žingsnį. Viskas, kas programoje, plius aš.</p>
+          <ul>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span><strong>Viskas iš „12 savaičių programa“</strong></li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>20 minučių pažintinis pokalbis</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Savaitinė ataskaita, asmeninis atsakymas per 72 valandas</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Tiesioginis ryšys su treneriu, atsakymai į klausimus per 24 valandas</li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Programa koreguojama kas 4 savaites pagal tavo progresą</li>
+          </ul>
+          <div class="plan-foot">
+            <a class="btn btn-primary" href="#apply" data-plan="coaching">Pateik paraišką</a>
+            <p class="fine">Užpildyk trumpą anketą ir aš susisieksiu dėl pokalbio laiko.</p>
+            <div class="pay">
+              <span class="pay-item"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Kortelė</span>
+              <span class="pay-item"><svg viewBox="0 0 24 24"><path d="M12 6c.5-2 2-3 3.5-3 .2 1.7-.6 3-1.6 3.7"/><path d="M16.5 12c0-2 1.5-3 2-3.3C17.6 7.3 16 6.8 15 6.8c-1.2 0-2 .6-2.8.6-.8 0-1.7-.6-2.8-.6-1.8 0-3.9 1.5-3.9 4.6 0 3 2.2 6.6 3.8 6.6.8 0 1.6-.6 2.6-.6s1.7.6 2.6.6c1.2 0 2.5-2 3.1-3.4-1.6-.7-2.1-2-2.1-2.6Z"/></svg>Apple Pay</span>
+              <span class="pay-item"><svg viewBox="0 0 24 24"><path d="M3 10h18L12 4 3 10Z"/><path d="M5 10v8M10 10v8M14 10v8M19 10v8M3 20h18"/></svg>BECS</span>
+              <span class="pay-item" style="margin-left:auto">Apdoroja Stripe</span>
+            </div>
+          </div>
+        </article>
+      </div>
+      <p class="assure reveal">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 4.4 3.4 8.3 8 9 4.6-.7 8-4.6 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+        Paraiška nemokama, užtrunka apie penkias minutes ir neprašo kortelės.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== FIT ===================== -->
+  <section class="section section--surface" aria-labelledby="fit-h">
+    <div class="shell">
+      <p class="label reveal">Ar tai tau</p>
+      <h2 class="h2 section-head reveal" id="fit-h" style="--i:1">Tinka ne visiems.</h2>
+      <div class="fit-grid">
+        <div class="fit-col fit-col--yes reveal">
+          <h3>Tai tau, jei</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Pavargai pradėti iš naujo ir nori, kad pokyčių, kurie užsiliktų</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Gali įsipareigoti procesui, ne tik rezultatui</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Nori suprasti savo treniruotes ir mitybą, o ne tik vykdyti nurodymus</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Nori trenerio, kuris iš tikrųjų kreipia dėmesį į tave</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Nebijai būti sąžiningas prieš save ir mane</li>
+          </ul>
+        </div>
+        <div class="fit-col fit-col--no reveal" style="--i:1">
+          <h3>Tai ne tau, jei</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Nori stebuklingo sprendimo be jokių pastangų</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Tikiesi rezultatų be įpročių pokyčių</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Šiuo metu nenori investuoti į savo sveikatą</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Nenori treniruotis nuosekliai ir pagal planą</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>Nori, kad tau pasakytų, ką valgyti, be jokio paaiškinimo</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FAQ ===================== -->
+  <section class="section section--paper" id="faq" aria-labelledby="faq-h">
+    <div class="shell">
+      <p class="label reveal">Klausimai</p>
+      <h2 class="h2 section-head reveal" id="faq-h" style="--i:1">Prieš pradedant dirbti kartu.</h2>
+      <div class="faq" id="faqList">
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa1">Kas vyksta pirmą savaitę?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa1" role="region"><div class="qa-panel-in">Užpildai trumpą anketą, po kurios seka 20 minučių pažintinis pokalbis. Iš tavo atsakymų paruošiu treniruočių programą bei mitybos planą. Abu gauni per 72 valandas. Nuo ten prasideda treniruotės ir savaitinės ataskaitos.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa2">Ar reikia konkrečios sporto salės ar įrangos?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa2" role="region"><div class="qa-panel-in">Programa sudaroma pagal sporto salę, kurioje jau treniruojiesi, ir dienas, kurias iš tikrųjų gali skirti sportui. Pratimai ir intensyvumas parenkami pagal tavo įrangą ir grafiką, o ne pagal idealias sąlygas.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa3">Kaip greitai gausiu atsakymą į užklausą?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa3" role="region"><div class="qa-panel-in">Į savaitines ataskaitas gauni asmeninį atsakymą per 72 valandas. Į viską, ką parašai man tiesiogiai, atsakau per 24 valandas.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa4">Kuo mitybos dalis skiriasi nuo valgiaraščio?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa4" role="region"><div class="qa-panel-in">Valgiaraštis pasako, ką valgyti, ir subyra pirmą kartą, kai įsikiša realus gyvenimas. Mitybos planas yra sistema, sukurta aplink tai, ką jau valgai, be uždraustų produktų ir be kalorijų manijos, ir paaiškina priežastį už kiekvieno sprendimo, kad sprendimus galėtum priimti savarankiškai.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa5">Daug kartų pradėjau ir mečiau. Ar šįkart bus kitaip?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa5" role="region"><div class="qa-panel-in">Būtent tokiai situacijai tai ir sukurta. Skirtumas ne daugiau informacijos, o savaitinė ataskaita, tiesioginis ryšys ir programa, kuri kas keturias savaites perdaroma pagal tai, ką iš tikrųjų rodo tavo užfiksuotos treniruotės.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa6">Kaip vyksta mokėjimai?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa6" role="region"><div class="qa-panel-in">12 savaičių programa: vienkartinis 49 € mokestis. Pilnas treniravimas: 124 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa7">Kodėl vietų skaičius toks ribotas?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa7" role="region"><div class="qa-panel-in">Norint suteikti aukščiausios kokybės paslaugas galiu dirbti tik su nedideliu skaičiumi žmonių vienu metu.</div></div>
+        </div>
+
+        <div class="qa">
+          <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa8">Iš kur treniruoji?<span class="qa-sign" aria-hidden="true"></span></button></h3>
+          <div class="qa-panel" id="qa8" role="region"><div class="qa-panel-in">Treniravimas vyksta visiškai nuotoliniu būdu, tad laiko juosta neturi reikšmės. Turiu Cert III ir IV in Fitness kvalifikaciją Australijoje ir Europos asmeninio trenerio licenciją.</div></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== APPLY ===================== -->
+  <section class="finale on-ink" id="apply" aria-labelledby="apply-h">
+    <img class="finale-bg" src="img/hyroxRUN-1000.webp"
+         srcset="img/hyroxRUN-1000.webp 1000w, img/hyroxRUN-1800.webp 1800w"
+         sizes="100vw" width="1800" height="2400" loading="lazy" decoding="async" alt="">
+    <div class="shell apply-grid">
+
+      <div class="apply-copy">
+        <span class="chip reveal">Ankstyva prieiga, 3 vietos</span>
+        <h2 id="apply-h" class="reveal" style="--i:1; margin-top: var(--s-300)">Laikas nustoti pradėti iš naujo?</h2>
+        <p class="lede reveal" style="--i:2">Papasakok, kur esi dabar ir kas anksčiau trukdė. Jei atrodys, kad tinkame vienas kitam, susisieksiu su tavimi dėl pokalbio laiko.</p>
+        <ul class="apply-points reveal" style="--i:3">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Užtrunka apie penkias minutes</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Nemokama</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Skaitau aš, o ne rūšiuoja robotas</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4L19 7"/></svg>Nuotolinis treniravimas, prieinamas visame pasaulyje</li>
+        </ul>
+      </div>
+
+      <div class="form-card reveal" style="--i:1">
+        <form id="applyForm" action="https://api.web3forms.com/submit" method="POST" novalidate>
+          <!-- Free, unlimited endpoint. Get an access key at https://web3forms.com using the
+               address that should receive applications. The key is public by design and safe
+               to commit. Until it is filled in, the form refuses to submit and points people
+               at the old Google Form rather than failing silently. -->
+          <input type="hidden" name="access_key" id="accessKey" value="bc7e0832-f27f-4199-9cde-b02add5b9150">
+          <input type="hidden" name="subject" value="Butkus Coaching - nauja paraiška">
+          <input type="hidden" name="from_name" value="Butkus Coaching svetainė">
+          <div class="hp" aria-hidden="true"><label>Palik tuščią<input type="text" name="botcheck" tabindex="-1" autocomplete="off"></label></div>
+
+          <div class="form-head">
+            <span class="form-step-label" id="stepLabel">1 žingsnis iš 7: Apie tave</span>
+          </div>
+          <div class="progress" aria-hidden="true"><i id="progressBar" style="scale:0.1429 1"></i></div>
+
+          <fieldset class="step" data-step="1">
+            <legend>Apie tave</legend>
+            <div class="field">
+              <label for="f-name">Tavo vardas</label>
+<input id="f-name" name="Vardas" type="text" required>
+              <p class="err" id="e-f-name" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-email">El. paštas</label>
+<input id="f-email" name="El. paštas" type="email" required autocomplete="email">
+              <p class="err" id="e-f-email" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-option">
+              <span class="legend-inline" id="lbl-option">Kuris variantas tave domina</span>
+              <div class="plan-pick">
+                <label class="opt"><input type="radio" name="Variantas" value="Pilnas treniravimas: programa, savaitinės ataskaitos ir tiesioginis ryšys su treneriu" required>
+                  <span><b>Pilnas treniravimas</b><em>124 € / mėn.</em></span></label>
+                <label class="opt"><input type="radio" name="Variantas" value="12 savaičių programa: treniruočių planas ir mitybos planas">
+                  <span><b>12 savaičių programa</b><em>49 € vienkartinis</em></span></label>
+              </div>
+              <p class="err" id="e-option" aria-live="polite"></p>
+            </div>
+            <div class="field-row">
+            <div class="field">
+              <label for="f-age">Amžius</label>
+<input id="f-age" name="Amžius" type="number" required min="13" max="100" inputmode="numeric">
+              <p class="err" id="e-f-age" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-height">Ūgis (cm)</label>
+<input id="f-height" name="Ūgis (cm)" type="number" required min="100" max="250" inputmode="numeric">
+              <p class="err" id="e-f-height" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-weight">Svoris (kg)</label>
+<input id="f-weight" name="Svoris (kg)" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+              <p class="err" id="e-f-weight" aria-live="polite"></p>
+            </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="2" hidden>
+            <legend>Tavo tikslas</legend>
+            <div class="field">
+              <label for="f-goal">Apibūdink savo tikslą savais žodžiais</label>
+<textarea id="f-goal" name="Tikslas" required placeholder="Sąžininga versija ir yra naudingoji."></textarea>
+              <p class="err" id="e-f-goal" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-why">Kodėl tai tau svarbu būtent dabar</label>
+<textarea id="f-why" name="Kodėl dabar" required></textarea>
+              <p class="err" id="e-f-why" aria-live="polite"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="3" hidden>
+            <legend>Tavo treniruočių istorija</legend>
+            <div class="field" role="group" aria-labelledby="lbl-experiencelevel">
+              <span class="legend-inline" id="lbl-experiencelevel">Kaip apibūdintum savo patirties lygį</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-experiencelevel">
+              <label class="chip-opt"><input type="radio" name="Patirties lygis" value="Pradinis" required><span>Pradinis</span></label>
+              <label class="chip-opt"><input type="radio" name="Patirties lygis" value="Vidutinis"><span>Vidutinis</span></label>
+              <label class="chip-opt"><input type="radio" name="Patirties lygis" value="Aukštas"><span>Aukštas</span></label>
+            </div>
+              <p class="err" id="e-experiencelevel" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-followedaprogram">
+              <span class="legend-inline" id="lbl-followedaprogram">Ar anksčiau sekei treniruočių programą</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-followedaprogrambefore">
+              <label class="chip-opt"><input type="radio" name="Ar sekė programą anksčiau" value="Taip" required><span>Taip</span></label>
+              <label class="chip-opt"><input type="radio" name="Ar sekė programą anksčiau" value="Ne"><span>Ne</span></label>
+            </div>
+              <p class="err" id="e-followedaprogram" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-worked">Kas tau anksčiau veikė</label>
+<textarea id="f-worked" name="Kas veikė" required></textarea>
+              <p class="err" id="e-f-worked" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-notworked">Kas tau neveikė</label>
+<textarea id="f-notworked" name="Kas neveikė" required></textarea>
+              <p class="err" id="e-f-notworked" aria-live="polite"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="4" hidden>
+            <legend>Tavo grafikas</legend>
+            <div class="field" role="group" aria-labelledby="lbl-dayspweek">
+              <span class="legend-inline" id="lbl-dayspweek">Kiek dienų per savaitę gali treniruotis</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-daysperweek">
+              <label class="chip-opt"><input type="radio" name="Dienų per savaitę" value="1" required><span>1</span></label>
+              <label class="chip-opt"><input type="radio" name="Dienų per savaitę" value="2"><span>2</span></label>
+              <label class="chip-opt"><input type="radio" name="Dienų per savaitę" value="3"><span>3</span></label>
+              <label class="chip-opt"><input type="radio" name="Dienų per savaitę" value="4"><span>4</span></label>
+              <label class="chip-opt"><input type="radio" name="Dienų per savaitę" value="5"><span>5</span></label>
+            </div>
+              <p class="err" id="e-dayspweek" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-sessionlength">
+              <span class="legend-inline" id="lbl-sessionlength">Kokios trukmės gali būti treniruotės</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-sessionlength">
+              <label class="chip-opt"><input type="radio" name="Treniruotės trukmė" value="30 min" required><span>30 min</span></label>
+              <label class="chip-opt"><input type="radio" name="Treniruotės trukmė" value="45 min"><span>45 min</span></label>
+              <label class="chip-opt"><input type="radio" name="Treniruotės trukmė" value="60 min"><span>60 min</span></label>
+              <label class="chip-opt"><input type="radio" name="Treniruotės trukmė" value="90 min"><span>90 min</span></label>
+            </div>
+              <p class="err" id="e-sessionlength" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-whereyoutrain">
+              <span class="legend-inline" id="lbl-whereyoutrain">Kur treniruosiesi</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-whereyoutrain">
+              <label class="chip-opt"><input type="radio" name="Kur treniruojiesi" value="Sporto salėje" required><span>Sporto salėje</span></label>
+              <label class="chip-opt"><input type="radio" name="Kur treniruojiesi" value="Namuose"><span>Namuose</span></label>
+              <label class="chip-opt"><input type="radio" name="Kur treniruojiesi" value="Abiejose vietose"><span>Abiejose vietose</span></label>
+            </div>
+              <p class="err" id="e-whereyoutrain" aria-live="polite"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="5" hidden>
+            <legend>Traumos ir sveikata</legend>
+            <div class="field">
+              <label for="f-injury">Ar šiuo metu turi traumų ar skausmų</label>
+<textarea id="f-injury" name="Dabartinės traumos ar skausmai" required placeholder="Jei nėra, parašyk „nėra“."></textarea>
+              <p class="err" id="e-f-injury" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-past">Ar turėjai traumų anksčiau</label>
+<textarea id="f-past" name="Ankstesnės traumos" required placeholder="Jei nėra, parašyk „nėra“."></textarea>
+              <p class="err" id="e-f-past" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-discomfort">Ar yra judesių, kurie sukelia diskomfortą</label>
+<input id="f-discomfort" name="Diskomfortą sukeliantys judesiai" type="text" required>
+              <p class="err" id="e-f-discomfort" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-medical">Sveikatos būklės ar vaistai, apie kuriuos treneris turėtų žinoti</label>
+<textarea id="f-medical" name="Sveikatos būklės ar vaistai" required placeholder="Jei nėra, parašyk „nėra“."></textarea>
+              <p class="err" id="e-f-medical" aria-live="polite"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="6" hidden>
+            <legend>Tavo gyvenimas ir maistas</legend>
+            <div class="field">
+              <label for="f-job">Koks tavo darbas</label>
+<input id="f-job" name="Darbas" type="text" required>
+              <p class="err" id="e-f-job" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-sleep">Kiek valandų miegi per naktį</label>
+<select id="f-sleep" name="Miegas per naktį" required>
+                <option value="">Pasirink</option>
+                <option>Mažiau nei 5</option>
+                <option>5-6</option>
+                <option>6-7</option>
+                <option>7-8</option>
+                <option>Daugiau nei 8</option>
+              </select>
+              <p class="err" id="e-f-sleep" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-stresslevel">
+              <span class="legend-inline" id="lbl-stresslevel">Streso lygis</span>
+            <div class="scale-wrap">
+              <div class="scale">
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="1" required><span>1</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="2"><span>2</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="3"><span>3</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="4"><span>4</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="5"><span>5</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="6"><span>6</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="7"><span>7</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="8"><span>8</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="9"><span>9</span></label>
+                <label class="chip-opt scale-opt"><input type="radio" name="Streso lygis" value="10"><span>10</span></label>
+              </div>
+              <div class="scale-ends" aria-hidden="true">
+                <span class="scale-end">Visiška ramybė</span>
+                <span class="scale-end">Didžiulis stresas</span>
+              </div>
+            </div>
+              <p class="err" id="e-stresslevel" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-steps">Žingsniai per dieną <span class="hint">(neprivaloma)</span></label>
+<input id="f-steps" name="Žingsniai per dieną" type="text" placeholder="Praleisk, jei jų neseki">
+              <p class="err" id="e-f-steps" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-diet">Mitybos apribojimai</label>
+<input id="f-diet" name="Mitybos apribojimai" type="text" required placeholder="Jei nėra, parašyk „nėra“.">
+              <p class="err" id="e-f-diet" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-nutritionstruggle">
+              <span class="legend-inline" id="lbl-nutritionstruggle">Kas tau sunkiausia mityboje <span class="hint">(pažymėk visus tinkamus)</span></span>
+            <div class="checks" data-required-group="1">
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Persivalgau"><span>Persivalgau</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Sunku išlaikyti nuoseklumą"><span>Sunku išlaikyti nuoseklumą</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Kamuoja potraukiai"><span>Kamuoja potraukiai</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Valgau per mažai / praleidžiu valgymus"><span>Valgau per mažai / praleidžiu valgymus</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Neturiu pastovaus valgymo režimo"><span>Neturiu pastovaus valgymo režimo</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Nežinau, ką valgyti"><span>Nežinau, ką valgyti</span></label>
+              <label class="check-opt"><input type="checkbox" name="Mitybos sunkumai" value="Didelių problemų nėra"><span>Didelių problemų nėra</span></label>
+            </div>
+              <p class="err" id="e-nutritionstruggle" aria-live="polite"></p>
+            </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="7" hidden>
+            <legend>Darbas kartu</legend>
+            <div class="field">
+              <label for="f-expect">Ko tikiesi iš manęs kaip trenerio</label>
+<textarea id="f-expect" name="Lūkesčiai treneriui" required></textarea>
+              <p class="err" id="e-f-expect" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-weeklyweight">
+              <span class="legend-inline" id="lbl-weeklyweight">Ar sutinki kas savaitę siųsti svorio atnaujinimus</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-weeklyweightupdates">
+              <label class="chip-opt"><input type="radio" name="Savaitiniai svorio atnaujinimai" value="Taip" required><span>Taip</span></label>
+              <label class="chip-opt"><input type="radio" name="Savaitiniai svorio atnaujinimai" value="Ne"><span>Ne</span></label>
+            </div>
+              <p class="err" id="e-weeklyweight" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-progressphotos">
+              <span class="legend-inline" id="lbl-progressphotos">Ar sutinki siųsti progreso nuotraukas</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-progressphotos">
+              <label class="chip-opt"><input type="radio" name="Progreso nuotraukos" value="Taip" required><span>Taip</span></label>
+              <label class="chip-opt"><input type="radio" name="Progreso nuotraukos" value="Ne"><span>Ne</span></label>
+            </div>
+              <p class="err" id="e-progressphotos" aria-live="polite"></p>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-howyoufoundme">
+              <span class="legend-inline" id="lbl-howyoufoundme">Kaip mane radai <span class="hint">(pažymėk visus tinkamus)</span></span>
+            <div class="checks" data-required-group="1">
+              <label class="check-opt"><input type="checkbox" name="Kaip radai" value="Instagram"><span>Instagram</span></label>
+              <label class="check-opt"><input type="checkbox" name="Kaip radai" value="Draugo rekomendacija"><span>Draugo rekomendacija</span></label>
+              <label class="check-opt"><input type="checkbox" name="Kaip radai" value="Facebook"><span>Facebook</span></label>
+              <label class="check-opt"><input type="checkbox" name="Kaip radai" value="Kita"><span>Kita</span></label>
+            </div>
+              <p class="err" id="e-howyoufoundme" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-found-other">Jei kita, kur <span class="hint">(neprivaloma)</span></label>
+<input id="f-found-other" name="Kur kitur radai" type="text">
+              <p class="err" id="e-f-found-other" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label class="consent" for="f-consent">
+                <input id="f-consent" name="Sutikimas" type="checkbox" value="taip" required>
+                <span>Sutinku, kad Dalius susisiektų su manimi dėl šios paraiškos ir saugotų tai, ką čia parašiau, įskaitant aukščiau nurodytą sveikatos informaciją, kol bendraujame.</span>
+              </label>
+              <p class="err" id="e-consent" aria-live="polite"></p>
+              <p class="fine"><a href="privacy.html">Kas nutinka su tuo, ką atsiuntei</a></p>
+            </div>
+          </fieldset>
+
+          <div class="form-nav">
+            <button class="btn btn-ghost" type="button" id="backBtn" hidden>Atgal</button>
+            <button class="btn btn-primary" type="button" id="nextBtn">Toliau</button>
+            <button class="btn btn-primary" type="submit" id="sendBtn" hidden>Siųsti paraišką</button>
+          </div>
+          <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+          <p class="form-foot">Jokios kortelės, jokio mokesčio. Paraiška niekuo neįpareigoja.</p>
+        </form>
+
+        <div class="apply-google">
+          <p class="form-step-label" style="display:block;margin-bottom:var(--s-200)">Paraiškos</p>
+          <h3>Pateik paraišką per anketą</h3>
+          <p>Penkios minutės, o klausia to paties, ko klaustų pirma treniruotė: tavo tikslo, grafiko ir to, kas anksčiau trukdė.</p>
+          <a class="btn btn-primary" href="https://docs.google.com/forms/d/e/1FAIpQLSfp8sDRlfeJSueQcIv-a7yMSvn82xwIOUcstBxTAEajFsXt2w/viewform" target="_blank" rel="noopener">Atidaryti paraiškos anketą</a>
+          <p class="form-foot">Jokios kortelės, jokio mokesčio. Paraiška niekuo neįpareigoja.</p>
+          <p class="steps-note">Anketa atsidaro naujame skirtuke „Google Forms“.</p>
+        </div>
+
+        <div class="form-done" id="formDone" hidden>
+          <div class="tickbig" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></div>
+          <h3>Paraiška išsiųsta</h3>
+          <p>Ji jau pas Dalių. Jei atrodys, kad tinkate vienas kitam, gausi žinutę dėl 20 minučių pokalbio laiko. Jei per porą dienų nieko negausi, patikrink šlamšto aplanką.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="foot on-ink">
+  <div class="shell">
+    <div class="lane" aria-hidden="true" style="margin-bottom: var(--s-500); opacity:.5"></div>
+    <div class="foot-top">
+      <a class="wordmark" href="#top">Butkus<i>/</i>Coaching</a>
+      <nav class="foot-links" aria-label="Poraštė">
+        <a href="#proof">Įrodymai</a>
+        <a href="#method">Metodas</a>
+        <a href="#included">Kas įeina</a>
+        <a href="#pricing">Kainos</a>
+        <a href="#faq">DUK</a>
+        <a href="privacy.html">Privatumas</a>
+      </nav>
+      <a class="foot-ig" href="https://instagram.com/dalius_butkus" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.22-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.7-4.92-4.92C2.17 15.58 2.16 15.2 2.16 12s.01-3.58.07-4.85c.15-3.23 1.66-4.77 4.92-4.92C8.42 2.17 8.8 2.16 12 2.16Zm0-2.16C8.74 0 8.33.01 7.05.07 2.7.27.28 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95c-.2-4.35-2.62-6.78-6.98-6.98C15.67.01 15.26 0 12 0Zm0 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84Zm0 10.16a4 4 0 1 1 4-4 4 4 0 0 1-4 4Zm6.41-11.85a1.44 1.44 0 1 0 1.44 1.44 1.44 1.44 0 0 0-1.44-1.44Z"/></svg>
+        @dalius_butkus
+      </a>
+    </div>
+    <div class="foot-bot">
+      <p>&copy; 2026 Butkus Coaching, Dalius Butkus</p>
+      <p>Cert III &amp; IV in Fitness (Australija) ir Europos asmeninio trenerio licencija</p>
+    </div>
+  </div>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ProfessionalService",
+      "@id": "https://dalius-b.github.io/butkuscoaching/#business",
+      "name": "Butkus Coaching",
+      "description": "Nuotolinis asmeninis treniravimas ir mitybos konsultacijos su savaitine atskaitomybe.",
+      "url": "https://dalius-b.github.io/butkuscoaching/",
+      "image": "https://dalius-b.github.io/butkuscoaching/img/og-cover.jpg",
+      "areaServed": "Visame pasaulyje",
+      "sameAs": ["https://instagram.com/dalius_butkus"],
+      "founder": {
+        "@type": "Person",
+        "name": "Dalius Butkus",
+        "jobTitle": "Asmeninis treneris ir nuotolinis treneris",
+        "sameAs": ["https://instagram.com/dalius_butkus"]
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Treniravimo variantai",
+        "itemListElement": [
+          { "@type": "Offer", "name": "12 savaičių programa", "price": "49", "priceCurrency": "EUR" },
+          { "@type": "Offer", "name": "Pilnas treniravimas", "price": "124", "priceCurrency": "EUR" }
+        ]
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "Kas vyksta pirmą savaitę?", "acceptedAnswer": { "@type": "Answer", "text": "Užpildai trumpą anketą, surengiame 20 minučių pažintinį pokalbį, o treniruočių programa ir mitybos planas parašomi iš tavo atsakymų ir pristatomi per 72 valandas." } },
+        { "@type": "Question", "name": "Ar reikia konkrečios sporto salės ar įrangos?", "acceptedAnswer": { "@type": "Answer", "text": "Programa sudaroma pagal sporto salę, kurioje jau treniruojiesi, ir dienas, kurias iš tikrųjų turi." } },
+        { "@type": "Question", "name": "Kaip greitai gausiu atsakymą į užklausą?", "acceptedAnswer": { "@type": "Answer", "text": "Į savaitines ataskaitas gauni asmeninį atsakymą per 72 valandas. Į tiesiogines žinutes atsakau per 24 valandas." } },
+        { "@type": "Question", "name": "Kaip vyksta mokėjimai?", "acceptedAnswer": { "@type": "Answer", "text": "12 savaičių programa: vienkartinis 49 € mokestis. Pilnas treniravimas: 124 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu." } }
+      ]
+    }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  /* If anything below fails, the page must still show all of its content. */
+  function failOpen() {
+    Array.prototype.forEach.call(document.querySelectorAll(".reveal"), function (el) { el.classList.add("is-in"); });
+    Array.prototype.forEach.call(document.querySelectorAll("#missionCopy .w"), function (w) { w.classList.add("on"); });
+    Array.prototype.forEach.call(document.querySelectorAll(".qa-panel"), function (el) { el.style.height = "auto"; });
+    var f = document.getElementById("sheetFill");
+    if (f) f.style.scale = "1 1";
+  }
+
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  try {
+
+  /* ---------- nav shadow ---------- */
+  var nav = document.getElementById("nav");
+  var onScrollNav = function () { nav.classList.toggle("is-stuck", window.scrollY > 24); };
+  onScrollNav();
+
+  /* ---------- mobile drawer ---------- */
+  var burger = document.getElementById("burger");
+  var drawer = document.getElementById("drawer");
+  function setDrawer(open) {
+    burger.setAttribute("aria-expanded", String(open));
+    burger.setAttribute("aria-label", open ? "Uždaryti meniu" : "Atidaryti meniu");
+    drawer.classList.toggle("is-open", open);
+    document.body.style.overflow = open ? "hidden" : "";
+  }
+  burger.addEventListener("click", function () {
+    var open = burger.getAttribute("aria-expanded") === "true";
+    setDrawer(!open);
+    if (!open) { var f = drawer.querySelector("a"); if (f) f.focus(); }
+  });
+  drawer.addEventListener("click", function (e) { if (e.target.closest("a")) setDrawer(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && burger.getAttribute("aria-expanded") === "true") { setDrawer(false); burger.focus(); }
+  });
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 900 && burger.getAttribute("aria-expanded") === "true") setDrawer(false);
+  });
+
+  /* ---------- scroll reveals ----------
+     Driven from the rAF loop below rather than from an IntersectionObserver.
+     A fast flick or an in-page anchor jump can carry an observed element past
+     the viewport between two callbacks; it would then stay invisible until the
+     visitor scrolled back over it. A per-frame check cannot miss one. */
+  var pending = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
+  if (reduce) {
+    pending.forEach(function (el) { el.classList.add("is-in"); });
+    pending = [];
+  }
+  function revealPass(vh) {
+    if (!pending.length) return;
+    var limit = vh * 0.94, hit = [], rest = [], i;
+    for (i = 0; i < pending.length; i++) {
+      (pending[i].getBoundingClientRect().top < limit ? hit : rest).push(pending[i]);
+    }
+    for (i = 0; i < hit.length; i++) hit[i].classList.add("is-in");
+    pending = rest;
+  }
+
+  /* ---------- current section in nav ---------- */
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll(".nav-links a"));
+  var targets = navLinks.map(function (a) { return document.querySelector(a.getAttribute("href")); }).filter(Boolean);
+  if ("IntersectionObserver" in window && targets.length) {
+    var spy = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        navLinks.forEach(function (a) {
+          a.classList.toggle("is-current", a.getAttribute("href") === "#" + en.target.id);
+        });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px", threshold: 0 });
+    targets.forEach(function (t) { spy.observe(t); });
+  }
+
+  /* ---------- FAQ accordion ---------- */
+  Array.prototype.forEach.call(document.querySelectorAll(".qa-btn"), function (btn) {
+    var panel = document.getElementById(btn.getAttribute("aria-controls"));
+    panel.style.height = "0px";
+    btn.addEventListener("click", function () {
+      var open = btn.getAttribute("aria-expanded") === "true";
+      btn.setAttribute("aria-expanded", String(!open));
+      if (open) {
+        panel.style.height = panel.scrollHeight + "px";
+        requestAnimationFrame(function () { panel.style.height = "0px"; });
+      } else {
+        panel.style.height = panel.scrollHeight + "px";
+        var done = function () { panel.style.height = "auto"; panel.removeEventListener("transitionend", done); };
+        if (reduce) done(); else panel.addEventListener("transitionend", done);
+      }
+    });
+  });
+
+  /* ---------- scroll driven: mission words + split rail ---------- */
+  var missionWords = Array.prototype.slice.call(document.querySelectorAll("#missionCopy .w"));
+  var missionEl = document.getElementById("missionCopy");
+  var sheet = document.getElementById("sheet");
+  var sheetFill = document.getElementById("sheetFill");
+  var ticking = false;
+
+  function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
+
+  function frame() {
+    ticking = false;
+    var vh = window.innerHeight;
+
+    revealPass(vh);
+
+    if (missionEl && missionWords.length) {
+      var r = missionEl.getBoundingClientRect();
+      var p = clamp01(((vh * 0.82) - r.top) / (r.height + vh * 0.28));
+      var n = Math.round(p * missionWords.length);
+      for (var i = 0; i < missionWords.length; i++) {
+        missionWords[i].classList.toggle("on", i < n);
+      }
+    }
+
+    if (sheet && sheetFill) {
+      var s = sheet.getBoundingClientRect();
+      var q = clamp01(((vh * 0.68) - s.top) / s.height);
+      sheetFill.style.scale = "1 " + q.toFixed(3);
+    }
+  }
+
+  function onScroll() {
+    onScrollNav();
+    if (reduce) return;
+    if (!ticking) { ticking = true; requestAnimationFrame(frame); }
+  }
+
+  if (reduce) {
+    missionWords.forEach(function (w) { w.classList.add("on"); });
+    if (sheetFill) sheetFill.style.scale = "1 1";
+  } else {
+    frame();
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  } catch (err) {
+    failOpen();
+  }
+})();
+</script>
+<script>
+(function () {
+  "use strict";
+  // apply-mode.css is the single source of truth for which mode is live, so
+  // read it from there rather than keeping a second copy of the answer.
+  var form = document.getElementById("applyForm");
+  if (!form || getComputedStyle(form).display === "none") return;
+
+  var FALLBACK = "https://docs.google.com/forms/d/e/1FAIpQLSfp8sDRlfeJSueQcIv-a7yMSvn82xwIOUcstBxTAEajFsXt2w/viewform";
+  var steps   = Array.prototype.slice.call(form.querySelectorAll(".step"));
+  var nextBtn = document.getElementById("nextBtn");
+  var backBtn = document.getElementById("backBtn");
+  var sendBtn = document.getElementById("sendBtn");
+  var bar     = document.getElementById("progressBar");
+  var label   = document.getElementById("stepLabel");
+  var status  = document.getElementById("formStatus");
+  var done    = document.getElementById("formDone");
+  var keyEl   = document.getElementById("accessKey");
+  var reduce  = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var TITLES  = ["Apie tave", "Tavo tikslas", "Treniruočių istorija", "Tavo grafikas",
+                 "Traumos ir sveikata", "Gyvenimas ir maistas", "Darbas kartu"];
+  var current = 0;
+  var openedAt = Date.now();
+
+  function errEl(el) { var f = el.closest(".field"); return f ? f.querySelector(".err") : null; }
+
+  function messageFor(el) {
+    if (el.type === "checkbox") return "Pažymėk, kad galėtum tęsti.";
+    if (el.type === "radio")    return "Pasirink vieną, kad galėtum tęsti.";
+    if (el.type === "email")    return el.value.trim() ? "Šis adresas atrodo neteisingas." : "Reikia el. pašto, kad galėčiau atsakyti.";
+    if (el.tagName === "SELECT") return "Pasirink vieną iš sąrašo.";
+    if (el.tagName === "TEXTAREA") return "Užtenka sakinio ar dviejų.";
+    return "Šis laukas būtinas.";
+  }
+
+  function clearError(el) {
+    var e = errEl(el);
+    if (e) e.textContent = "";
+    el.removeAttribute("aria-invalid");
+  }
+
+  function markError(el) {
+    var e = errEl(el);
+    if (e) {
+      e.textContent = messageFor(el);
+      if (e.id) el.setAttribute("aria-describedby", e.id);
+    }
+    el.setAttribute("aria-invalid", "true");
+  }
+
+  function validate(step) {
+    var ok = true, first = null, seen = {};
+    var fields = Array.prototype.slice.call(step.querySelectorAll("input, select, textarea"))
+      .filter(function (el) { return el.name && el.name !== "botcheck"; });
+
+    fields.forEach(function (el) {
+      if (el.type === "radio") {
+        if (seen[el.name]) return;
+        seen[el.name] = true;
+        var group = form.querySelectorAll('input[name="' + el.name + '"]'), picked = false;
+        Array.prototype.forEach.call(group, function (r) { if (r.checked) picked = true; });
+        if (!picked) { markError(el); ok = false; first = first || el; } else { clearError(el); }
+        return;
+      }
+      if (el.checkValidity()) { clearError(el); }
+      else { markError(el); ok = false; first = first || el; }
+    });
+
+    // A checkbox group cannot use the required attribute: that would demand
+    // every box, not one of them. Validate the container instead, after the
+    // per-field pass so this verdict is the one that sticks.
+    Array.prototype.forEach.call(step.querySelectorAll("[data-required-group]"), function (box) {
+      var holder = box.closest(".field");
+      var e = holder ? holder.querySelector(".err") : null;
+      if (box.querySelector('input[type="checkbox"]:checked')) {
+        if (e) e.textContent = "";
+      } else {
+        if (e) e.textContent = "Pažymėk bent vieną.";
+        ok = false;
+        first = first || box.querySelector('input[type="checkbox"]');
+      }
+    });
+
+    if (first) { try { first.focus({ preventScroll: false }); } catch (e) { first.focus(); } }
+    return ok;
+  }
+
+  function show(i) {
+    current = Math.max(0, Math.min(steps.length - 1, i));
+    steps.forEach(function (st, n) { st.hidden = n !== current; });
+    backBtn.hidden = current === 0;
+    nextBtn.hidden = current === steps.length - 1;
+    sendBtn.hidden = current !== steps.length - 1;
+    bar.style.scale = ((current + 1) / steps.length).toFixed(4) + " 1";
+    label.textContent = (current + 1) + " žingsnis iš " + steps.length + ": " + TITLES[current];
+    status.textContent = "";
+    status.classList.remove("is-error");
+  }
+
+  function keepCardInView() {
+    var card = form.closest(".form-card");
+    if (!card) return;
+    var top = card.getBoundingClientRect().top;
+    if (top < 72 || top > window.innerHeight - 160) {
+      card.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+    }
+  }
+
+  function focusFirstIn(step) {
+    var el = step.querySelector("input:not([type=hidden]), select, textarea");
+    if (el) { try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); } }
+  }
+
+  function fail(msg, withFallback) {
+    status.classList.add("is-error");
+    status.textContent = msg + " ";
+    if (withFallback) {
+      var a = document.createElement("a");
+      a.href = FALLBACK; a.target = "_blank"; a.rel = "noopener";
+      a.textContent = "Naudok senąją paraiškos anketą.";
+      status.appendChild(a);
+    }
+  }
+
+  nextBtn.addEventListener("click", function () {
+    if (!validate(steps[current])) return;
+    show(current + 1);
+    keepCardInView();
+    focusFirstIn(steps[current]);
+  });
+
+  backBtn.addEventListener("click", function () {
+    show(current - 1);
+    keepCardInView();
+    focusFirstIn(steps[current]);
+  });
+
+  form.addEventListener("input", function (ev) {
+    var el = ev.target;
+    if (el.name && el.checkValidity && el.checkValidity()) clearError(el);
+  });
+  form.addEventListener("change", function (ev) {
+    var el = ev.target;
+    if (el.type === "radio" || el.type === "checkbox" || el.tagName === "SELECT") {
+      if (el.type === "radio" ? true : el.checkValidity()) clearError(el);
+    }
+  });
+
+  // Pricing buttons pre-select the matching option.
+  Array.prototype.forEach.call(document.querySelectorAll("a[data-plan]"), function (a) {
+    a.addEventListener("click", function () {
+      var wantProgram = a.getAttribute("data-plan") === "program";
+      var radios = form.querySelectorAll('input[name="Variantas"]');
+      var pick = radios[wantProgram ? 1 : 0];
+      if (pick) { pick.checked = true; clearError(pick); }
+      show(0);
+    });
+  });
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+
+    for (var i = 0; i < steps.length; i++) {
+      var wasHidden = steps[i].hidden;
+      steps[i].hidden = false;
+      var ok = validate(steps[i]);
+      steps[i].hidden = wasHidden;
+      if (!ok) { show(i); keepCardInView(); return; }
+    }
+
+    if (form.botcheck && form.botcheck.value) return;                 // honeypot
+    if (Date.now() - openedAt < 3000) {                               // time trap
+      fail("Palauk dar akimirką ir siųsk.");
+      return;
+    }
+
+    var key = keyEl ? keyEl.value : "";
+    if (!key || key.indexOf("REPLACE_WITH") === 0) {
+      fail("Anketa dar neprijungta prie pašto dėžutės, tad ši paraiška niekam nenueitų.", true);
+      return;
+    }
+
+    var data = {};
+    new FormData(form).forEach(function (v, k) {
+      if (k === "botcheck") return;
+      data[k] = (data[k] === undefined) ? v : data[k] + ", " + v;  // tick-all-that-apply
+    });
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Siunčiama";
+    status.textContent = "";
+    status.classList.remove("is-error");
+
+    fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(data)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (res && res.success) {
+          form.hidden = true;
+          done.hidden = false;
+          done.setAttribute("tabindex", "-1");
+          done.focus();
+          keepCardInView();
+        } else {
+          fail((res && res.message) || "Nepavyko išsiųsti.", true);
+        }
+      })
+      .catch(function () {
+        fail("Nepavyko išsiųsti. Patikrink ryšį ir bandyk dar kartą.", true);
+      })
+      .then(function () {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "Siųsti paraišką";
+      });
+  });
+
+  // If no inbox is wired up yet, say so before anyone fills in three steps.
+  (function () {
+    var k = keyEl ? keyEl.value : "";
+    if (k && k.indexOf("REPLACE_WITH") !== 0) return;
+    var warn = document.createElement("p");
+    warn.className = "form-status is-error";
+    warn.style.margin = "0 0 var(--s-300)";
+    warn.textContent = "Ši anketa dar neprijungta prie pašto dėžutės. ";
+    var a = document.createElement("a");
+    a.href = FALLBACK; a.target = "_blank"; a.rel = "noopener";
+    a.textContent = "Pateik paraišką per dabartinę anketą.";
+    warn.appendChild(a);
+    form.insertBefore(warn, form.querySelector(".form-head"));
+  })();
+
+  try {
+    show(0);
+  } catch (err) {
+    steps.forEach(function (st) { st.hidden = false; });
+    sendBtn.hidden = false;
+    nextBtn.hidden = true;
+  }
+})();
+</script>
+</body>
+</html>
