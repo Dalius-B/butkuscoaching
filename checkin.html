@@ -230,6 +230,10 @@ form[hidden], .form-done[hidden] { display: none; }
               <label for="f-week">Kurią programos savaitę šiuo metu esi?</label>
               <input id="f-week" name="program_week" type="text" required placeholder="Pvz., 3 savaitė">
             </div>
+            <div class="field">
+              <label for="f-weight">Koks tavo svoris šią savaitę? (kg)</label>
+              <input id="f-weight" name="weight_kg" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+            </div>
           </fieldset>
 
           <fieldset class="step">
@@ -241,6 +245,10 @@ form[hidden], .form-done[hidden] { display: none; }
                 <label class="chip-opt"><input type="radio" name="sessions_completed" value="1"><span>1</span></label>
                 <label class="chip-opt"><input type="radio" name="sessions_completed" value="2"><span>2</span></label>
                 <label class="chip-opt"><input type="radio" name="sessions_completed" value="3"><span>3</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="4"><span>4</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="5"><span>5</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="6"><span>6</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="7"><span>7</span></label>
               </div>
             </div>
             <div class="field" role="group" aria-labelledby="lbl-effort">
@@ -271,11 +279,12 @@ form[hidden], .form-done[hidden] { display: none; }
                 <label class="opt"><input type="radio" name="pain_status" value="Nedidelis diskomfortas, bet treniravausi toliau"><span>Nedidelis diskomfortas, bet treniravausi toliau</span></label>
                 <label class="opt"><input type="radio" name="pain_status" value="Taip, pakeičiau pratimą"><span>Taip, pakeičiau pratimą</span></label>
                 <label class="opt"><input type="radio" name="pain_status" value="Taip, teko praleisti pratimą"><span>Taip, teko praleisti pratimą</span></label>
+                <label class="opt"><input type="radio" name="pain_status" value="Taip, teko nutraukti visą treniruotę"><span>Taip, teko nutraukti visą treniruotę</span></label>
               </div>
             </div>
             <div class="field">
-              <label for="f-weight">Koks tavo svoris šią savaitę? (kg)</label>
-              <input id="f-weight" name="weight_kg" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+              <label for="f-paindetail">Jei pažymėjai skausmą, diskomfortą ar traumą, papasakok plačiau, kas nutiko <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <textarea id="f-paindetail" name="pain_detail"></textarea>
             </div>
           </fieldset>
 
@@ -507,6 +516,7 @@ form[hidden], .form-done[hidden] { display: none; }
       sessions_completed: fd.get("sessions_completed"),
       effort_rating: Number(fd.get("effort_rating")),
       pain_status: fd.get("pain_status"),
+      pain_detail: fd.get("pain_detail") || null,
       weight_kg: Number(fd.get("weight_kg")),
       sleep_hours: fd.get("sleep_hours"),
       sleep_quality: Number(fd.get("sleep_quality")),
