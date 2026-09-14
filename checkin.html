@@ -286,6 +286,10 @@ form[hidden], .form-done[hidden] { display: none; }
               <label for="f-paindetail">Jei pažymėjai skausmą, diskomfortą ar traumą, papasakok plačiau, kas nutiko <span class="hint" style="display:inline">(neprivaloma)</span></label>
               <textarea id="f-paindetail" name="pain_detail"></textarea>
             </div>
+            <div class="field">
+              <label for="f-steps">Kiek vidutiniškai žingsnių padarei per dieną? <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <input id="f-steps" name="avg_daily_steps" type="number" min="0" step="1" inputmode="numeric" placeholder="Pvz., 8000">
+            </div>
           </fieldset>
 
           <fieldset class="step">
@@ -517,6 +521,7 @@ form[hidden], .form-done[hidden] { display: none; }
       effort_rating: Number(fd.get("effort_rating")),
       pain_status: fd.get("pain_status"),
       pain_detail: fd.get("pain_detail") || null,
+      avg_daily_steps: fd.get("avg_daily_steps") ? Number(fd.get("avg_daily_steps")) : null,
       weight_kg: Number(fd.get("weight_kg")),
       sleep_hours: fd.get("sleep_hours"),
       sleep_quality: Number(fd.get("sleep_quality")),

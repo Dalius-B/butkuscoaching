@@ -20,6 +20,7 @@ create table public.checkins (
   effort_rating smallint not null,
   pain_status text not null,
   pain_detail text,
+  avg_daily_steps integer,
   weight_kg numeric not null,
 
   sleep_hours text not null,
