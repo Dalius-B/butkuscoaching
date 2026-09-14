@@ -1,5 +1,11 @@
 -- Run this once in the Supabase dashboard: Project -> SQL Editor -> New query -> paste -> Run.
--- Creates the table that stores every weekly check-in submitted from checkin.html.
+-- Creates the table that stores every weekly check-in.
+--
+-- The insert policy created below (public, no login required) is superseded
+-- by supabase/checkins-zona-integracija.sql, which locks submissions to
+-- logged-in clients writing their own row. Run this file first regardless
+-- (it creates the table), then always run checkins-zona-integracija.sql
+-- after it -- that second file is safe to re-run any time.
 
 create extension if not exists pgcrypto;
 

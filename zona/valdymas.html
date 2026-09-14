@@ -36,23 +36,21 @@
   <div class="shell page">
     <div class="page-head">
       <h1>Valdymas</h1>
-      <p>Programos, klientai ir kvietimai vienoje vietoje.</p>
+      <p>Klientai, kvietimai ir savaitinės ataskaitos vienoje vietoje.</p>
     </div>
 
     <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
 
     <div id="skydelis" hidden>
       <div class="tabs" role="tablist">
-        <button class="tab" role="tab" type="button" data-kortele="programos" aria-selected="true">Programos</button>
-        <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="false">Klientai</button>
+        <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="true">Klientai</button>
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
       </div>
 
       <p class="note" id="pranesimas" hidden></p>
 
-      <section id="kortele-programos"></section>
-      <section id="kortele-klientai"  hidden></section>
+      <section id="kortele-klientai"></section>
       <section id="kortele-kvietimai" hidden></section>
       <section id="kortele-patikrinimai" hidden></section>
     </div>
@@ -69,14 +67,12 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
-  atsitiktinis, absoliutus, BUSENOS, BUCKET, zodis,
+  atsitiktinis, absoliutus, BUSENOS, zodis,
 } from './app.js';
 
 let profiliai = [];
 let savasId = null;
-let programos = [];
 let kvietimai = [];
-let priskyrimai = [];
 let patikrinimai = [];
 
 paleisk();
@@ -98,26 +94,21 @@ async function paleisk() {
 }
 
 async function perkrauk() {
-  const [p1, p2, p3, p4, p5] = await Promise.all([
+  const [p1, p2, p3] = await Promise.all([
     db.from('profiles').select('id, email, full_name, phone, status, created_at').order('created_at', { ascending: false }),
-    db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, created_at').order('created_at', { ascending: false }),
-    db.from('assignments').select('id, program_id, client_id, status'),
     db.from('checkins').select('*').order('created_at', { ascending: false }),
   ]);
 
-  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error;
+  const pirmaKlaida = p1.error || p2.error || p3.error;
   if (pirmaKlaida) {
     pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
   }
 
   profiliai    = p1.data || [];
-  programos    = p2.data || [];
-  kvietimai    = p3.data || [];
-  priskyrimai  = p4.data || [];
-  patikrinimai = p5.data || [];
+  kvietimai    = p2.data || [];
+  patikrinimai = p3.data || [];
 
-  piesProgramas();
   piesKlientus();
   piesKvietimus();
   piesPatikrinimus();
@@ -127,7 +118,7 @@ function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai']) {
+  for (const k of ['klientai', 'kvietimai', 'patikrinimai']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -135,118 +126,6 @@ function rodykKortele(vardas) {
 // =============================================================================
 //  PROGRAMOS
 // =============================================================================
-function piesProgramas() {
-  const eilutes = programos.map((p) => {
-    const kiek = priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length;
-    return `
-      <tr>
-        <td>
-          <strong>${esc(p.title)}</strong>
-          ${p.summary ? `<div class="muted" style="font-size:.8125rem">${esc(p.summary.slice(0, 90))}${p.summary.length > 90 ? '…' : ''}</div>` : ''}
-        </td>
-        <td><span class="chip ${p.status === 'published' ? 'chip-ok' : 'chip-quiet'}">${esc(BUSENOS[p.status] || p.status)}</span></td>
-        <td>${kiek}</td>
-        <td>${esc(data(p.updated_at))}</td>
-        <td>
-          <div class="row">
-            <a class="btn btn-ghost btn-sm" href="redaguoti.html?id=${encodeURIComponent(p.id)}">Redaguoti</a>
-            <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
-
-  $('#kortele-programos').innerHTML = `
-    <div class="card" style="margin-bottom:var(--s-300)">
-      <div class="card-head">
-        <h2>Nauja programa</h2>
-      </div>
-      <form id="forma-programa" novalidate>
-        <div class="field">
-          <label for="p-pavadinimas">Pavadinimas</label>
-          <input id="p-pavadinimas" type="text" required placeholder="Pavyzdžiui, 12 savaičių jėgos blokas">
-        </div>
-        <div class="field">
-          <label for="p-aprasas">Trumpas aprašas</label>
-          <textarea id="p-aprasas" placeholder="Ką klientas ras šioje programoje."></textarea>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" type="submit">Sukurti ir redaguoti</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="card">
-      <div class="card-head"><h2>Visos programos</h2><span class="row-end muted">${programos.length}</span></div>
-      ${programos.length ? `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Programa</th><th>Būsena</th><th>Klientų</th><th>Atnaujinta</th><th></th></tr></thead>
-            <tbody>${eilutes}</tbody>
-          </table>
-        </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
-    </div>`;
-
-  $('#forma-programa').addEventListener('submit', sukurkPrograma);
-  for (const b of $$('.trinti-programa')) b.addEventListener('click', () => trinkPrograma(b.dataset.id, b.dataset.vardas));
-}
-
-async function sukurkPrograma(ev) {
-  ev.preventDefault();
-  const pavadinimas = $('#p-pavadinimas').value.trim();
-  if (!pavadinimas) {
-    pranesk($('#pranesimas'), 'Įrašyk programos pavadinimą.', 'error');
-    return;
-  }
-
-  const { data: nauja, error } = await db
-    .from('programs')
-    .insert({ title: pavadinimas, summary: $('#p-aprasas').value.trim() })
-    .select('id')
-    .single();
-
-  if (error) {
-    pranesk($('#pranesimas'), klaidaLT(error), 'error');
-    return;
-  }
-  location.href = 'redaguoti.html?id=' + encodeURIComponent(nauja.id);
-}
-
-async function trinkPrograma(id, vardas) {
-  if (!confirm(`Ištrinti programą "${vardas}"?\n\nKartu dings jos blokai, priskyrimai klientams ir visų įkeltų failų kopijos. To atstatyti nebus galima.`)) return;
-
-  // Failai ištrinami pirmi. Programos įrašas nusineša ir priedų eilutes, o
-  // su jomis vienintelį kelio įrašą, tad likę failai amžinai užimtų vietą
-  // saugykloje ir jų nebebūtų kaip surasti.
-  const { data: priedai, error: pKlaida } = await db
-    .from('attachments')
-    .select('storage_path')
-    .eq('program_id', id)
-    .not('storage_path', 'is', null);
-
-  if (pKlaida) {
-    pranesk($('#pranesimas'), klaidaLT(pKlaida), 'error');
-    return;
-  }
-
-  const keliai = (priedai || []).map((p) => p.storage_path).filter(Boolean);
-  if (keliai.length) {
-    const { error: sKlaida } = await db.storage.from(BUCKET).remove(keliai);
-    if (sKlaida) {
-      pranesk($('#pranesimas'), 'Failų pašalinti nepavyko, programa neištrinta: ' + klaidaLT(sKlaida), 'error');
-      return;
-    }
-  }
-
-  const { error } = await db.from('programs').delete().eq('id', id);
-  if (error) {
-    pranesk($('#pranesimas'), klaidaLT(error), 'error');
-    return;
-  }
-  pranesk($('#pranesimas'), 'Programa ištrinta.', 'ok');
-  await perkrauk();
-}
-
 // =============================================================================
 //  KLIENTAI
 // =============================================================================
@@ -254,11 +133,6 @@ function piesKlientus() {
   const klientai = profiliai.filter((p) => p.id !== savasId);
 
   const eilutes = klientai.map((k) => {
-    const savos = priskyrimai.filter((a) => a.client_id === k.id && a.status === 'active');
-    const pavadinimai = savos
-      .map((a) => programos.find((p) => p.id === a.program_id)?.title)
-      .filter(Boolean);
-
     return `
       <tr>
         <td>
@@ -267,7 +141,6 @@ function piesKlientus() {
           ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
         </td>
         <td><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
-        <td>${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
         <td>${esc(data(k.created_at))}</td>
         <td>
           <div class="row">
@@ -285,13 +158,10 @@ function piesKlientus() {
         <h2>Klientai</h2>
         <span class="row-end muted">${klientai.length}</span>
       </div>
-      <p class="muted" style="margin-bottom:var(--s-200)">
-        Programos priskiriamos programos redagavimo lange, skiltyje Priskyrimai.
-      </p>
       ${klientai.length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
+            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Užsiregistravo</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
           </table>
         </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
@@ -499,16 +369,12 @@ async function trinkKvietima(id) {
 // =============================================================================
 //  PATIKRINIMAI
 //
-//  Savaitinės kliento ataskaitos (checkin.html) suvestinė kortelė. Kol
-//  ataskaitos nėra susietos su vartotojo id (formą galima užpildyti be
-//  prisijungimo), klientas atpažįstamas pagal el. paštą, tokį patį, kokį jis
-//  įrašė formoje. Jei žmogus formoje suklysta rašydamas paštą, jo ataskaita
-//  čia tiesiog nepriskiriama niekam ir lieka matoma tik Supabase lentelėje.
+//  Savaitinės kliento ataskaitos suvestinė kortelė. Ataskaitą klientas pildo
+//  prisijungęs (mano.html), tad kiekviena eilutė jau turi user_id, ir
+//  priskyrimas čia yra tikslus, o ne spėjimas pagal el. paštą.
 // =============================================================================
 function klientoPatikrinimai(klientas) {
-  const paštas = (klientas.email || '').trim().toLowerCase();
-  if (!paštas) return [];
-  return patikrinimai.filter((c) => (c.email || '').trim().toLowerCase() === paštas);
+  return patikrinimai.filter((c) => c.user_id === klientas.id);
 }
 
 function piesPatikrinimus() {

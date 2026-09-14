@@ -16,12 +16,7 @@ if (typeof createClient !== 'function') {
 import {
   SUPABASE_URL,
   SUPABASE_PUBLISHABLE_KEY,
-  BUCKET,
-  NUORODOS_GALIOJIMAS,
-  MAX_FAILO_DYDIS,
 } from './konfig.js';
-
-export { BUCKET, NUORODOS_GALIOJIMAS, MAX_FAILO_DYDIS };
 
 // -----------------------------------------------------------------------------
 //  Konfigūracijos patikra
@@ -87,16 +82,6 @@ export function valyk(el) {
   }
 }
 
-/** Baitai į skaitomą tekstą. */
-export function dydis(baitai) {
-  const n = Number(baitai);
-  if (!Number.isFinite(n) || n <= 0) return '';
-  if (n < 1024) return n + ' B';
-  if (n < 1024 * 1024) return (n / 1024).toFixed(0) + ' KB';
-  if (n < 1024 * 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
-  return (n / 1024 / 1024 / 1024).toFixed(2) + ' GB';
-}
-
 /** ISO data į lietuvišką formą, pavyzdžiui 2026 m. rugsėjo 8 d. */
 const MENESIAI = [
   'sausio', 'vasario', 'kovo', 'balandžio', 'gegužės', 'birželio',
@@ -114,27 +99,6 @@ export function data(iso, suLaiku = false) {
   return out;
 }
 
-/**
- * Lietuviškos raidės ir tarpai failų varduose lūžta saugyklos keliuose,
- * todėl kelias visada sudaromas iš saugių simbolių, o tikrasis vardas
- * išsaugomas duomenų bazėje ir grąžinamas atsisiunčiant.
- */
-const RAIDES = {
-  ą: 'a', č: 'c', ę: 'e', ė: 'e', į: 'i', š: 's', ų: 'u', ū: 'u', ž: 'z',
-  Ą: 'A', Č: 'C', Ę: 'E', Ė: 'E', Į: 'I', Š: 'S', Ų: 'U', Ū: 'U', Ž: 'Z',
-};
-
-export function saugusVardas(vardas) {
-  const svarus = String(vardas || 'failas')
-    .replace(/[ąčęėįšųūžĄČĘĖĮŠŲŪŽ]/g, (r) => RAIDES[r] || r)
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .slice(0, 80)
-    .replace(/^[-.]+|[-.]+$/g, '');
-  return svarus || 'failas';
-}
 
 /**
  * Lietuviška daugiskaita: 1 failas, 2 failai, 10 failų, 11 failų, 21 failas.
@@ -150,83 +114,12 @@ export function zodis(n, vienas, keli, daug) {
   return keli;
 }
 
-/** Atsitiktinis raktas kvietimams ir failų vardams. */
+/** Atsitiktinis raktas kvietimams. */
 export function atsitiktinis(ilgis = 32) {
   const abc = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const baitai = new Uint8Array(ilgis);
   crypto.getRandomValues(baitai);
   return Array.from(baitai, (b) => abc[b % abc.length]).join('');
-}
-
-// -----------------------------------------------------------------------------
-//  Video nuorodos
-//  Priimame YouTube, Vimeo ir Google Drive, nes senos programos guli Drive.
-//  YouTube naudojame nocookie versiją, Vimeo su dnt, kad žiūrint programą
-//  nebūtų nereikalingo sekimo.
-// -----------------------------------------------------------------------------
-export function videoEmbed(nuoroda) {
-  const url = String(nuoroda || '').trim();
-  if (!url) return null;
-
-  let u;
-  try {
-    u = new URL(url);
-  } catch {
-    return null;
-  }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
-
-  const host = u.hostname.replace(/^www\./, '').toLowerCase();
-
-  if (host === 'youtu.be') {
-    const id = u.pathname.slice(1).split('/')[0];
-    return id ? { tipas: 'youtube', src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0` } : null;
-  }
-
-  if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'youtube-nocookie.com') {
-    let id = u.searchParams.get('v');
-    if (!id) {
-      const m = u.pathname.match(/\/(embed|shorts|live|v)\/([^/?#]+)/);
-      if (m) id = m[2];
-    }
-    return id ? { tipas: 'youtube', src: `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0` } : null;
-  }
-
-  if (host === 'vimeo.com' || host === 'player.vimeo.com') {
-    const m = u.pathname.match(/(\d{6,})/);
-    if (!m) return null;
-    const hash = u.searchParams.get('h');
-    const q = hash ? `?h=${encodeURIComponent(hash)}&dnt=1` : '?dnt=1';
-    return { tipas: 'vimeo', src: `https://player.vimeo.com/video/${m[1]}${q}` };
-  }
-
-  if (host === 'drive.google.com') {
-    const m = u.pathname.match(/\/file\/d\/([^/]+)/) || [null, u.searchParams.get('id')];
-    return m[1] ? { tipas: 'drive', src: `https://drive.google.com/file/d/${encodeURIComponent(m[1])}/preview` } : null;
-  }
-
-  return null;
-}
-
-export function videoNuorodaGalioja(nuoroda) {
-  return videoEmbed(nuoroda) !== null;
-}
-
-/**
- * Grazina nuoroda tik tada, kai ji tikrai yra http arba https.
- *
- * esc() ekranuoja kabutes ir skliaustus, bet schemos nekeicia, tad
- * javascript: prasidedanti reiksme pereitu nepaliesta ir suveiktu paspaudus.
- * Tai vienintele vieta, kur i href patenka is duomenu bazes atkeliaves
- * adresas, todel patikra daroma cia.
- */
-export function saugiNuoroda(nuoroda) {
-  try {
-    const u = new URL(String(nuoroda));
-    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
-  } catch {
-    return null;
-  }
 }
 
 // -----------------------------------------------------------------------------
@@ -493,7 +386,7 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   const treneris = arTreneris === true;
   const vardas = profilis?.full_name?.trim() || profilis?.email || '';
 
-  const nuorodos = [{ href: 'mano.html', tekstas: 'Mano programos' }];
+  const nuorodos = [{ href: 'mano.html', tekstas: 'Savaitinė ataskaita' }];
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });
 
@@ -528,42 +421,8 @@ export function kraunasi(el, tekstas = 'Kraunama') {
   el.innerHTML = `<div class="loading"><span class="spinner" aria-hidden="true"></span><span>${esc(tekstas)}</span></div>`;
 }
 
-// -----------------------------------------------------------------------------
-//  Failai
-// -----------------------------------------------------------------------------
-
-/**
- * Sukuria laikiną atsisiuntimo nuorodą privačiam failui.
- * Nuoroda galioja ribotą laiką ir veikia tik tada, kai duomenų bazės
- * taisyklės leidžia šiam vartotojui matyti tos programos failus.
- */
-export async function failoNuoroda(kelias, atsisiustiVardu = null) {
-  // Vardas įrašomas tiesiai į nuorodos galą, o encodeURI palieka & # ? +
-  // nepakeistus. Tokie ženklai nutrauktų arba iškreiptų užklausą, todėl jie
-  // pakeičiami brūkšneliu. Lietuviškos raidės lieka, jas encodeURI sutvarko.
-  const vardas = atsisiustiVardu ? String(atsisiustiVardu).replace(/[&#?+]/g, '-') : null;
-  const nustatymai = vardas ? { download: vardas } : undefined;
-  const { data: d, error } = await db.storage
-    .from(BUCKET)
-    .createSignedUrl(kelias, NUORODOS_GALIOJIMAS, nustatymai);
-  if (error) throw error;
-  return d.signedUrl;
-}
-
-export function priedoIkona(kind) {
-  if (kind === 'video_link' || kind === 'video_file') {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2"/><path d="M10.5 9.3 15 12l-4.5 2.7V9.3Z"/></svg>';
-  }
-  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h7.5L18.5 8v12a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V5A1.5 1.5 0 0 1 6 3.5Z"/><path d="M13.5 3.5V8h5"/><path d="M8 13h7M8 16.5h4.5"/></svg>';
-}
-
 export const BUSENOS = {
-  draft: 'Juodraštis',
-  published: 'Paskelbta',
-  archived: 'Archyve',
   active: 'Aktyvi',
-  paused: 'Pristabdyta',
-  finished: 'Baigta',
   pending: 'Laukia kvietimo',
   blocked: 'Sustabdyta',
 };

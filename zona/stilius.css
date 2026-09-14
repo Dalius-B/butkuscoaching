@@ -287,6 +287,46 @@ p { text-wrap: pretty; }
 }
 .check-opt input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--ink); }
 
+/* Pasirenkami mygtukai vietoje standartinių radio: dienų skaičius, skausmo
+   būsena, baltymų kiekis ir panašiai. */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s-75); }
+.chip-opt { position: relative; }
+.chip-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.chip-opt span {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 44px; padding: 0 var(--s-200);
+  font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-pill); background: var(--white);
+  transition-property: border-color, background-color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.chip-opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.chip-opt input:checked + span { border-color: var(--ink); background: var(--volt); font-weight: 600; }
+.chip-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* 1 iki 10 skalė. */
+.scale { display: flex; flex-wrap: wrap; gap: var(--s-50); }
+.scale-opt { flex: 1 1 40px; }
+.scale-opt span { padding: 0; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; gap: var(--s-200); margin-top: var(--s-75); }
+.scale-end {
+  font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft); max-width: 40%;
+}
+
+/* Sukrautos kortelės, kai variantų tekstas per ilgas chip mygtukui, pavyzdžiui
+   klausimas apie skausmą treniruotėse. */
+.opt-list { display: flex; flex-direction: column; gap: var(--s-75); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.opt span {
+  display: block; padding: var(--s-200); border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  background: var(--white); min-height: 48px; font-size: 1rem; font-weight: 400;
+  transition-property: border-color, background-color, box-shadow; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.opt input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink), inset 0 0 0 5px var(--volt); }
+.opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
 .form-actions { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: var(--s-400); }
 
 /* -----------------------------------------------------------------------------

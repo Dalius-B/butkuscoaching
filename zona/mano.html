@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mano programos | Butkus Coaching</title>
+<title>Savaitinė ataskaita | Butkus Coaching</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#101010">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
@@ -35,11 +35,11 @@
 <main id="turinys">
   <div class="shell page">
     <div class="page-head">
-      <h1 id="antraste">Mano programos</h1>
+      <h1 id="antraste">Savaitinė ataskaita</h1>
       <p id="paantraste">Kraunama</p>
     </div>
-    <div id="sarasas">
-      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunamos programos</span></div>
+    <div id="turinio-vieta">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
     </div>
   </div>
 </main>
@@ -53,12 +53,16 @@
 
 <script type="module">
 import {
-  db, $, esc, data, klaidaLT, reikiaSesijos, rodykNav,
-  panaudokLaukiantiKvietima, zodis,
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  panaudokLaukiantiKvietima,
 } from './app.js';
 
-const sarasas    = $('#sarasas');
+const vieta      = $('#turinio-vieta');
 const paantraste = $('#paantraste');
+
+let savoAtsakymai = [];
+let vartotojas = null;
+let profilis = null;
 
 paleisk();
 
@@ -66,10 +70,11 @@ async function paleisk() {
   const s = await reikiaSesijos();
   if (!s) return;
 
-  let profilis = s.profilis;
+  profilis   = s.profilis;
+  vartotojas = s.vartotojas;
 
   if (s.klaida) {
-    sarasas.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
     paantraste.textContent = '';
     return;
   }
@@ -79,7 +84,7 @@ async function paleisk() {
     const { data: naujas } = await db
       .from('profiles')
       .select('id, email, full_name, phone, status, created_at')
-      .eq('id', s.vartotojas.id)
+      .eq('id', vartotojas.id)
       .maybeSingle();
     if (naujas) profilis = naujas;
   }
@@ -88,99 +93,271 @@ async function paleisk() {
 
   const vardas = profilis?.full_name?.trim();
   // Kreipinys be giminės, nes zona skirta ir moterims, ir vyrams.
-  $('#antraste').textContent = vardas ? `Labas, ${vardas.split(' ')[0]}` : 'Mano programos';
+  $('#antraste').textContent = vardas ? `Labas, ${vardas.split(' ')[0]}` : 'Savaitinė ataskaita';
 
   if (profilis?.status === 'pending') {
     paantraste.textContent = '';
-    sarasas.innerHTML = `
+    vieta.innerHTML = `
       <div class="empty">
         <h2>Paskyra sukurta</h2>
-        <p>Kvietimas dar nepatvirtintas arba Dalius dar nepriskyrė tau programos.
-           Kai tik ji atsiras, ją matysi būtent čia.</p>
+        <p>Kvietimas dar nepatvirtintas. Kai Dalius patvirtins tavo prieigą, čia galėsi
+           pildyti savaitinę ataskaitą.</p>
       </div>`;
     return;
   }
 
-  await rodykProgramas(s.arTreneris);
+  paantraste.textContent = 'Pildyk kiekvieną sekmadienio vakarą. Užtrunka apie penkias minutes.';
+  piesTurini();
+  await ikelkSavoAtsakymus();
 }
 
-async function rodykProgramas(arTreneris) {
-  const { data: priskyrimai, error } = await db
-    .from('assignments')
-    .select('id, status, note, starts_on, assigned_at, programs!inner (id, title, summary, status, updated_at)')
-    .eq('status', 'active')
-    .order('assigned_at', { ascending: false });
+function piesTurini() {
+  vieta.innerHTML = `
+    <div class="card">
+      <form id="ataskaitosForma" novalidate>
+        <fieldset style="border:0">
+          <legend class="sr-only">Treniruotės</legend>
+          <div class="field">
+            <label for="f-week">Kurią programos savaitę šiuo metu esi</label>
+            <input id="f-week" name="program_week" type="text" required placeholder="Pvz., 3 savaitė">
+          </div>
+          <div class="field">
+            <label for="f-weight">Koks tavo svoris šią savaitę (kg)</label>
+            <input id="f-weight" name="weight_kg" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+          </div>
+          <div class="field" role="group" aria-labelledby="lbl-sessions">
+            <span class="legend-inline" id="lbl-sessions">Kiek treniruočių atlikai šią savaitę</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-sessions">
+              ${[0,1,2,3,4,5,6,7].map((n) => `<label class="chip-opt"><input type="radio" name="sessions_completed" value="${n}"${n === 0 ? ' required' : ''}><span>${n}</span></label>`).join('')}
+            </div>
+          </div>
+          ${skale('effort_rating', 'Kaip įvertintum savo vidutines pastangas treniruojantis šią savaitę', 'Vos stengiausi', 'Atidaviau viską')}
+          <div class="field" role="group" aria-labelledby="lbl-pain">
+            <span class="legend-inline" id="lbl-pain">Ar per treniruotes jautei skausmą, diskomfortą ar traumą</span>
+            <div class="opt-list" role="radiogroup" aria-labelledby="lbl-pain">
+              <label class="opt"><input type="radio" name="pain_status" value="Ne, viskas gerai" required><span>Ne, viskas gerai</span></label>
+              <label class="opt"><input type="radio" name="pain_status" value="Nedidelis diskomfortas, bet treniravausi toliau"><span>Nedidelis diskomfortas, bet treniravausi toliau</span></label>
+              <label class="opt"><input type="radio" name="pain_status" value="Taip, pakeičiau pratimą"><span>Taip, pakeičiau pratimą</span></label>
+              <label class="opt"><input type="radio" name="pain_status" value="Taip, teko praleisti pratimą"><span>Taip, teko praleisti pratimą</span></label>
+              <label class="opt"><input type="radio" name="pain_status" value="Taip, teko nutraukti visą treniruotę"><span>Taip, teko nutraukti visą treniruotę</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-paindetail">Jei pažymėjai skausmą, diskomfortą ar traumą, papasakok plačiau <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="f-paindetail" name="pain_detail"></textarea>
+          </div>
+          <div class="field">
+            <label for="f-steps">Kiek vidutiniškai žingsnių padarei per dieną <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="f-steps" name="avg_daily_steps" type="number" min="0" step="1" inputmode="numeric" placeholder="Pvz., 8000">
+          </div>
+        </fieldset>
+
+        <fieldset style="border:0;margin-top:var(--s-400)">
+          <legend class="sr-only">Miegas</legend>
+          <div class="field" role="group" aria-labelledby="lbl-sleephours">
+            <span class="legend-inline" id="lbl-sleephours">Kiek vidutiniškai valandų miegojai per naktį šią savaitę</span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-sleephours">
+              <label class="chip-opt"><input type="radio" name="sleep_hours" value="Mažiau nei 5" required><span>Mažiau nei 5</span></label>
+              <label class="chip-opt"><input type="radio" name="sleep_hours" value="5-6"><span>5-6</span></label>
+              <label class="chip-opt"><input type="radio" name="sleep_hours" value="6-7"><span>6-7</span></label>
+              <label class="chip-opt"><input type="radio" name="sleep_hours" value="7-8"><span>7-8</span></label>
+              <label class="chip-opt"><input type="radio" name="sleep_hours" value="Daugiau nei 8"><span>Daugiau nei 8</span></label>
+            </div>
+          </div>
+          ${skale('sleep_quality', 'Kaip įvertintum savo miego kokybę šią savaitę', 'Baisi', 'Puiki')}
+          <div class="field">
+            <label for="f-sleepissues">Ar kas nors trikdo tavo miegą šią savaitę <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="f-sleepissues" name="sleep_disruptions"></textarea>
+          </div>
+        </fieldset>
+
+        <fieldset style="border:0;margin-top:var(--s-400)">
+          <legend class="sr-only">Mityba</legend>
+          ${skale('nutrition_adherence', 'Kaip tiksliai laikeisi mitybos plano šią savaitę', 'Visiškai ignoravau', 'Laikiausi tiksliai')}
+          <div class="field" role="group" aria-labelledby="lbl-protein">
+            <span class="legend-inline" id="lbl-protein">Kaip apibūdintum baltymų suvartojimą šią savaitę</span>
+            <p class="hint">Aukštas — daugumą dienų pasiekiau tikslą · Vidutinis — kai kurias dienas · Žemas — sunkiai sekėsi gauti pakankamai</p>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-protein">
+              <label class="chip-opt"><input type="radio" name="protein_intake" value="Aukštas" required><span>Aukštas</span></label>
+              <label class="chip-opt"><input type="radio" name="protein_intake" value="Vidutinis"><span>Vidutinis</span></label>
+              <label class="chip-opt"><input type="radio" name="protein_intake" value="Žemas"><span>Žemas</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label for="f-nutrissues">Ar turėjai sunkumų su maistu ar mityba šią savaitę</label>
+            <textarea id="f-nutrissues" name="nutrition_struggles" required></textarea>
+          </div>
+        </fieldset>
+
+        <fieldset style="border:0;margin-top:var(--s-400)">
+          <legend class="sr-only">Energija ir savijauta</legend>
+          ${skale('energy_level', 'Koks buvo tavo vidutinis energijos lygis per dieną šią savaitę', 'Visą dieną išsekęs', 'Visą dieną kupinas energijos')}
+          ${skale('stress_level', 'Koks buvo tavo vidutinis streso lygis šią savaitę', 'Visiškai atsipalaidavęs', 'Itin sustresuotas')}
+          <div class="field">
+            <label for="f-stresssource">Kas buvo pagrindinis streso šaltinis šią savaitę <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="f-stresssource" name="stress_source"></textarea>
+          </div>
+          ${skale('progress_feeling', 'Kaip apskritai vertini savo progresą šią savaitę', 'Labai nusivylęs', 'Itin motyvuotas')}
+        </fieldset>
+
+        <fieldset style="border:0;margin-top:var(--s-400)">
+          <legend class="sr-only">Atspindys</legend>
+          <div class="field">
+            <label for="f-proud">Kuo labiausiai didžiuojiesi iš šios savaitės</label>
+            <textarea id="f-proud" name="proud_of" required></textarea>
+          </div>
+          <div class="field">
+            <label for="f-challenge">Koks buvo didžiausias šios savaitės iššūkis</label>
+            <textarea id="f-challenge" name="biggest_challenge" required></textarea>
+          </div>
+          <div class="field">
+            <label for="f-notes">Ar yra kažkas kito, ką norėtum, kad žinočiau šią savaitę <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="f-notes" name="additional_notes"></textarea>
+          </div>
+          <div class="field">
+            <label for="f-adjust">Ar jauti, kad programoje ką nors reikėtų pakoreguoti <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="f-adjust" name="program_adjustment"></textarea>
+          </div>
+        </fieldset>
+
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="siustiBtn">Siųsti ataskaitą</button>
+        </div>
+        <p class="note" id="formosPranesimas" hidden></p>
+      </form>
+    </div>
+
+    <div class="page-head" style="margin-top:var(--s-600)">
+      <h2 style="margin:0">Tavo ankstesnės ataskaitos</h2>
+    </div>
+    <div id="istorija"></div>`;
+
+  $('#ataskaitosForma').addEventListener('submit', siųskAtaskaita);
+}
+
+function skale(vardas, klausimas, kaireEnd, desineEnd) {
+  const idAtt = 'lbl-' + vardas;
+  const opcijos = Array.from({ length: 10 }, (_, i) => i + 1).map((n) => `
+    <label class="chip-opt scale-opt"><input type="radio" name="${vardas}" value="${n}"${n === 1 ? ' required' : ''}><span>${n}</span></label>`).join('');
+  return `
+    <div class="field" role="group" aria-labelledby="${idAtt}">
+      <span class="legend-inline" id="${idAtt}">${esc(klausimas)}</span>
+      <div class="scale-wrap">
+        <div class="scale" role="radiogroup" aria-labelledby="${idAtt}">${opcijos}</div>
+        <div class="scale-ends" aria-hidden="true">
+          <span class="scale-end">${esc(kaireEnd)}</span>
+          <span class="scale-end">${esc(desineEnd)}</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function siųskAtaskaita(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  if (!forma.reportValidity()) return;
+
+  const fd = new FormData(forma);
+  const eilute = {
+    user_id: vartotojas.id,
+    email: vartotojas.email,
+    full_name: profilis?.full_name || '',
+    program_week: fd.get('program_week'),
+    sessions_completed: fd.get('sessions_completed'),
+    effort_rating: Number(fd.get('effort_rating')),
+    pain_status: fd.get('pain_status'),
+    pain_detail: fd.get('pain_detail') || null,
+    avg_daily_steps: fd.get('avg_daily_steps') ? Number(fd.get('avg_daily_steps')) : null,
+    weight_kg: Number(fd.get('weight_kg')),
+    sleep_hours: fd.get('sleep_hours'),
+    sleep_quality: Number(fd.get('sleep_quality')),
+    sleep_disruptions: fd.get('sleep_disruptions') || null,
+    nutrition_adherence: Number(fd.get('nutrition_adherence')),
+    protein_intake: fd.get('protein_intake'),
+    nutrition_struggles: fd.get('nutrition_struggles'),
+    energy_level: Number(fd.get('energy_level')),
+    stress_level: Number(fd.get('stress_level')),
+    stress_source: fd.get('stress_source') || null,
+    progress_feeling: Number(fd.get('progress_feeling')),
+    proud_of: fd.get('proud_of'),
+    biggest_challenge: fd.get('biggest_challenge'),
+    additional_notes: fd.get('additional_notes') || null,
+    program_adjustment: fd.get('program_adjustment') || null,
+  };
+
+  const btn = $('#siustiBtn');
+  btn.disabled = true;
+  btn.textContent = 'Siunčiama';
+  pranesk($('#formosPranesimas'), '', 'info');
+
+  const { error } = await db.from('checkins').insert([eilute]);
+
+  btn.disabled = false;
+  btn.textContent = 'Siųsti ataskaitą';
 
   if (error) {
-    paantraste.textContent = '';
-    sarasas.innerHTML = `<div class="note note-error">${esc(klaidaLT(error))}</div>`;
+    pranesk($('#formosPranesimas'), klaidaLT(error), 'error');
     return;
   }
 
-  const matomos = (priskyrimai || []).filter((p) => p.programs && p.programs.status === 'published');
-
-  if (!matomos.length) {
-    paantraste.textContent = '';
-    sarasas.innerHTML = `
-      <div class="empty">
-        <h2>Kol kas tuščia</h2>
-        <p>Priskirtų programų dar nėra. Kai Dalius paruoš tavo planą, jis atsiras čia
-           kartu su vaizdo įrašais ir failais.</p>
-        ${arTreneris
-          ? '<div class="form-actions" style="justify-content:center"><a class="btn btn-primary" href="valdymas.html">Eiti į valdymą</a></div>'
-          : ''}
-      </div>`;
-    return;
-  }
-
-  // Kiek priedų turi kiekviena programa. Viena užklausa visoms programoms.
-  const idSarasas = matomos.map((p) => p.programs.id);
-  const { data: priedai } = await db
-    .from('attachments')
-    .select('id, program_id, kind')
-    .in('program_id', idSarasas);
-
-  const skaiciai = new Map();
-  for (const pr of priedai || []) {
-    const cur = skaiciai.get(pr.program_id) || { failai: 0, video: 0 };
-    if (pr.kind === 'file') cur.failai += 1;
-    else cur.video += 1;
-    skaiciai.set(pr.program_id, cur);
-  }
-
-  paantraste.textContent = matomos.length === 1
-    ? 'Viena aktyvi programa.'
-    : `Aktyvių programų: ${matomos.length}.`;
-
-  sarasas.className = 'grid-cards';
-  sarasas.innerHTML = matomos.map((p) => {
-    const pr = p.programs;
-    const c = skaiciai.get(pr.id) || { failai: 0, video: 0 };
-    const zymos = [];
-    if (c.video)  zymos.push(`${c.video} ${zodis(c.video, 'vaizdo įrašas', 'vaizdo įrašai', 'vaizdo įrašų')}`);
-    if (c.failai) zymos.push(`${c.failai} ${zodis(c.failai, 'failas', 'failai', 'failų')}`);
-
-    return `
-      <a class="card program-card" href="programa.html?id=${encodeURIComponent(pr.id)}">
-        <h3>${esc(pr.title)}</h3>
-        ${pr.summary ? `<p>${esc(trumpink(pr.summary, 140))}</p>` : ''}
-        <div class="meta">
-          <div class="row">
-            ${zymos.length
-              ? zymos.map((z) => `<span class="chip chip-quiet">${esc(z)}</span>`).join('')
-              : '<span class="chip chip-quiet">Turinys ruošiamas</span>'}
-          </div>
-          <p class="muted" style="font-size:.8125rem;margin-top:8px">
-            ${p.starts_on ? 'Pradžia ' + esc(data(p.starts_on)) : 'Priskirta ' + esc(data(p.assigned_at))}
-          </p>
-        </div>
-      </a>`;
-  }).join('');
+  pranesk($('#formosPranesimas'), 'Ataskaita gauta. Ačiū!', 'ok');
+  forma.reset();
+  await ikelkSavoAtsakymus();
 }
 
-function trumpink(t, n) {
-  const s = String(t || '').trim();
-  return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
+async function ikelkSavoAtsakymus() {
+  const laukas = $('#istorija');
+  if (!laukas) return;
+  laukas.innerHTML = '<div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>';
+
+  const { data: eilutes, error } = await db
+    .from('checkins')
+    .select('*')
+    .eq('user_id', vartotojas.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    laukas.innerHTML = `<div class="note note-error">${esc(klaidaLT(error))}</div>`;
+    return;
+  }
+
+  savoAtsakymai = eilutes || [];
+
+  if (!savoAtsakymai.length) {
+    laukas.innerHTML = '<p class="muted">Kol kas ataskaitų nėra. Pirmą kartą užpildžius, jos rodysis čia.</p>';
+    return;
+  }
+
+  laukas.innerHTML = savoAtsakymai.map((c) => `
+    <div class="card" style="margin-top:var(--s-200)">
+      <div class="card-head">
+        <h3 style="margin:0">${esc(c.program_week || 'Savaitė nenurodyta')}</h3>
+        <span class="row-end muted">${esc(data(c.created_at, true))}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s-100) var(--s-300);font-size:.9375rem;margin-top:var(--s-100)">
+        <div><span class="muted">Treniruotės</span><br>${esc(c.sessions_completed)}</div>
+        <div><span class="muted">Pastangos</span><br>${esc(c.effort_rating)}/10</div>
+        <div><span class="muted">Svoris</span><br>${esc(c.weight_kg)} kg</div>
+        <div><span class="muted">Miegas</span><br>${esc(c.sleep_hours)}, kokybė ${esc(c.sleep_quality)}/10</div>
+        <div><span class="muted">Mityba</span><br>${esc(c.nutrition_adherence)}/10</div>
+        <div><span class="muted">Energija</span><br>${esc(c.energy_level)}/10</div>
+        <div><span class="muted">Stresas</span><br>${esc(c.stress_level)}/10</div>
+        <div><span class="muted">Progresas</span><br>${esc(c.progress_feeling)}/10</div>
+      </div>
+      <details style="margin-top:var(--s-200)">
+        <summary class="muted" style="cursor:pointer;font-size:.875rem">Visas tekstas</summary>
+        <div style="margin-top:var(--s-100);display:flex;flex-direction:column;gap:var(--s-100);font-size:.9375rem">
+          ${c.pain_detail ? `<div><strong>Skausmo detalės</strong><br>${esc(c.pain_detail)}</div>` : ''}
+          ${c.sleep_disruptions ? `<div><strong>Miego trikdžiai</strong><br>${esc(c.sleep_disruptions)}</div>` : ''}
+          <div><strong>Mitybos sunkumai</strong><br>${esc(c.nutrition_struggles)}</div>
+          ${c.stress_source ? `<div><strong>Streso šaltinis</strong><br>${esc(c.stress_source)}</div>` : ''}
+          <div><strong>Kuo didžiuojasi</strong><br>${esc(c.proud_of)}</div>
+          <div><strong>Didžiausias iššūkis</strong><br>${esc(c.biggest_challenge)}</div>
+          ${c.additional_notes ? `<div><strong>Papildomai</strong><br>${esc(c.additional_notes)}</div>` : ''}
+          ${c.program_adjustment ? `<div><strong>Siūlomi pakeitimai</strong><br>${esc(c.program_adjustment)}</div>` : ''}
+        </div>
+      </details>
+    </div>`).join('');
 }
 </script>
 </body>
