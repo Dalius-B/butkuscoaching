@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savaitinė ataskaita | Butkus Coaching</title>
+<meta name="description" content="Savaitinė kliento ataskaita: treniruotės, miegas, mityba, energija ir savijauta.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+img, svg { display: block; max-width: 100%; }
+ul { list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+:root {
+  --ink: #101010; --ink-soft: #4B4C46;
+  --paper: #E8E8E3; --surface: #F2F2EE;
+  --volt: #FFDD44;
+  --hair-ink: rgba(16,16,16,0.14);
+  --hair-paper: rgba(232,232,227,0.16);
+  --soft-paper: rgba(232,232,227,0.64);
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --s-50: 4px; --s-75: 8px; --s-100: 12px; --s-200: 16px; --s-300: 24px;
+  --s-400: 32px; --s-500: 40px; --s-600: 48px; --s-700: 64px; --s-800: 80px;
+  --r-sm: 6px; --r-lg: 16px; --r-pill: 999px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --shell: 860px; --nav-h: 64px;
+}
+
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--display); font-weight: 400; font-stretch: 100%;
+  font-size: 1.125rem; line-height: 1.6;
+  color: var(--ink); background: var(--paper);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+::selection { background: var(--volt); color: var(--ink); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.on-ink :focus-visible { outline-color: var(--volt); }
+
+.shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: var(--s-300); }
+
+h1, h2, .display {
+  font-family: var(--display); font-weight: 800; font-stretch: 115%;
+  text-transform: uppercase; line-height: 0.94; letter-spacing: -0.012em; text-wrap: balance;
+}
+p { text-wrap: pretty; }
+
+/* nav */
+.nav { position: sticky; top: 0; z-index: 100; background: var(--ink); color: var(--paper); }
+.nav-inner { height: var(--nav-h); display: flex; align-items: center; justify-content: space-between; gap: var(--s-300); }
+.wordmark {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-stretch: 108%;
+  font-size: 1.25rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1;
+  min-height: 44px; padding-block: var(--s-100);
+}
+.wordmark i { font-style: normal; color: var(--volt); }
+
+/* head block */
+.head { background: var(--ink); color: var(--paper); padding-block: clamp(var(--s-600), 7vw, var(--s-700)); }
+.label {
+  display: inline-flex; align-items: center; gap: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.18em; color: var(--soft-paper);
+}
+.head h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin-top: var(--s-300); }
+.head .deck { font-size: 1.0625rem; color: var(--soft-paper); max-width: 60ch; margin-top: var(--s-300); }
+
+/* form area */
+.doc { padding-block: clamp(var(--s-600), 8vw, var(--s-800)); }
+
+.form-card {
+  background: #FFFFFF; color: var(--ink);
+  border-radius: var(--r-lg); padding: var(--s-500);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 10px 30px -20px rgba(16,16,16,0.35);
+}
+.step { display: flex; flex-direction: column; gap: var(--s-300); border: 0; }
+.step + .step { margin-top: var(--s-500); padding-top: var(--s-500); border-top: 1px solid var(--hair-ink); }
+.step legend {
+  font-family: var(--display); font-size: 1.125rem; font-weight: 800; font-stretch: 106%;
+  text-transform: uppercase; letter-spacing: 0.01em; margin-bottom: var(--s-100);
+}
+.field { display: flex; flex-direction: column; gap: var(--s-75); }
+.field label, .legend-inline {
+  font-family: var(--display); font-size: 0.8125rem; font-weight: 600; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink);
+}
+.hint { display: block; text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ink-soft); font-size: 0.875rem; margin-top: 2px; }
+.field input:not([type="checkbox"]):not([type="radio"]), .field textarea {
+  font-family: var(--display); font-size: 1rem; font-stretch: 100%; color: var(--ink);
+  background: #FFFFFF; border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  padding: var(--s-100) var(--s-200); min-height: 48px; width: 100%;
+  transition-property: border-color, box-shadow; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.field textarea { min-height: 96px; resize: vertical; line-height: 1.5; padding-block: var(--s-100); }
+.field input:hover, .field textarea:hover { border-color: rgba(16,16,16,0.42); }
+.field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink); }
+
+/* chip radios: sessions, sleep hours, protein, pain */
+.chips { display: flex; flex-wrap: wrap; gap: var(--s-75); }
+.chip-opt { position: relative; }
+.chip-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.chip-opt span {
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  min-height: 44px; padding: 0 var(--s-200);
+  font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;
+  border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-pill); background: #FFFFFF;
+  transition-property: border-color, background-color; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.chip-opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.chip-opt input:checked + span { border-color: var(--ink); background: var(--volt); font-weight: 600; }
+.chip-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* 1 to 10 scale */
+.scale { display: flex; flex-wrap: wrap; gap: var(--s-50); }
+.scale-opt { flex: 1 1 40px; }
+.scale-opt span { padding: 0; font-variant-numeric: tabular-nums; }
+.scale-ends { display: flex; justify-content: space-between; gap: var(--s-200); margin-top: var(--s-75); }
+.scale-end {
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft); max-width: 40%;
+}
+
+/* stacked cards: pain status */
+.opt-list { display: flex; flex-direction: column; gap: var(--s-75); }
+.opt { position: relative; }
+.opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.opt span {
+  display: block; padding: var(--s-200); border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  background: #FFFFFF; min-height: 48px;
+  font-size: 1rem; font-weight: 400; text-transform: none; letter-spacing: 0;
+  transition-property: border-color, background-color, box-shadow; transition-duration: 150ms; transition-timing-function: var(--ease-out);
+}
+.opt input:hover + span { border-color: rgba(16,16,16,0.45); }
+.opt input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink), inset 0 0 0 5px var(--volt); }
+.opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-75);
+  min-height: 48px; padding: var(--s-100) var(--s-300);
+  font-family: var(--display); font-size: 1rem; font-weight: 700;
+  font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none; border-radius: var(--r-pill); white-space: nowrap;
+  background: var(--volt); color: var(--ink); box-shadow: 0 1px 2px rgba(16,16,16,0.16);
+  transition-property: background-color, scale; transition-duration: 160ms; transition-timing-function: var(--ease-out);
+  width: 100%; margin-top: var(--s-200);
+}
+.btn:hover { background: #FFE873; }
+.btn:active { scale: 0.96; }
+.btn:disabled { opacity: 0.6; cursor: default; }
+.btn:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
+
+.form-status { margin-top: var(--s-200); font-size: 0.9375rem; }
+.form-status:empty { display: none; }
+.form-status.is-error { color: #B3261E; }
+.form-foot { margin-top: var(--s-200); font-size: 0.8125rem; color: var(--ink-soft); text-align: center; }
+
+.form-done { text-align: left; }
+.form-done h3 { font-size: 1.5rem; font-stretch: 106%; margin-bottom: var(--s-200); text-transform: uppercase; letter-spacing: -0.01em; }
+.form-done p { color: var(--ink-soft); }
+.form-done .tickbig { width: 48px; height: 48px; border-radius: var(--r-pill); background: var(--volt); display: flex; align-items: center; justify-content: center; margin-bottom: var(--s-300); }
+.form-done .tickbig svg { width: 26px; height: 26px; stroke: var(--ink); fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+form[hidden], .form-done[hidden] { display: none; }
+
+.skip { position: absolute; left: var(--s-200); top: -100px; z-index: 200;
+  background: var(--volt); color: var(--ink); padding: var(--s-100) var(--s-300); border-radius: var(--r-pill);
+  font-family: var(--display); font-size: 0.875rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; text-decoration: none;
+  transition-property: top; transition-duration: 200ms; transition-timing-function: var(--ease-out); }
+.skip:focus { top: var(--s-200); }
+
+@media (max-width: 620px) {
+  .form-card { padding: var(--s-400) var(--s-300); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Pereiti prie turinio</a>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="index.html">Butkus<i>/</i>Coaching</a>
+  </div>
+</header>
+
+<main id="main">
+
+  <div class="head on-ink">
+    <div class="shell">
+      <p class="label">Klientams</p>
+      <h1>Savaitinė ataskaita</h1>
+      <p class="deck">Užtrunka apie penkias minutes. Būk sąžiningas, čia nėra neteisingų atsakymų, kuo tikslesnis būsi, tuo geriau galėsiu tave treniruoti. Pildyk kiekvieną sekmadienio vakarą.</p>
+    </div>
+  </div>
+
+  <div class="doc">
+    <div class="shell">
+      <div class="form-card">
+        <form id="checkinForm">
+
+          <fieldset class="step">
+            <legend>Apie tave</legend>
+            <div class="field">
+              <label for="f-name">Tavo vardas ir pavardė</label>
+              <input id="f-name" name="full_name" type="text" required>
+            </div>
+            <div class="field">
+              <label for="f-email">Tavo el. paštas</label>
+              <input id="f-email" name="email" type="email" required autocomplete="email">
+            </div>
+            <div class="field">
+              <label for="f-week">Kurią programos savaitę šiuo metu esi?</label>
+              <input id="f-week" name="program_week" type="text" required placeholder="Pvz., 3 savaitė">
+            </div>
+          </fieldset>
+
+          <fieldset class="step">
+            <legend>Treniruotės</legend>
+            <div class="field" role="group" aria-labelledby="lbl-sessions">
+              <span class="legend-inline" id="lbl-sessions">Kiek treniruočių atlikai šią savaitę?</span>
+              <div class="chips" role="radiogroup" aria-labelledby="lbl-sessions">
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="0" required><span>0</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="1"><span>1</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="2"><span>2</span></label>
+                <label class="chip-opt"><input type="radio" name="sessions_completed" value="3"><span>3</span></label>
+              </div>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-effort">
+              <span class="legend-inline" id="lbl-effort">Kaip įvertintum savo vidutines pastangas treniruojantis šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-effort">
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="effort_rating" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Vos stengiausi</span>
+                  <span class="scale-end">Atidaviau viską</span>
+                </div>
+              </div>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-pain">
+              <span class="legend-inline" id="lbl-pain">Ar per treniruotes jautei skausmą, diskomfortą ar traumą?</span>
+              <div class="opt-list" role="radiogroup" aria-labelledby="lbl-pain">
+                <label class="opt"><input type="radio" name="pain_status" value="Ne, viskas gerai" required><span>Ne, viskas gerai</span></label>
+                <label class="opt"><input type="radio" name="pain_status" value="Nedidelis diskomfortas, bet treniravausi toliau"><span>Nedidelis diskomfortas, bet treniravausi toliau</span></label>
+                <label class="opt"><input type="radio" name="pain_status" value="Taip, pakeičiau pratimą"><span>Taip, pakeičiau pratimą</span></label>
+                <label class="opt"><input type="radio" name="pain_status" value="Taip, teko praleisti pratimą"><span>Taip, teko praleisti pratimą</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-weight">Koks tavo svoris šią savaitę? (kg)</label>
+              <input id="f-weight" name="weight_kg" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+            </div>
+          </fieldset>
+
+          <fieldset class="step">
+            <legend>Miegas</legend>
+            <div class="field" role="group" aria-labelledby="lbl-sleephours">
+              <span class="legend-inline" id="lbl-sleephours">Kiek vidutiniškai valandų miegojai per naktį šią savaitę?</span>
+              <div class="chips" role="radiogroup" aria-labelledby="lbl-sleephours">
+                <label class="chip-opt"><input type="radio" name="sleep_hours" value="Mažiau nei 5" required><span>Mažiau nei 5</span></label>
+                <label class="chip-opt"><input type="radio" name="sleep_hours" value="5-6"><span>5-6</span></label>
+                <label class="chip-opt"><input type="radio" name="sleep_hours" value="6-7"><span>6-7</span></label>
+                <label class="chip-opt"><input type="radio" name="sleep_hours" value="7-8"><span>7-8</span></label>
+                <label class="chip-opt"><input type="radio" name="sleep_hours" value="Daugiau nei 8"><span>Daugiau nei 8</span></label>
+              </div>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-sleepquality">
+              <span class="legend-inline" id="lbl-sleepquality">Kaip įvertintum savo miego kokybę šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-sleepquality">
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="sleep_quality" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Baisi</span>
+                  <span class="scale-end">Puiki</span>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-sleepissues">Ar kas nors trikdo tavo miegą šią savaitę? <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <textarea id="f-sleepissues" name="sleep_disruptions"></textarea>
+            </div>
+          </fieldset>
+
+          <fieldset class="step">
+            <legend>Mityba</legend>
+            <div class="field" role="group" aria-labelledby="lbl-nutrition">
+              <span class="legend-inline" id="lbl-nutrition">Kaip tiksliai laikeisi mitybos plano šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-nutrition">
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="nutrition_adherence" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Visiškai ignoravau</span>
+                  <span class="scale-end">Laikiausi tiksliai</span>
+                </div>
+              </div>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-protein">
+              <span class="legend-inline" id="lbl-protein">Kaip apibūdintum baltymų suvartojimą šią savaitę?</span>
+              <p class="hint">Aukštas — daugumą dienų pasiekiau tikslą · Vidutinis — kai kurias dienas · Žemas — sunkiai sekėsi gauti pakankamai</p>
+              <div class="chips" role="radiogroup" aria-labelledby="lbl-protein">
+                <label class="chip-opt"><input type="radio" name="protein_intake" value="Aukštas" required><span>Aukštas</span></label>
+                <label class="chip-opt"><input type="radio" name="protein_intake" value="Vidutinis"><span>Vidutinis</span></label>
+                <label class="chip-opt"><input type="radio" name="protein_intake" value="Žemas"><span>Žemas</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-nutrissues">Ar turėjai sunkumų su maistu ar mityba šią savaitę?</label>
+              <textarea id="f-nutrissues" name="nutrition_struggles" required></textarea>
+            </div>
+          </fieldset>
+
+          <fieldset class="step">
+            <legend>Energija ir savijauta</legend>
+            <div class="field" role="group" aria-labelledby="lbl-energy">
+              <span class="legend-inline" id="lbl-energy">Koks buvo tavo vidutinis energijos lygis per dieną šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-energy">
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="energy_level" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Visą dieną išsekęs</span>
+                  <span class="scale-end">Visą dieną kupinas energijos</span>
+                </div>
+              </div>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-stress">
+              <span class="legend-inline" id="lbl-stress">Koks buvo tavo vidutinis streso lygis šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-stress">
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="stress_level" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Visiškai atsipalaidavęs</span>
+                  <span class="scale-end">Itin sustresuotas</span>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="f-stresssource">Kas buvo pagrindinis streso šaltinis šią savaitę? <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <textarea id="f-stresssource" name="stress_source"></textarea>
+            </div>
+            <div class="field" role="group" aria-labelledby="lbl-progress">
+              <span class="legend-inline" id="lbl-progress">Kaip apskritai vertini savo progresą šią savaitę?</span>
+              <div class="scale-wrap">
+                <div class="scale" role="radiogroup" aria-labelledby="lbl-progress">
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="1" required><span>1</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="2"><span>2</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="3"><span>3</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="4"><span>4</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="5"><span>5</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="6"><span>6</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="7"><span>7</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="8"><span>8</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="9"><span>9</span></label>
+                  <label class="chip-opt scale-opt"><input type="radio" name="progress_feeling" value="10"><span>10</span></label>
+                </div>
+                <div class="scale-ends" aria-hidden="true">
+                  <span class="scale-end">Labai nusivylęs</span>
+                  <span class="scale-end">Itin motyvuotas</span>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset class="step">
+            <legend>Atspindys</legend>
+            <div class="field">
+              <label for="f-proud">Kuo labiausiai didžiuojiesi iš šios savaitės?</label>
+              <textarea id="f-proud" name="proud_of" required></textarea>
+            </div>
+            <div class="field">
+              <label for="f-challenge">Koks buvo didžiausias šios savaitės iššūkis?</label>
+              <textarea id="f-challenge" name="biggest_challenge" required></textarea>
+            </div>
+            <div class="field">
+              <label for="f-notes">Ar yra kažkas kito, ką norėtum, kad žinočiau šią savaitę? <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <textarea id="f-notes" name="additional_notes"></textarea>
+            </div>
+            <div class="field">
+              <label for="f-adjust">Ar jauti, kad programoje ką nors reikėtų pakoreguoti? <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <textarea id="f-adjust" name="program_adjustment"></textarea>
+            </div>
+          </fieldset>
+
+          <button class="btn" type="submit" id="sendBtn">Siųsti ataskaitą</button>
+          <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
+          <p class="form-foot">Tavo atsakymai saugomi ir naudojami tik tavo programai koreguoti.</p>
+        </form>
+
+        <div class="form-done" id="formDone" hidden>
+          <div class="tickbig" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></div>
+          <h3>Ataskaita gauta</h3>
+          <p>Ačiū! Peržiūrėsiu tavo savaitę ir, jei reikės ką nors keisti programoje, praneš tau atskirai.</p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+
+  var SUPABASE_URL = "https://asqhesgicdtmgaafglkl.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_QpIXxZdGhMeSaFulNGxHcw_gBaxJZd1";
+  var WEB3FORMS_KEY = "bc7e0832-f27f-4199-9cde-b02add5b9150";
+
+  var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  var form = document.getElementById("checkinForm");
+  var status = document.getElementById("formStatus");
+  var done = document.getElementById("formDone");
+  var sendBtn = document.getElementById("sendBtn");
+
+  function notifyByEmail(row) {
+    return fetch("https://api.web3forms.com/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        access_key: WEB3FORMS_KEY,
+        subject: "Nauja savaitinė ataskaita: " + row.full_name,
+        from_name: "Butkus Coaching svetainė",
+        "Vardas": row.full_name,
+        "El. paštas": row.email,
+        "Programos savaitė": row.program_week,
+        "Pastaba": "Pilną ataskaitą rasi Supabase lentelėje \"checkins\"."
+      })
+    });
+  }
+
+  form.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    if (!form.reportValidity()) return;
+
+    var fd = new FormData(form);
+    var row = {
+      full_name: fd.get("full_name"),
+      email: fd.get("email"),
+      program_week: fd.get("program_week"),
+      sessions_completed: fd.get("sessions_completed"),
+      effort_rating: Number(fd.get("effort_rating")),
+      pain_status: fd.get("pain_status"),
+      weight_kg: Number(fd.get("weight_kg")),
+      sleep_hours: fd.get("sleep_hours"),
+      sleep_quality: Number(fd.get("sleep_quality")),
+      sleep_disruptions: fd.get("sleep_disruptions") || null,
+      nutrition_adherence: Number(fd.get("nutrition_adherence")),
+      protein_intake: fd.get("protein_intake"),
+      nutrition_struggles: fd.get("nutrition_struggles"),
+      energy_level: Number(fd.get("energy_level")),
+      stress_level: Number(fd.get("stress_level")),
+      stress_source: fd.get("stress_source") || null,
+      progress_feeling: Number(fd.get("progress_feeling")),
+      proud_of: fd.get("proud_of"),
+      biggest_challenge: fd.get("biggest_challenge"),
+      additional_notes: fd.get("additional_notes") || null,
+      program_adjustment: fd.get("program_adjustment") || null
+    };
+
+    sendBtn.disabled = true;
+    sendBtn.textContent = "Siunčiama";
+    status.textContent = "";
+    status.classList.remove("is-error");
+
+    db.from("checkins").insert([row]).then(function (res) {
+      if (res.error) throw res.error;
+      notifyByEmail(row).catch(function () {});
+      form.hidden = true;
+      done.hidden = false;
+      done.setAttribute("tabindex", "-1");
+      done.focus();
+    }).catch(function () {
+      status.classList.add("is-error");
+      status.textContent = "Nepavyko išsiųsti. Patikrink interneto ryšį ir bandyk dar kartą.";
+    }).then(function () {
+      sendBtn.disabled = false;
+      sendBtn.textContent = "Siųsti ataskaitą";
+    });
+  });
+})();
+</script>
+</body>
+</html>
