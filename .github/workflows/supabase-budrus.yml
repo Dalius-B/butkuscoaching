@@ -1,0 +1,25 @@
+# Nemokamas Supabase projektas sustoja po septynių dienų be duomenų bazės
+# veiklos ir pats nepabunda. Šis darbas tris kartus per savaitę perskaito
+# public.keepalive lentelę (žr. supabase/duomenu-baze.sql, 9 dalis), kad
+# projektas liktų gyvas. Naudoja tik viešą "publishable" raktą, kuris
+# pats savaime prieigos neduoda -- apsauga yra duomenų bazės taisyklėse.
+#
+# GitHub suplanuotus darbus paleidžia tik iš numatytosios šakos (main), ir
+# juos automatiškai išjungia, kai repozitorijoje 60 dienų nebūna jokios
+# veiklos -- tada Actions skiltyje jį reikia įjungti ranka.
+name: Supabase budrumo darbas
+
+on:
+  schedule:
+    - cron: '0 6 * * 1,3,5'
+  workflow_dispatch: {}
+
+jobs:
+  budrus:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Perskaityk keepalive lentelę
+        run: |
+          curl -sf "https://asqhesgicdtmgaafglkl.supabase.co/rest/v1/keepalive?select=id" \
+            -H "apikey: sb_publishable_QpIXxZdGhMeSaFulNGxHcw_gBaxJZd1" \
+            -H "Authorization: Bearer sb_publishable_QpIXxZdGhMeSaFulNGxHcw_gBaxJZd1"

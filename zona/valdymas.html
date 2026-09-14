@@ -46,6 +46,7 @@
         <button class="tab" role="tab" type="button" data-kortele="programos" aria-selected="true">Programos</button>
         <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="false">Klientai</button>
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
+        <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
       </div>
 
       <p class="note" id="pranesimas" hidden></p>
@@ -53,6 +54,7 @@
       <section id="kortele-programos"></section>
       <section id="kortele-klientai"  hidden></section>
       <section id="kortele-kvietimai" hidden></section>
+      <section id="kortele-patikrinimai" hidden></section>
     </div>
   </div>
 </main>
@@ -67,7 +69,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
-  atsitiktinis, absoliutus, BUSENOS, BUCKET,
+  atsitiktinis, absoliutus, BUSENOS, BUCKET, zodis,
 } from './app.js';
 
 let profiliai = [];
@@ -75,6 +77,7 @@ let savasId = null;
 let programos = [];
 let kvietimai = [];
 let priskyrimai = [];
+let patikrinimai = [];
 
 paleisk();
 
@@ -95,33 +98,36 @@ async function paleisk() {
 }
 
 async function perkrauk() {
-  const [p1, p2, p3, p4] = await Promise.all([
+  const [p1, p2, p3, p4, p5] = await Promise.all([
     db.from('profiles').select('id, email, full_name, phone, status, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, created_at').order('created_at', { ascending: false }),
     db.from('assignments').select('id, program_id, client_id, status'),
+    db.from('checkins').select('*').order('created_at', { ascending: false }),
   ]);
 
-  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error;
+  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error;
   if (pirmaKlaida) {
     pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
   }
 
-  profiliai   = p1.data || [];
-  programos   = p2.data || [];
-  kvietimai   = p3.data || [];
-  priskyrimai = p4.data || [];
+  profiliai    = p1.data || [];
+  programos    = p2.data || [];
+  kvietimai    = p3.data || [];
+  priskyrimai  = p4.data || [];
+  patikrinimai = p5.data || [];
 
   piesProgramas();
   piesKlientus();
   piesKvietimus();
+  piesPatikrinimus();
 }
 
 function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -488,6 +494,110 @@ async function trinkKvietima(id) {
   }
   pranesk($('#pranesimas'), 'Kvietimas ištrintas.', 'ok');
   await perkrauk();
+}
+
+// =============================================================================
+//  PATIKRINIMAI
+//
+//  Savaitinės kliento ataskaitos (checkin.html) suvestinė kortelė. Kol
+//  ataskaitos nėra susietos su vartotojo id (formą galima užpildyti be
+//  prisijungimo), klientas atpažįstamas pagal el. paštą, tokį patį, kokį jis
+//  įrašė formoje. Jei žmogus formoje suklysta rašydamas paštą, jo ataskaita
+//  čia tiesiog nepriskiriama niekam ir lieka matoma tik Supabase lentelėje.
+// =============================================================================
+function klientoPatikrinimai(klientas) {
+  const paštas = (klientas.email || '').trim().toLowerCase();
+  if (!paštas) return [];
+  return patikrinimai.filter((c) => (c.email || '').trim().toLowerCase() === paštas);
+}
+
+function piesPatikrinimus() {
+  const klientai = profiliai.filter((p) => p.id !== savasId);
+
+  const eilutes = klientai.map((k) => {
+    const savi = klientoPatikrinimai(k);
+    const paskutinis = savi[0];
+    return `
+      <tr>
+        <td>
+          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
+        </td>
+        <td>${savi.length}</td>
+        <td>${paskutinis ? esc(data(paskutinis.created_at)) : '<span class="muted">nėra</span>'}</td>
+        <td>
+          <button class="btn btn-ghost btn-sm zr-patikrinimai" type="button" data-id="${esc(k.id)}"${savi.length ? '' : ' disabled'}>Žiūrėti</button>
+        </td>
+      </tr>`;
+  }).join('');
+
+  $('#kortele-patikrinimai').innerHTML = `
+    <div class="card">
+      <div class="card-head"><h2>Klientų ataskaitos</h2><span class="row-end muted">${klientai.length}</span></div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Kiekvieną sekmadienį klientas užpildo savaitinę ataskaitą svetainėje. Čia matai visą jos istoriją, kliento el. paštu susietą su jo paskyra.
+      </p>
+      ${klientai.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Žmogus</th><th>Ataskaitų</th><th>Paskutinė</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Klientų dar nėra.</p>'}
+    </div>
+    <div id="patikrinimu-detale"></div>`;
+
+  for (const b of $$('.zr-patikrinimai')) {
+    b.addEventListener('click', () => rodykKlientoPatikrinimus(b.dataset.id));
+  }
+}
+
+function rodykKlientoPatikrinimus(clientId) {
+  const klientas = profiliai.find((p) => p.id === clientId);
+  if (!klientas) return;
+  const savi = klientoPatikrinimai(klientas);
+
+  const kortos = savi.map((c) => `
+    <div class="card" style="margin-top:var(--s-200)">
+      <div class="card-head">
+        <h3 style="margin:0">${esc(c.program_week || 'Savaitė nenurodyta')}</h3>
+        <span class="row-end muted">${esc(data(c.created_at, true))}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s-100) var(--s-300);font-size:.9375rem;margin-top:var(--s-100)">
+        <div><span class="muted">Treniruotės</span><br>${esc(c.sessions_completed)}</div>
+        <div><span class="muted">Pastangos</span><br>${esc(c.effort_rating)}/10</div>
+        <div><span class="muted">Skausmas</span><br>${esc(c.pain_status)}</div>
+        <div><span class="muted">Svoris</span><br>${esc(c.weight_kg)} kg</div>
+        <div><span class="muted">Miegas</span><br>${esc(c.sleep_hours)}, kokybė ${esc(c.sleep_quality)}/10</div>
+        <div><span class="muted">Mityba</span><br>laikymasis ${esc(c.nutrition_adherence)}/10, baltymai ${esc(c.protein_intake)}</div>
+        <div><span class="muted">Energija</span><br>${esc(c.energy_level)}/10</div>
+        <div><span class="muted">Stresas</span><br>${esc(c.stress_level)}/10</div>
+        <div><span class="muted">Progresas</span><br>${esc(c.progress_feeling)}/10</div>
+        ${c.avg_daily_steps ? `<div><span class="muted">Žingsniai</span><br>${esc(c.avg_daily_steps)}</div>` : ''}
+      </div>
+      <details style="margin-top:var(--s-200)">
+        <summary class="muted" style="cursor:pointer;font-size:.875rem">Visas tekstas</summary>
+        <div style="margin-top:var(--s-100);display:flex;flex-direction:column;gap:var(--s-100);font-size:.9375rem">
+          ${c.pain_detail ? `<div><strong>Skausmo detalės</strong><br>${esc(c.pain_detail)}</div>` : ''}
+          ${c.sleep_disruptions ? `<div><strong>Miego trikdžiai</strong><br>${esc(c.sleep_disruptions)}</div>` : ''}
+          <div><strong>Mitybos sunkumai</strong><br>${esc(c.nutrition_struggles)}</div>
+          ${c.stress_source ? `<div><strong>Streso šaltinis</strong><br>${esc(c.stress_source)}</div>` : ''}
+          <div><strong>Kuo didžiuojasi</strong><br>${esc(c.proud_of)}</div>
+          <div><strong>Didžiausias iššūkis</strong><br>${esc(c.biggest_challenge)}</div>
+          ${c.additional_notes ? `<div><strong>Papildomai</strong><br>${esc(c.additional_notes)}</div>` : ''}
+          ${c.program_adjustment ? `<div><strong>Siūlomi pakeitimai</strong><br>${esc(c.program_adjustment)}</div>` : ''}
+        </div>
+      </details>
+    </div>`).join('');
+
+  $('#patikrinimu-detale').innerHTML = `
+    <div class="page-head" style="margin-top:var(--s-300);margin-bottom:0">
+      <h2>${esc(klientas.full_name || klientas.email)}</h2>
+      <p>${savi.length} ${zodis(savi.length, 'ataskaita', 'ataskaitos', 'ataskaitų')}.</p>
+    </div>
+    ${kortos || '<p class="muted">Ataskaitų nėra.</p>'}`;
+
+  $('#patikrinimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 </script>
 </body>
