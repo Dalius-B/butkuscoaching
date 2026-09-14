@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mano programos | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <h1 id="antraste">Mano programos</h1>
+      <p id="paantraste">Kraunama</p>
+    </div>
+    <div id="sarasas">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunamos programos</span></div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, esc, data, klaidaLT, reikiaSesijos, rodykNav,
+  panaudokLaukiantiKvietima, zodis,
+} from './app.js';
+
+const sarasas    = $('#sarasas');
+const paantraste = $('#paantraste');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+
+  let profilis = s.profilis;
+
+  if (s.klaida) {
+    sarasas.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
+    paantraste.textContent = '';
+    return;
+  }
+
+  // Jei žmogus registravosi su patvirtinimo laišku, kvietimas dar nepanaudotas.
+  if (await panaudokLaukiantiKvietima(profilis)) {
+    const { data: naujas } = await db
+      .from('profiles')
+      .select('id, email, full_name, phone, status, created_at')
+      .eq('id', s.vartotojas.id)
+      .maybeSingle();
+    if (naujas) profilis = naujas;
+  }
+
+  rodykNav(profilis, 'mano.html', s.arTreneris);
+
+  const vardas = profilis?.full_name?.trim();
+  // Kreipinys be giminės, nes zona skirta ir moterims, ir vyrams.
+  $('#antraste').textContent = vardas ? `Labas, ${vardas.split(' ')[0]}` : 'Mano programos';
+
+  if (profilis?.status === 'pending') {
+    paantraste.textContent = '';
+    sarasas.innerHTML = `
+      <div class="empty">
+        <h2>Paskyra sukurta</h2>
+        <p>Kvietimas dar nepatvirtintas arba Dalius dar nepriskyrė tau programos.
+           Kai tik ji atsiras, ją matysi būtent čia.</p>
+      </div>`;
+    return;
+  }
+
+  await rodykProgramas(s.arTreneris);
+}
+
+async function rodykProgramas(arTreneris) {
+  const { data: priskyrimai, error } = await db
+    .from('assignments')
+    .select('id, status, note, starts_on, assigned_at, programs!inner (id, title, summary, status, updated_at)')
+    .eq('status', 'active')
+    .order('assigned_at', { ascending: false });
+
+  if (error) {
+    paantraste.textContent = '';
+    sarasas.innerHTML = `<div class="note note-error">${esc(klaidaLT(error))}</div>`;
+    return;
+  }
+
+  const matomos = (priskyrimai || []).filter((p) => p.programs && p.programs.status === 'published');
+
+  if (!matomos.length) {
+    paantraste.textContent = '';
+    sarasas.innerHTML = `
+      <div class="empty">
+        <h2>Kol kas tuščia</h2>
+        <p>Priskirtų programų dar nėra. Kai Dalius paruoš tavo planą, jis atsiras čia
+           kartu su vaizdo įrašais ir failais.</p>
+        ${arTreneris
+          ? '<div class="form-actions" style="justify-content:center"><a class="btn btn-primary" href="valdymas.html">Eiti į valdymą</a></div>'
+          : ''}
+      </div>`;
+    return;
+  }
+
+  // Kiek priedų turi kiekviena programa. Viena užklausa visoms programoms.
+  const idSarasas = matomos.map((p) => p.programs.id);
+  const { data: priedai } = await db
+    .from('attachments')
+    .select('id, program_id, kind')
+    .in('program_id', idSarasas);
+
+  const skaiciai = new Map();
+  for (const pr of priedai || []) {
+    const cur = skaiciai.get(pr.program_id) || { failai: 0, video: 0 };
+    if (pr.kind === 'file') cur.failai += 1;
+    else cur.video += 1;
+    skaiciai.set(pr.program_id, cur);
+  }
+
+  paantraste.textContent = matomos.length === 1
+    ? 'Viena aktyvi programa.'
+    : `Aktyvių programų: ${matomos.length}.`;
+
+  sarasas.className = 'grid-cards';
+  sarasas.innerHTML = matomos.map((p) => {
+    const pr = p.programs;
+    const c = skaiciai.get(pr.id) || { failai: 0, video: 0 };
+    const zymos = [];
+    if (c.video)  zymos.push(`${c.video} ${zodis(c.video, 'vaizdo įrašas', 'vaizdo įrašai', 'vaizdo įrašų')}`);
+    if (c.failai) zymos.push(`${c.failai} ${zodis(c.failai, 'failas', 'failai', 'failų')}`);
+
+    return `
+      <a class="card program-card" href="programa.html?id=${encodeURIComponent(pr.id)}">
+        <h3>${esc(pr.title)}</h3>
+        ${pr.summary ? `<p>${esc(trumpink(pr.summary, 140))}</p>` : ''}
+        <div class="meta">
+          <div class="row">
+            ${zymos.length
+              ? zymos.map((z) => `<span class="chip chip-quiet">${esc(z)}</span>`).join('')
+              : '<span class="chip chip-quiet">Turinys ruošiamas</span>'}
+          </div>
+          <p class="muted" style="font-size:.8125rem;margin-top:8px">
+            ${p.starts_on ? 'Pradžia ' + esc(data(p.starts_on)) : 'Priskirta ' + esc(data(p.assigned_at))}
+          </p>
+        </div>
+      </a>`;
+  }).join('');
+}
+
+function trumpink(t, n) {
+  const s = String(t || '').trim();
+  return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
+}
+</script>
+</body>
+</html>

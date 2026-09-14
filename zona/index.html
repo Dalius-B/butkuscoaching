@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prisijungimas | Butkus Coaching klientų zona</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="../index.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <a class="btn btn-ghost btn-sm" href="../index.html">Į svetainę</a>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1>Prisijunk</h1>
+      <p>Čia rasi savo treniruočių programas, vaizdo įrašus ir failus.</p>
+
+      <p class="note" id="pranesimas" hidden></p>
+
+      <form id="forma" novalidate>
+        <div class="field">
+          <label for="el-pastas">El. paštas</label>
+          <input id="el-pastas" name="email" type="email" autocomplete="email" required>
+          <p class="err" id="klaida-el-pastas" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label for="slaptazodis">Slaptažodis</label>
+          <input id="slaptazodis" name="password" type="password" autocomplete="current-password" required>
+          <p class="err" id="klaida-slaptazodis" aria-live="polite"></p>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn btn-primary btn-block" type="submit" id="siusti">Prisijungti</button>
+        </div>
+      </form>
+
+      <div class="auth-foot">
+        <a href="slaptazodis.html">Pamiršai slaptažodį</a>
+        <span>Paskyros kuriamos tik pagal Daliaus kvietimą</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { db, KONFIGURUOTA, $, pranesk, klaidaLT, rodykKonfigKlaida, sesija } from './app.js';
+
+const forma       = $('#forma');
+const mygtukas    = $('#siusti');
+const pranesimas  = $('#pranesimas');
+const laukoPastas = $('#el-pastas');
+const laukoSlapt  = $('#slaptazodis');
+
+if (!KONFIGURUOTA) {
+  rodykKonfigKlaida();
+} else {
+  paleisk();
+}
+
+async function paleisk() {
+  const params = new URLSearchParams(location.search);
+
+  if (params.get('priezastis') === 'blocked') {
+    pranesk(pranesimas, 'Tavo prieiga sustabdyta. Parašyk Daliui, jei tai klaida.', 'error');
+  } else if (params.get('priezastis') === 'atsijungta') {
+    pranesk(pranesimas, 'Atsijungei sėkmingai.', 'ok');
+  } else if (params.get('registruota') === '1') {
+    pranesk(pranesimas, 'Paskyra sukurta. Dabar prisijunk su savo el. paštu ir slaptažodžiu.', 'ok');
+  } else if (params.get('priezastis') === 'rysys') {
+    pranesk(pranesimas, 'Nepavyko atnaujinti sesijos. Patikrink interneto ryšį ir bandyk dar kartą.', 'error');
+  } else if (params.get('patvirtink') === '1') {
+    pranesk(pranesimas, 'Paskyra sukurta. Pašto dėžutėje rasi patvirtinimo laišką, paspausk nuorodą jame ir grįžk čia prisijungti.', 'ok');
+  }
+
+  // Jau prisijungusio žmogaus nelaikome prisijungimo lange.
+  //
+  // Išimtis: kai atėjome su priežastimi, pavyzdžiui sustabdyta prieiga.
+  // Tokiu atveju sesija galėjo likti neišvalyta, jei atsijungimo užklausa
+  // nepasiekė serverio, ir automatinis grąžinimas atgal sukurtų begalinį
+  // ratą tarp šio puslapio ir zonos. Tada tiesiog parodome žinutę.
+  const priezastis = params.get('priezastis');
+  const s = await sesija();
+  if (s && !priezastis) {
+    location.replace(kurToliau());
+    return;
+  }
+
+  laukoPastas.focus();
+}
+
+function kurToliau() {
+  const toliau = new URLSearchParams(location.search).get('toliau');
+  // Priimame tik vietinius puslapius, kad nuoroda negalėtų nusiųsti į svetimą svetainę.
+  if (toliau && /^[a-z0-9_-]+\.html(\?[^#]*)?$/i.test(toliau)) return toliau;
+  return 'mano.html';
+}
+
+forma.addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  $('#klaida-el-pastas').textContent = '';
+  $('#klaida-slaptazodis').textContent = '';
+  pranesk(pranesimas, '');
+
+  const email = laukoPastas.value.trim();
+  const password = laukoSlapt.value;
+
+  if (!email) {
+    $('#klaida-el-pastas').textContent = 'Įrašyk el. paštą.';
+    laukoPastas.focus();
+    return;
+  }
+  if (!password) {
+    $('#klaida-slaptazodis').textContent = 'Įrašyk slaptažodį.';
+    laukoSlapt.focus();
+    return;
+  }
+
+  mygtukas.disabled = true;
+  mygtukas.textContent = 'Jungiamasi';
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+
+  mygtukas.disabled = false;
+  mygtukas.textContent = 'Prisijungti';
+
+  if (error) {
+    pranesk(pranesimas, klaidaLT(error), 'error');
+    laukoSlapt.select();
+    return;
+  }
+
+  location.replace(kurToliau());
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paskyra | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page" style="max-width:760px">
+    <div class="page-head">
+      <h1>Paskyra</h1>
+      <p>Tavo duomenys ir slaptažodis.</p>
+    </div>
+
+    <div class="stack" id="kortos">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import { db, $, esc, data, pranesk, klaidaLT, reikiaSesijos, rodykNav, BUSENOS } from './app.js';
+
+const kortos = $('#kortos');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+  rodykNav(s.profilis, 'paskyra.html', s.arTreneris);
+
+  // Be šios patikros forma būtų užpildyta tuščiomis reikšmėmis, o paspaudus
+  // Išsaugoti vardas ir telefonas būtų ištrinti.
+  if (s.klaida || !s.profilis) {
+    kortos.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
+    return;
+  }
+
+  const p = s.profilis;
+
+  kortos.innerHTML = `
+    <section class="card">
+      <div class="card-head"><h2>Mano duomenys</h2></div>
+      <p class="note" id="pranesimas-duomenys" hidden></p>
+      <form id="forma-duomenys" novalidate>
+        <div class="field">
+          <label for="vardas">Vardas ir pavardė</label>
+          <input id="vardas" type="text" autocomplete="name" value="${esc(p.full_name || '')}">
+        </div>
+        <div class="field">
+          <label for="telefonas">Telefonas</label>
+          <input id="telefonas" type="tel" autocomplete="tel" value="${esc(p.phone || '')}">
+          <span class="hint">Neprivaloma. Padeda Daliui susisiekti greičiau.</span>
+        </div>
+        <div class="field">
+          <label for="pastas">El. paštas</label>
+          <input id="pastas" type="email" value="${esc(p.email || s.vartotojas.email || '')}" readonly>
+          <span class="hint">Adreso pakeisti negalima. Parašyk Daliui, jei jį reikia pakeisti.</span>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="saugoti">Išsaugoti</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Slaptažodis</h2></div>
+      <p class="note" id="pranesimas-slapt" hidden></p>
+      <form id="forma-slapt" novalidate>
+        <div class="field">
+          <label for="naujas">Naujas slaptažodis</label>
+          <input id="naujas" type="password" autocomplete="new-password" minlength="8">
+          <span class="hint">Bent 8 simboliai.</span>
+        </div>
+        <div class="field">
+          <label for="naujas2">Pakartok</label>
+          <input id="naujas2" type="password" autocomplete="new-password">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-ghost" type="submit" id="keisti">Pakeisti slaptažodį</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Būsena</h2></div>
+      <div class="row">
+        <span class="chip ${p.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${esc(BUSENOS[p.status] || p.status || '')}</span>
+        ${s.arTreneris ? '<span class="chip chip-volt">Treneris</span>' : ''}
+      </div>
+      <p class="muted" style="margin-top:var(--s-200);font-size:.875rem">
+        Paskyra sukurta ${esc(data(p.created_at) || data(s.vartotojas.created_at))}
+      </p>
+    </section>
+  `;
+
+  $('#forma-duomenys').addEventListener('submit', (ev) => saugokDuomenis(ev, s.vartotojas.id));
+  $('#forma-slapt').addEventListener('submit', keiskSlaptazodi);
+}
+
+async function saugokDuomenis(ev, id) {
+  ev.preventDefault();
+  const pranesimas = $('#pranesimas-duomenys');
+  const mygtukas = $('#saugoti');
+
+  mygtukas.disabled = true;
+  mygtukas.textContent = 'Saugoma';
+  pranesk(pranesimas, '');
+
+  const { error } = await db
+    .from('profiles')
+    .update({
+      full_name: $('#vardas').value.trim(),
+      phone: $('#telefonas').value.trim() || null,
+    })
+    .eq('id', id);
+
+  mygtukas.disabled = false;
+  mygtukas.textContent = 'Išsaugoti';
+
+  if (error) {
+    pranesk(pranesimas, klaidaLT(error), 'error');
+    return;
+  }
+  pranesk(pranesimas, 'Išsaugota.', 'ok');
+}
+
+async function keiskSlaptazodi(ev) {
+  ev.preventDefault();
+  const pranesimas = $('#pranesimas-slapt');
+  const mygtukas = $('#keisti');
+  const a = $('#naujas').value;
+  const b = $('#naujas2').value;
+
+  pranesk(pranesimas, '');
+
+  if (a.length < 8) {
+    pranesk(pranesimas, 'Slaptažodis per trumpas. Reikia bent 8 simbolių.', 'error');
+    return;
+  }
+  if (a !== b) {
+    pranesk(pranesimas, 'Slaptažodžiai nesutampa.', 'error');
+    return;
+  }
+
+  mygtukas.disabled = true;
+  mygtukas.textContent = 'Keičiama';
+
+  const { error } = await db.auth.updateUser({ password: a });
+
+  mygtukas.disabled = false;
+  mygtukas.textContent = 'Pakeisti slaptažodį';
+
+  if (error) {
+    pranesk(pranesimas, klaidaLT(error), 'error');
+    return;
+  }
+
+  $('#forma-slapt').reset();
+  pranesk(pranesimas, 'Slaptažodis pakeistas.', 'ok');
+}
+</script>
+</body>
+</html>

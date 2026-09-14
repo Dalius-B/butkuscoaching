@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Valdymas | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Valdymas</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <h1>Valdymas</h1>
+      <p>Programos, klientai ir kvietimai vienoje vietoje.</p>
+    </div>
+
+    <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+
+    <div id="skydelis" hidden>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" type="button" data-kortele="programos" aria-selected="true">Programos</button>
+        <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="false">Klientai</button>
+        <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
+      </div>
+
+      <p class="note" id="pranesimas" hidden></p>
+
+      <section id="kortele-programos"></section>
+      <section id="kortele-klientai"  hidden></section>
+      <section id="kortele-kvietimai" hidden></section>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, valdymas</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  atsitiktinis, absoliutus, BUSENOS, BUCKET,
+} from './app.js';
+
+let profiliai = [];
+let savasId = null;
+let programos = [];
+let kvietimai = [];
+let priskyrimai = [];
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos({ tikTreneriui: true });
+  if (!s) return;
+  rodykNav(s.profilis, 'valdymas.html', true);
+  savasId = s.vartotojas.id;
+
+  for (const t of $$('.tab')) {
+    t.addEventListener('click', () => rodykKortele(t.dataset.kortele));
+  }
+
+  await perkrauk();
+
+  $('#kraunasi').hidden = true;
+  $('#skydelis').hidden = false;
+}
+
+async function perkrauk() {
+  const [p1, p2, p3, p4] = await Promise.all([
+    db.from('profiles').select('id, email, full_name, phone, status, created_at').order('created_at', { ascending: false }),
+    db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
+    db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, created_at').order('created_at', { ascending: false }),
+    db.from('assignments').select('id, program_id, client_id, status'),
+  ]);
+
+  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error;
+  if (pirmaKlaida) {
+    pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
+  }
+
+  profiliai   = p1.data || [];
+  programos   = p2.data || [];
+  kvietimai   = p3.data || [];
+  priskyrimai = p4.data || [];
+
+  piesProgramas();
+  piesKlientus();
+  piesKvietimus();
+}
+
+function rodykKortele(vardas) {
+  for (const t of $$('.tab')) {
+    t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
+  }
+  for (const k of ['programos', 'klientai', 'kvietimai']) {
+    $('#kortele-' + k).hidden = k !== vardas;
+  }
+}
+
+// =============================================================================
+//  PROGRAMOS
+// =============================================================================
+function piesProgramas() {
+  const eilutes = programos.map((p) => {
+    const kiek = priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length;
+    return `
+      <tr>
+        <td>
+          <strong>${esc(p.title)}</strong>
+          ${p.summary ? `<div class="muted" style="font-size:.8125rem">${esc(p.summary.slice(0, 90))}${p.summary.length > 90 ? '…' : ''}</div>` : ''}
+        </td>
+        <td><span class="chip ${p.status === 'published' ? 'chip-ok' : 'chip-quiet'}">${esc(BUSENOS[p.status] || p.status)}</span></td>
+        <td>${kiek}</td>
+        <td>${esc(data(p.updated_at))}</td>
+        <td>
+          <div class="row">
+            <a class="btn btn-ghost btn-sm" href="redaguoti.html?id=${encodeURIComponent(p.id)}">Redaguoti</a>
+            <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  $('#kortele-programos').innerHTML = `
+    <div class="card" style="margin-bottom:var(--s-300)">
+      <div class="card-head">
+        <h2>Nauja programa</h2>
+      </div>
+      <form id="forma-programa" novalidate>
+        <div class="field">
+          <label for="p-pavadinimas">Pavadinimas</label>
+          <input id="p-pavadinimas" type="text" required placeholder="Pavyzdžiui, 12 savaičių jėgos blokas">
+        </div>
+        <div class="field">
+          <label for="p-aprasas">Trumpas aprašas</label>
+          <textarea id="p-aprasas" placeholder="Ką klientas ras šioje programoje."></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Sukurti ir redaguoti</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Visos programos</h2><span class="row-end muted">${programos.length}</span></div>
+      ${programos.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Programa</th><th>Būsena</th><th>Klientų</th><th>Atnaujinta</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
+    </div>`;
+
+  $('#forma-programa').addEventListener('submit', sukurkPrograma);
+  for (const b of $$('.trinti-programa')) b.addEventListener('click', () => trinkPrograma(b.dataset.id, b.dataset.vardas));
+}
+
+async function sukurkPrograma(ev) {
+  ev.preventDefault();
+  const pavadinimas = $('#p-pavadinimas').value.trim();
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk programos pavadinimą.', 'error');
+    return;
+  }
+
+  const { data: nauja, error } = await db
+    .from('programs')
+    .insert({ title: pavadinimas, summary: $('#p-aprasas').value.trim() })
+    .select('id')
+    .single();
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  location.href = 'redaguoti.html?id=' + encodeURIComponent(nauja.id);
+}
+
+async function trinkPrograma(id, vardas) {
+  if (!confirm(`Ištrinti programą "${vardas}"?\n\nKartu dings jos blokai, priskyrimai klientams ir visų įkeltų failų kopijos. To atstatyti nebus galima.`)) return;
+
+  // Failai ištrinami pirmi. Programos įrašas nusineša ir priedų eilutes, o
+  // su jomis vienintelį kelio įrašą, tad likę failai amžinai užimtų vietą
+  // saugykloje ir jų nebebūtų kaip surasti.
+  const { data: priedai, error: pKlaida } = await db
+    .from('attachments')
+    .select('storage_path')
+    .eq('program_id', id)
+    .not('storage_path', 'is', null);
+
+  if (pKlaida) {
+    pranesk($('#pranesimas'), klaidaLT(pKlaida), 'error');
+    return;
+  }
+
+  const keliai = (priedai || []).map((p) => p.storage_path).filter(Boolean);
+  if (keliai.length) {
+    const { error: sKlaida } = await db.storage.from(BUCKET).remove(keliai);
+    if (sKlaida) {
+      pranesk($('#pranesimas'), 'Failų pašalinti nepavyko, programa neištrinta: ' + klaidaLT(sKlaida), 'error');
+      return;
+    }
+  }
+
+  const { error } = await db.from('programs').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Programa ištrinta.', 'ok');
+  await perkrauk();
+}
+
+// =============================================================================
+//  KLIENTAI
+// =============================================================================
+function piesKlientus() {
+  const klientai = profiliai.filter((p) => p.id !== savasId);
+
+  const eilutes = klientai.map((k) => {
+    const savos = priskyrimai.filter((a) => a.client_id === k.id && a.status === 'active');
+    const pavadinimai = savos
+      .map((a) => programos.find((p) => p.id === a.program_id)?.title)
+      .filter(Boolean);
+
+    return `
+      <tr>
+        <td>
+          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
+          ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
+        </td>
+        <td><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
+        <td>${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
+        <td>${esc(data(k.created_at))}</td>
+        <td>
+          <div class="row">
+            ${k.status === 'blocked'
+              ? `<button class="btn btn-ghost btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="active">Grąžinti prieigą</button>`
+              : `<button class="btn btn-danger btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="blocked">Sustabdyti</button>`}
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  $('#kortele-klientai').innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h2>Klientai</h2>
+        <span class="row-end muted">${klientai.length}</span>
+      </div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Programos priskiriamos programos redagavimo lange, skiltyje Priskyrimai.
+      </p>
+      ${klientai.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
+    </div>
+
+    <div class="card" style="margin-top:var(--s-300)">
+      <p class="muted" style="font-size:.875rem;margin:0">
+        Trenerio teisės suteikiamos tik per Supabase SQL redaktorių, iš šio puslapio to padaryti negalima.
+        Taip klientas niekada negali pasikelti sau teisių.
+      </p>
+    </div>`;
+
+  for (const b of $$('.busena')) {
+    b.addEventListener('click', () => keiskBusena(b.dataset.id, b.dataset.busena));
+  }
+}
+
+async function keiskBusena(id, busena) {
+  // Būsena keičiama per funkciją, o ne tiesiogiai: status stulpelio rašymo
+  // teisių neturi net treneris, kad klientas negalėtų atblokuoti savęs pats.
+  const { error } = await db.rpc('admin_set_status', { p_client: id, p_status: busena });
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), busena === 'blocked' ? 'Prieiga sustabdyta.' : 'Prieiga grąžinta.', 'ok');
+  await perkrauk();
+}
+
+// =============================================================================
+//  KVIETIMAI
+// =============================================================================
+function piesKvietimus() {
+  const eilutes = kvietimai.map((k) => {
+    const panaudotas = Boolean(k.used_by);
+    const pasibaiges = !panaudotas && k.expires_at && new Date(k.expires_at) <= new Date();
+    const nuoroda = kvietimoNuoroda(k.token);
+
+    let zyma = '<span class="chip chip-ok">Galioja</span>';
+    if (panaudotas) zyma = '<span class="chip chip-quiet">Panaudotas</span>';
+    else if (pasibaiges) zyma = '<span class="chip chip-danger">Nebegalioja</span>';
+
+    return `
+      <tr>
+        <td>
+          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <div class="muted" style="font-size:.8125rem">${esc(k.email || 'be el. pašto')}</div>
+          ${k.note ? `<div class="muted" style="font-size:.8125rem">${esc(k.note)}</div>` : ''}
+        </td>
+        <td>${zyma}</td>
+        <td>${k.expires_at ? esc(data(k.expires_at)) : '<span class="muted">neribotas</span>'}</td>
+        <td>${esc(data(k.created_at))}</td>
+        <td>
+          <div class="row">
+            ${!panaudotas && !pasibaiges
+              ? `<button class="btn btn-ghost btn-sm kopijuoti" type="button" data-nuoroda="${esc(nuoroda)}">Kopijuoti nuorodą</button>`
+              : ''}
+            <button class="btn btn-danger btn-sm trinti-kvietima" type="button" data-id="${esc(k.id)}">Trinti</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  $('#kortele-kvietimai').innerHTML = `
+    <div class="card" style="margin-bottom:var(--s-300)">
+      <div class="card-head"><h2>Naujas kvietimas</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-300)">
+        Sukūrus kvietimą gausi asmeninę nuorodą. Nusiųsk ją žmogui, ir jis pats susikurs paskyrą.
+        Nuoroda veikia vieną kartą.
+      </p>
+      <form id="forma-kvietimas" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label for="k-vardas">Vardas ir pavardė</label>
+            <input id="k-vardas" type="text" placeholder="Vardenis Pavardenis">
+          </div>
+          <div class="field">
+            <label for="k-pastas">El. paštas</label>
+            <input id="k-pastas" type="email" placeholder="vardas@pastas.lt">
+            <span class="hint">Jei įrašysi, registruojantis adreso pakeisti nebus galima.</span>
+          </div>
+          <div class="field">
+            <label for="k-galioja">Galioja dienų</label>
+            <input id="k-galioja" type="number" min="1" max="365" value="30">
+          </div>
+        </div>
+        <div class="field">
+          <label for="k-pastaba">Pastaba sau</label>
+          <input id="k-pastaba" type="text" placeholder="Neprivaloma">
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Sukurti kvietimą</button>
+        </div>
+      </form>
+      <div id="nauja-nuoroda" hidden style="margin-top:var(--s-300)"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Visi kvietimai</h2><span class="row-end muted">${kvietimai.length}</span></div>
+      ${kvietimai.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Kam</th><th>Būsena</th><th>Galioja iki</th><th>Sukurta</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Kvietimų dar nėra.</p>'}
+    </div>`;
+
+  $('#forma-kvietimas').addEventListener('submit', sukurkKvietima);
+  for (const b of $$('.kopijuoti')) b.addEventListener('click', () => kopijuok(b, b.dataset.nuoroda));
+  for (const b of $$('.trinti-kvietima')) b.addEventListener('click', () => trinkKvietima(b.dataset.id));
+}
+
+function kvietimoNuoroda(token) {
+  return absoliutus('registracija.html') + '?kvietimas=' + encodeURIComponent(token);
+}
+
+async function sukurkKvietima(ev) {
+  ev.preventDefault();
+
+  const dienos = Number($('#k-galioja').value);
+  const galioja = Number.isFinite(dienos) && dienos > 0
+    ? new Date(Date.now() + dienos * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+
+  const token = atsitiktinis(36);
+
+  const { error } = await db.from('invites').insert({
+    token,
+    email: $('#k-pastas').value.trim() || null,
+    full_name: $('#k-vardas').value.trim() || null,
+    note: $('#k-pastaba').value.trim() || null,
+    expires_at: galioja,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+
+  const nuoroda = kvietimoNuoroda(token);
+  const langelis = $('#nauja-nuoroda');
+  langelis.hidden = false;
+  langelis.innerHTML = `
+    <div class="note note-ok">
+      <strong>Kvietimas paruoštas.</strong> Nusiųsk šią nuorodą žmogui.
+      <div class="field" style="margin-top:var(--s-200)">
+        <input id="nuorodos-laukas" type="text" readonly value="${esc(nuoroda)}">
+      </div>
+      <div class="form-actions" style="margin-top:var(--s-200)">
+        <button class="btn btn-ghost btn-sm" type="button" id="kopijuoti-nauja">Kopijuoti</button>
+      </div>
+    </div>`;
+
+  $('#kopijuoti-nauja').addEventListener('click', (e) => kopijuok(e.currentTarget, nuoroda));
+  $('#forma-kvietimas').reset();
+  $('#k-galioja').value = '30';
+
+  await perkrauk();
+  // perkrauk perpiešia kortelę, todėl nuorodą parodome dar kartą.
+  const naujas = $('#nauja-nuoroda');
+  naujas.hidden = false;
+  naujas.innerHTML = langelis.innerHTML;
+  $('#kopijuoti-nauja').addEventListener('click', (e) => kopijuok(e.currentTarget, nuoroda));
+}
+
+async function kopijuok(mygtukas, tekstas) {
+  const senas = mygtukas.textContent;
+  try {
+    await navigator.clipboard.writeText(tekstas);
+    mygtukas.textContent = 'Nukopijuota';
+    setTimeout(() => { mygtukas.textContent = senas; }, 1800);
+    return;
+  } catch {
+    // Kai kurios naršyklės neleidžia rašyti į iškarpinę be papildomo leidimo.
+    // Tada parodome būtent šios eilutės nuorodą ir ją pažymime, kad žmogus
+    // galėtų nukopijuoti ranka.
+    let laukas = mygtukas.parentElement?.querySelector('.rankinis-laukas');
+    if (!laukas) {
+      laukas = document.createElement('input');
+      laukas.type = 'text';
+      laukas.readOnly = true;
+      laukas.className = 'rankinis-laukas';
+      laukas.style.cssText = 'width:100%;margin-top:8px;font-size:.8125rem;padding:6px 8px;border:1px solid rgba(16,16,16,.2);border-radius:6px';
+      mygtukas.parentElement?.appendChild(laukas);
+    }
+    laukas.value = tekstas;
+    laukas.select();
+    mygtukas.textContent = 'Kopijuok ranka';
+  }
+  setTimeout(() => { mygtukas.textContent = senas; }, 3000);
+}
+
+async function trinkKvietima(id) {
+  if (!confirm('Ištrinti kvietimą? Nuoroda nustos veikti.')) return;
+  const { error } = await db.from('invites').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Kvietimas ištrintas.', 'ok');
+  await perkrauk();
+}
+</script>
+</body>
+</html>

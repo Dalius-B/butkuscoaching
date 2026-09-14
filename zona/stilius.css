@@ -1,0 +1,450 @@
+/* =============================================================================
+   BUTKUS COACHING, KLIENTŲ ZONA
+   Ta pati dizaino sistema kaip rinkodaros puslapyje: vienas šriftas Archivo,
+   betono ir rašalo paletė, geltonas akcentas tik kaip užpildas, niekada kaip
+   smulkus tekstas.
+   ============================================================================= */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Naršyklės numatytoji [hidden] taisyklė yra silpnesnė už bet kurią mūsų klasę,
+   todėl elementas su display: flex liktų matomas net ir paslėptas. Ši eilutė
+   tai sutvarko visiems puslapiams iš karto. */
+[hidden] { display: none !important; }
+img, svg { display: block; max-width: 100%; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+a { color: inherit; }
+ul, ol { list-style: none; }
+
+:root {
+  --ink:        #101010;
+  --ink-2:      #1B1C19;
+  --ink-soft:   #4B4C46;
+  --paper:      #E8E8E3;
+  --surface:    #F2F2EE;
+  --white:      #FFFFFF;
+  --volt:       #FFDD44;
+  --hair-ink:   rgba(16, 16, 16, 0.14);
+  --hair-paper: rgba(232, 232, 227, 0.16);
+  --soft-paper: rgba(232, 232, 227, 0.64);
+  --danger:     #B3261E;
+  --ok:         #1E6B3A;
+
+  --display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+
+  --s-25: 2px;  --s-50: 4px;  --s-75: 8px;  --s-100: 12px; --s-200: 16px;
+  --s-300: 24px; --s-400: 32px; --s-500: 40px; --s-600: 48px;
+  --s-700: 64px; --s-800: 80px;
+
+  --r-sm: 6px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+  --shell: 1120px;
+  --nav-h: 64px;
+}
+
+html {
+  scroll-padding-top: calc(var(--nav-h) + 24px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--display);
+  font-weight: 400;
+  font-stretch: 100%;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection { background: var(--volt); color: var(--ink); }
+
+h1, h2, h3, .display {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 112%;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+p { text-wrap: pretty; }
+
+:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.on-ink :focus-visible { outline-color: var(--volt); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.shell { width: 100%; max-width: var(--shell); margin-inline: auto; padding-inline: var(--s-300); }
+
+.muted { color: var(--ink-soft); }
+.on-ink .muted { color: var(--soft-paper); }
+
+.label {
+  display: inline-flex; align-items: center; gap: var(--s-75);
+  font-family: var(--display); font-size: 0.75rem; font-weight: 600;
+  font-stretch: 84%; text-transform: uppercase; letter-spacing: 0.18em;
+  color: var(--ink-soft);
+}
+.on-ink .label { color: var(--soft-paper); }
+
+/* -----------------------------------------------------------------------------
+   Mygtukai
+   ----------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-75);
+  min-height: 48px; padding: var(--s-100) var(--s-300);
+  font-family: var(--display); font-size: 1rem; font-weight: 700;
+  font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.06em;
+  text-decoration: none; border-radius: var(--r-pill); white-space: nowrap;
+  transition-property: background-color, color, box-shadow, scale, border-color, opacity;
+  transition-duration: 160ms; transition-timing-function: var(--ease-out);
+}
+.btn:active { scale: 0.97; }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
+.btn[disabled]:active { scale: 1; }
+
+.btn-primary { background: var(--volt); color: var(--ink); box-shadow: 0 1px 2px rgba(16,16,16,0.16); }
+.btn-primary:hover:not([disabled]) { background: #FFE873; box-shadow: 0 4px 14px rgba(16,16,16,0.22); }
+.btn-primary:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
+
+.btn-ghost { border: 1.5px solid var(--hair-ink); color: var(--ink); }
+.btn-ghost:hover:not([disabled]) { border-color: var(--ink); background: rgba(16,16,16,0.05); }
+.on-ink .btn-ghost { border-color: var(--hair-paper); color: var(--paper); }
+.on-ink .btn-ghost:hover:not([disabled]) { border-color: var(--paper); background: rgba(232,232,227,0.08); }
+
+.btn-danger { border: 1.5px solid rgba(179, 38, 30, 0.4); color: var(--danger); }
+.btn-danger:hover:not([disabled]) { border-color: var(--danger); background: rgba(179, 38, 30, 0.06); }
+
+.btn-sm { min-height: 40px; font-size: 0.8125rem; padding: var(--s-75) var(--s-200); }
+.btn-block { width: 100%; }
+
+/* -----------------------------------------------------------------------------
+   Viršutinė juosta
+   ----------------------------------------------------------------------------- */
+.nav {
+  position: sticky; top: 0; z-index: 100;
+  background: var(--ink); color: var(--paper);
+}
+.nav-inner {
+  height: var(--nav-h); display: flex; align-items: center;
+  justify-content: space-between; gap: var(--s-200);
+}
+.wordmark {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  font-family: var(--display); font-weight: 800; font-stretch: 108%;
+  font-size: 1.1875rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1;
+  min-height: 44px;
+}
+.wordmark i { font-style: normal; color: var(--volt); }
+.wordmark small {
+  font-size: 0.6875rem; font-weight: 600; font-stretch: 84%; letter-spacing: 0.16em;
+  color: var(--soft-paper); margin-left: var(--s-75);
+}
+.nav-right { display: flex; align-items: center; gap: var(--s-200); }
+.nav-user {
+  font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--soft-paper);
+  max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.nav-links { display: flex; gap: var(--s-300); }
+.nav-links a {
+  font-size: 0.8125rem; font-weight: 600; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.13em; text-decoration: none;
+  color: var(--soft-paper); display: inline-flex; align-items: center; min-height: 44px;
+}
+.nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--paper); }
+
+/* -----------------------------------------------------------------------------
+   Puslapio karkasas
+   ----------------------------------------------------------------------------- */
+.page { padding-block: var(--s-600) var(--s-800); }
+.page-head { margin-bottom: var(--s-500); }
+.page-head h1 { font-size: clamp(1.75rem, 4vw, 2.75rem); }
+.page-head p { margin-top: var(--s-200); color: var(--ink-soft); max-width: 64ch; }
+
+.stack   { display: flex; flex-direction: column; gap: var(--s-300); }
+.stack-sm{ display: flex; flex-direction: column; gap: var(--s-100); }
+.row     { display: flex; flex-wrap: wrap; gap: var(--s-100); align-items: center; }
+.row-end { margin-left: auto; }
+
+/* Centruotas langelis prisijungimui ir registracijai */
+.auth-wrap {
+  min-height: calc(100vh - var(--nav-h));
+  display: grid; place-items: center; padding: var(--s-500) var(--s-300) var(--s-700);
+}
+.auth-card {
+  width: 100%; max-width: 440px;
+  background: var(--surface); border-radius: var(--r-lg); padding: var(--s-500);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 18px 50px -30px rgba(16,16,16,0.5);
+}
+.auth-card h1 { font-size: 1.75rem; margin-bottom: var(--s-100); }
+.auth-card > p:first-of-type { color: var(--ink-soft); margin-bottom: var(--s-400); }
+.auth-foot {
+  margin-top: var(--s-400); padding-top: var(--s-300);
+  border-top: 1px solid var(--hair-ink);
+  font-size: 0.875rem; color: var(--ink-soft);
+  display: flex; flex-wrap: wrap; gap: var(--s-100) var(--s-300); justify-content: space-between;
+}
+.auth-foot a { color: var(--ink); text-underline-offset: 3px; }
+
+/* -----------------------------------------------------------------------------
+   Kortelės
+   ----------------------------------------------------------------------------- */
+.card {
+  background: var(--surface); border-radius: var(--r-lg); padding: var(--s-400);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 8px 24px -16px rgba(16,16,16,0.30);
+}
+.card-tight { padding: var(--s-300); }
+.card h2 { font-size: 1.25rem; font-stretch: 104%; letter-spacing: 0; }
+.card h3 { font-size: 1.0625rem; font-stretch: 102%; letter-spacing: 0.01em; }
+.card-head {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s-100) var(--s-200);
+  margin-bottom: var(--s-300);
+}
+.card-head .row-end { margin-left: auto; }
+
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-300); }
+
+.program-card { display: flex; flex-direction: column; gap: var(--s-200); text-decoration: none; }
+.program-card:hover { box-shadow: 0 2px 4px rgba(16,16,16,0.10), 0 16px 40px -22px rgba(16,16,16,0.5); }
+.program-card h3 { font-size: 1.25rem; font-stretch: 104%; }
+.program-card p { font-size: 0.9375rem; color: var(--ink-soft); }
+.program-card .meta { margin-top: auto; padding-top: var(--s-200); border-top: 1px solid var(--hair-ink); }
+
+/* -----------------------------------------------------------------------------
+   Žymos
+   ----------------------------------------------------------------------------- */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s-50);
+  font-size: 0.6875rem; font-weight: 700; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 5px var(--s-100); border-radius: var(--r-pill);
+  background: rgba(16,16,16,0.08); color: var(--ink);
+}
+.chip-volt    { background: var(--volt); color: var(--ink); }
+.chip-ink     { background: var(--ink); color: var(--paper); }
+.chip-quiet   { background: transparent; box-shadow: inset 0 0 0 1px var(--hair-ink); color: var(--ink-soft); }
+.chip-danger  { background: rgba(179, 38, 30, 0.12); color: var(--danger); }
+.chip-ok      { background: rgba(30, 107, 58, 0.12); color: var(--ok); }
+
+/* -----------------------------------------------------------------------------
+   Formos
+   ----------------------------------------------------------------------------- */
+.field { display: flex; flex-direction: column; gap: var(--s-75); }
+.field + .field { margin-top: var(--s-300); }
+.field > label, .field > .legend-inline {
+  font-family: var(--display); font-size: 0.8125rem; font-weight: 600; font-stretch: 88%;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink);
+}
+.field .hint {
+  text-transform: none; letter-spacing: 0; font-weight: 400;
+  color: var(--ink-soft); font-size: 0.875rem;
+}
+
+.field input:not([type="checkbox"]):not([type="radio"]),
+.field select,
+.field textarea {
+  font-family: var(--display); font-size: 1rem; font-stretch: 100%; color: var(--ink);
+  background: var(--white); border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm);
+  padding: var(--s-100) var(--s-200); min-height: 48px; width: 100%;
+  transition-property: border-color, box-shadow; transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+.field textarea { min-height: 104px; resize: vertical; line-height: 1.5; }
+.field select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%),
+                    linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 21px, calc(100% - 13px) 21px;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+  padding-right: var(--s-500);
+}
+.field input[type="file"] { padding: var(--s-75); }
+.field input:hover, .field select:hover, .field textarea:hover { border-color: rgba(16,16,16,0.42); }
+.field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 1px; border-color: var(--ink);
+}
+.field [aria-invalid="true"] { border-color: var(--danger); }
+
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-200); }
+.field-row .field + .field { margin-top: 0; }
+
+.err { font-size: 0.8125rem; font-stretch: 92%; color: var(--danger); }
+.err:empty { display: none; }
+
+.check-opt {
+  display: flex; gap: var(--s-100); align-items: flex-start; min-height: 44px;
+  padding: var(--s-75) 0; font-size: 1rem; line-height: 1.45; cursor: pointer;
+}
+.check-opt input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: var(--ink); }
+
+.form-actions { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: var(--s-400); }
+
+/* -----------------------------------------------------------------------------
+   Pranešimai
+   ----------------------------------------------------------------------------- */
+.note {
+  border-radius: var(--r-md); padding: var(--s-200) var(--s-300);
+  font-size: 0.9375rem; line-height: 1.5;
+}
+.note:empty { display: none; }
+.note-error { background: rgba(179, 38, 30, 0.10); color: #7A1A15; box-shadow: inset 0 0 0 1px rgba(179,38,30,0.25); }
+.note-ok    { background: rgba(30, 107, 58, 0.10); color: #14512B; box-shadow: inset 0 0 0 1px rgba(30,107,58,0.25); }
+.note-info  { background: rgba(16, 16, 16, 0.05); color: var(--ink-soft); box-shadow: inset 0 0 0 1px var(--hair-ink); }
+.note a { color: inherit; }
+
+.empty {
+  border-radius: var(--r-lg); padding: var(--s-600) var(--s-400); text-align: center;
+  box-shadow: inset 0 0 0 1px var(--hair-ink); color: var(--ink-soft);
+}
+.empty h2 { color: var(--ink); margin-bottom: var(--s-200); font-size: 1.25rem; }
+.empty p { max-width: 46ch; margin-inline: auto; }
+
+/* Įkrovimo būsena */
+.loading { display: flex; align-items: center; gap: var(--s-100); color: var(--ink-soft); font-size: 0.9375rem; }
+.spinner {
+  width: 18px; height: 18px; border-radius: 50%; flex: none;
+  border: 2px solid rgba(16,16,16,0.18); border-top-color: var(--ink);
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin { to { rotate: 360deg; } }
+
+/* -----------------------------------------------------------------------------
+   Programos turinys
+   ----------------------------------------------------------------------------- */
+.section-block + .section-block { margin-top: var(--s-400); }
+.section-block h2 { font-size: 1.375rem; font-stretch: 106%; margin-bottom: var(--s-100); }
+.section-notes { white-space: pre-wrap; color: var(--ink-soft); }
+
+.att-list { display: flex; flex-direction: column; gap: var(--s-100); margin-top: var(--s-300); }
+.att {
+  display: flex; align-items: center; gap: var(--s-200);
+  background: var(--white); border-radius: var(--r-md); padding: var(--s-200);
+  box-shadow: inset 0 0 0 1px var(--hair-ink);
+  text-align: left; width: 100%;
+}
+.att-ico {
+  width: 40px; height: 40px; border-radius: var(--r-sm); flex: none;
+  background: var(--ink); color: var(--volt);
+  display: flex; align-items: center; justify-content: center;
+}
+.att-ico svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.att-body { min-width: 0; flex: 1; }
+.att-body strong { display: block; font-weight: 600; font-size: 0.9375rem; overflow-wrap: anywhere; }
+.att-body span { display: block; font-size: 0.8125rem; color: var(--ink-soft); }
+.att-act { flex: none; }
+
+.video-wrap {
+  position: relative; border-radius: var(--r-md); overflow: hidden;
+  background: #000; aspect-ratio: 16 / 9; margin-top: var(--s-200);
+}
+.video-wrap iframe, .video-wrap video { width: 100%; height: 100%; border: 0; display: block; }
+.video-lazy { display: flex; align-items: center; justify-content: center; }
+.video-play {
+  display: inline-flex; align-items: center; gap: var(--s-100);
+  min-height: 48px; padding: var(--s-100) var(--s-300);
+  border-radius: var(--r-pill); background: var(--volt); color: var(--ink);
+  font-family: var(--display); font-size: 0.9375rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.video-play:hover { background: #FFE873; }
+.video-play:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+.video-title { margin-top: var(--s-100); font-size: 0.9375rem; font-weight: 600; }
+.video-desc  { font-size: 0.875rem; color: var(--ink-soft); }
+.video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-300); margin-top: var(--s-300); }
+
+/* -----------------------------------------------------------------------------
+   Lentelės valdymo skydelyje
+   ----------------------------------------------------------------------------- */
+.table-wrap { overflow-x: auto; margin-top: var(--s-200); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9375rem; }
+th, td { text-align: left; padding: var(--s-100) var(--s-200); border-bottom: 1px solid var(--hair-ink); vertical-align: top; }
+th {
+  font-size: 0.6875rem; font-weight: 700; font-stretch: 84%;
+  text-transform: uppercase; letter-spacing: 0.14em; color: var(--ink-soft);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td .row { gap: var(--s-50); }
+
+/* Skirtukai */
+.tabs { display: flex; flex-wrap: wrap; gap: var(--s-50); margin-bottom: var(--s-400); }
+.tab {
+  min-height: 44px; padding: 0 var(--s-300); border-radius: var(--r-pill);
+  font-size: 0.8125rem; font-weight: 700; font-stretch: 92%;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  box-shadow: inset 0 0 0 1px var(--hair-ink); color: var(--ink-soft);
+  display: inline-flex; align-items: center;
+}
+.tab[aria-selected="true"] { background: var(--ink); color: var(--paper); box-shadow: none; }
+
+/* Modalinis langas */
+dialog {
+  border: 0; border-radius: var(--r-lg); padding: 0; max-width: 620px; width: calc(100vw - 32px);
+  background: var(--surface); color: var(--ink);
+  box-shadow: 0 24px 70px -20px rgba(16,16,16,0.6);
+}
+dialog::backdrop { background: rgba(16,16,16,0.55); }
+.dialog-in { padding: var(--s-400); }
+.dialog-in h2 { margin-bottom: var(--s-300); font-size: 1.25rem; }
+
+/* Progreso juosta įkeliant */
+.progress { height: 4px; background: rgba(16,16,16,0.12); border-radius: var(--r-pill); overflow: hidden; margin-top: var(--s-200); }
+.progress i { display: block; height: 100%; background: var(--volt); width: 0; transition: width 200ms var(--ease-out); }
+
+/* -----------------------------------------------------------------------------
+   Poraštė
+   ----------------------------------------------------------------------------- */
+.foot {
+  background: var(--ink); color: var(--soft-paper); padding-block: var(--s-400);
+  font-size: 0.8125rem; margin-top: var(--s-800);
+}
+.foot .shell { display: flex; flex-wrap: wrap; gap: var(--s-200) var(--s-400); justify-content: space-between; }
+.foot a { color: var(--soft-paper); text-decoration: none; }
+.foot a:hover { color: var(--volt); }
+
+/* -----------------------------------------------------------------------------
+   Mobilus
+   ----------------------------------------------------------------------------- */
+/* Viršutinė juosta į dvi eiles, kai vienoje netelpa vardas, meniu ir mygtukas. */
+@media (max-width: 760px) {
+  .nav-inner {
+    height: auto; flex-wrap: wrap; align-items: center;
+    padding-block: var(--s-75); gap: var(--s-75);
+  }
+  .wordmark small { display: none; }
+  .nav-user { display: none; }
+  .nav-right {
+    width: 100%; justify-content: space-between; gap: var(--s-100);
+    padding-bottom: var(--s-50);
+  }
+  .nav-links { gap: var(--s-300); min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-links a { white-space: nowrap; min-height: 38px; }
+  .nav-right .btn { min-height: 38px; }
+}
+
+@media (max-width: 620px) {
+  .auth-card { padding: var(--s-400) var(--s-300); }
+  .card { padding: var(--s-300); }
+  .page { padding-block: var(--s-500) var(--s-600); }
+  .form-actions .btn { width: 100%; }
+  .btn { white-space: normal; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .spinner { animation: none; }
+}

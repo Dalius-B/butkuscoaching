@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programa | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <p style="margin-bottom:var(--s-300)">
+      <a class="btn btn-ghost btn-sm" href="mano.html">Visos programos</a>
+    </p>
+    <div id="virsus">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama programa</span></div>
+    </div>
+    <div id="turinys-programos"></div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, data, dydis, klaidaLT, reikiaSesijos, rodykNav,
+  videoEmbed, saugiNuoroda, failoNuoroda, priedoIkona,
+} from './app.js';
+
+const virsus  = $('#virsus');
+const turinys = $('#turinys-programos');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+  rodykNav(s.profilis, 'mano.html', s.arTreneris);
+
+  const id = new URLSearchParams(location.search).get('id');
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+    klaidaEkrane('Programa nerasta', 'Nuoroda neteisinga. Grįžk į programų sąrašą ir pasirink iš naujo.');
+    return;
+  }
+
+  const { data: programa, error } = await db
+    .from('programs')
+    .select('id, title, summary, status, updated_at')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) {
+    klaidaEkrane('Nepavyko atidaryti', klaidaLT(error));
+    return;
+  }
+  if (!programa) {
+    klaidaEkrane('Programa nepasiekiama',
+      'Ji arba dar neparuošta, arba nepriskirta tavo paskyrai. Jei manai, kad tai klaida, parašyk Daliui.');
+    return;
+  }
+
+  document.title = programa.title + ' | Butkus Coaching';
+
+  const [{ data: blokai }, { data: priedai, error: pKlaida }] = await Promise.all([
+    db.from('program_sections').select('id, title, notes, position').eq('program_id', id)
+      .order('position', { ascending: true }).order('created_at', { ascending: true }),
+    db.from('attachments')
+      .select('id, section_id, kind, title, description, storage_path, external_url, original_name, mime_type, size_bytes, position')
+      .eq('program_id', id)
+      .order('position', { ascending: true }).order('created_at', { ascending: true }),
+  ]);
+
+  if (pKlaida) {
+    klaidaEkrane('Nepavyko atidaryti', klaidaLT(pKlaida));
+    return;
+  }
+
+  virsus.innerHTML = `
+    <div class="page-head">
+      <h1>${esc(programa.title)}</h1>
+      ${programa.summary ? `<p style="white-space:pre-wrap">${esc(programa.summary)}</p>` : ''}
+      <p class="muted" style="font-size:.8125rem;margin-top:var(--s-200)">
+        Atnaujinta ${esc(data(programa.updated_at))}
+      </p>
+    </div>`;
+
+  const beBloko = (priedai || []).filter((p) => !p.section_id);
+  const dalys = [];
+
+  if (beBloko.length) {
+    dalys.push(blokas(null, beBloko, (blokai || []).length > 0));
+  }
+
+  for (const b of blokai || []) {
+    const savi = (priedai || []).filter((p) => p.section_id === b.id);
+    dalys.push(blokas(b, savi, true));
+  }
+
+  if (!dalys.length) {
+    turinys.innerHTML = `
+      <div class="empty">
+        <h2>Turinys dar ruošiamas</h2>
+        <p>Programa jau tavo, bet failų ir vaizdo įrašų dar nėra. Jie atsiras čia.</p>
+      </div>`;
+    return;
+  }
+
+  turinys.innerHTML = dalys.join('');
+  prikabinkAtsisiuntimus();
+  prikabinkVaizdoIrasus();
+}
+
+function blokas(b, priedai, rodykAntraste) {
+  const video = priedai.filter((p) => p.kind === 'video_link' || p.kind === 'video_file');
+  const failai = priedai.filter((p) => p.kind === 'file');
+
+  const antraste = b
+    ? `<h2>${esc(b.title)}</h2>${b.notes ? `<p class="section-notes">${esc(b.notes)}</p>` : ''}`
+    : (rodykAntraste ? '<h2>Bendra medžiaga</h2>' : '');
+
+  return `
+    <section class="card section-block">
+      ${antraste}
+      ${video.length ? `<div class="video-grid">${video.map(videoBlokas).join('')}</div>` : ''}
+      ${failai.length ? `<div class="att-list">${failai.map(failoBlokas).join('')}</div>` : ''}
+      ${!video.length && !failai.length ? '<p class="muted">Šiame bloke medžiagos dar nėra.</p>' : ''}
+    </section>`;
+}
+
+function videoBlokas(v) {
+  let grotuvas = '';
+
+  if (v.kind === 'video_link') {
+    const emb = videoEmbed(v.external_url);
+    if (emb) {
+      grotuvas = `<div class="video-wrap"><iframe src="${esc(emb.src)}" title="${esc(v.title)}" loading="lazy"
+             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+             referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+    } else {
+      // Nuoroda rodoma tik tada, kai ji tikrai http arba https. Kitaip
+      // javascript: adresas suveiktų paspaudus, nes esc() schemos nekeičia.
+      const saugi = saugiNuoroda(v.external_url);
+      grotuvas = saugi
+        ? `<p class="note note-info">Vaizdo įrašo peržiūrėti čia nepavyksta.
+             <a href="${esc(saugi)}" target="_blank" rel="noopener noreferrer">Atidaryti nuorodą</a></p>`
+        : '<p class="note note-info">Šio vaizdo įrašo nuoroda netinkama. Parašyk Daliui.</p>';
+    }
+  } else {
+    // Pasirašyta nuoroda sukuriama tik paspaudus. Taip nesukuriame nuorodų
+    // įrašams, kurių niekas nežiūrės, ir atimta programa nustoja veikti iškart,
+    // o ne po valandos, kiek galiotų iš anksto pasirašyta nuoroda.
+    grotuvas = `<div class="video-wrap video-lazy" data-kelias="${esc(v.storage_path)}">
+        <button class="video-play" type="button">Paleisti</button>
+      </div>`;
+  }
+
+  return `
+    <div>
+      ${grotuvas}
+      <p class="video-title">${esc(v.title)}</p>
+      ${v.description ? `<p class="video-desc">${esc(v.description)}</p>` : ''}
+    </div>`;
+}
+
+function failoBlokas(f) {
+  const smulkiau = [f.original_name, dydis(f.size_bytes)].filter(Boolean).join(', ');
+  return `
+    <div class="att">
+      <span class="att-ico" aria-hidden="true">${priedoIkona(f.kind)}</span>
+      <span class="att-body">
+        <strong>${esc(f.title)}</strong>
+        <span>${esc(f.description || smulkiau)}</span>
+      </span>
+      <span class="att-act">
+        <button class="btn btn-ghost btn-sm atsisiusti" type="button"
+                data-kelias="${esc(f.storage_path)}"
+                data-vardas="${esc(f.original_name || f.title)}">Atsisiųsti</button>
+      </span>
+    </div>`;
+}
+
+function prikabinkVaizdoIrasus() {
+  for (const langas of $$('.video-lazy')) {
+    const mygtukas = langas.querySelector('.video-play');
+    if (!mygtukas) continue;
+    mygtukas.addEventListener('click', async () => {
+      mygtukas.disabled = true;
+      mygtukas.textContent = 'Ruošiama';
+      try {
+        const src = await failoNuoroda(langas.dataset.kelias);
+        const grotuvas = document.createElement('video');
+        grotuvas.controls = true;
+        grotuvas.autoplay = true;
+        grotuvas.playsInline = true;
+        grotuvas.preload = 'metadata';
+        grotuvas.src = src;
+        langas.replaceChildren(grotuvas);
+        langas.classList.remove('video-lazy');
+      } catch (e) {
+        mygtukas.disabled = false;
+        mygtukas.textContent = 'Paleisti';
+        alert(klaidaLT(e));
+      }
+    });
+  }
+}
+
+function prikabinkAtsisiuntimus() {
+  for (const mygtukas of $$('.atsisiusti')) {
+    mygtukas.addEventListener('click', async () => {
+      const senas = mygtukas.textContent;
+      mygtukas.disabled = true;
+      mygtukas.textContent = 'Ruošiama';
+      try {
+        const nuoroda = await failoNuoroda(mygtukas.dataset.kelias, mygtukas.dataset.vardas);
+        // Naršyklė atsisiunčia pati, nuoroda galioja ribotą laiką.
+        location.href = nuoroda;
+        mygtukas.textContent = senas;
+      } catch (e) {
+        mygtukas.textContent = 'Nepavyko';
+        alert(klaidaLT(e));
+        setTimeout(() => { mygtukas.textContent = senas; }, 2000);
+      } finally {
+        mygtukas.disabled = false;
+      }
+    });
+  }
+}
+
+function klaidaEkrane(antraste, tekstas) {
+  virsus.innerHTML = '';
+  turinys.innerHTML = `
+    <div class="empty">
+      <h2>${esc(antraste)}</h2>
+      <p>${esc(tekstas)}</p>
+      <div class="form-actions" style="justify-content:center">
+        <a class="btn btn-ghost" href="mano.html">Grįžti</a>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>

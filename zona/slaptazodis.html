@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Slaptažodis | Butkus Coaching klientų zona</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+
+<!--
+  Adresas nuskaitomas ČIA, paprastu skriptu, dar prieš modulius.
+  Supabase biblioteka, radusi atkūrimo žymenis po grotelėmis, juos apdoroja ir
+  iš adreso eilutės pašalina. Modulis vykdomas vėliau, tad be šios eilutės
+  atkūrimo atpažinimas priklausytų nuo vykdymo eiliškumo.
+-->
+<script>window.__zonaAdresas = { search: location.search, hash: location.hash };</script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="../index.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <a class="btn btn-ghost btn-sm" href="index.html">Prisijungti</a>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="auth-wrap">
+    <div class="auth-card" id="kortele">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { db, KONFIGURUOTA, $, pranesk, klaidaLT, rodykKonfigKlaida, absoliutus, sesija } from './app.js';
+
+const kortele = $('#kortele');
+
+// Klausomės dar prieš tikrindami sesiją. Kai žmogus ateina iš laiško nuorodos,
+// biblioteka pati iškeičia kodą į sesiją ir praneša apie PASSWORD_RECOVERY.
+let atkurimoIvykis = false;
+if (KONFIGURUOTA) {
+  db.auth.onAuthStateChange((ivykis) => {
+    if (ivykis === 'PASSWORD_RECOVERY') atkurimoIvykis = true;
+  });
+}
+
+if (!KONFIGURUOTA) {
+  rodykKonfigKlaida();
+} else {
+  paleisk();
+}
+
+async function paleisk() {
+  const pradinis = window.__zonaAdresas || { search: location.search, hash: location.hash };
+  const q = new URLSearchParams(pradinis.search);
+  const h = new URLSearchParams(pradinis.hash.replace(/^#/, ''));
+
+  // Nepavykusi nuoroda grįžta su klaida adreso eilutėje arba po grotelėmis.
+  const klaidosTekstas = q.get('error_description') || h.get('error_description');
+  const klaidosKodas   = q.get('error_code') || h.get('error_code') || q.get('error') || h.get('error');
+
+  if (klaidosTekstas || klaidosKodas) {
+    const pasibaige = /expired|invalid/i.test(String(klaidosKodas) + ' ' + String(klaidosTekstas));
+    rodykPrasyma(pasibaige
+      ? 'Nuoroda nebegalioja. Atkūrimo laiškas galioja ribotą laiką, tad paprašyk naujo.'
+      : 'Nuorodos apdoroti nepavyko. Paprašyk naujo laiško.');
+    return;
+  }
+
+  const isLaisko = Boolean(q.get('code') || h.get('access_token') || q.get('type') === 'recovery' || h.get('type') === 'recovery');
+
+  // getSession palaukia, kol biblioteka baigs darbą su adreso eilute.
+  const s = await sesija();
+
+  if ((isLaisko || atkurimoIvykis) && s) {
+    rodykNaujoSlaptazodzioForma();
+    return;
+  }
+
+  if (isLaisko && !s) {
+    rodykPrasyma('Nuoroda nebegalioja arba jau buvo panaudota. Paprašyk naujo laiško.');
+    return;
+  }
+
+  rodykPrasyma('');
+}
+
+// -----------------------------------------------------------------------------
+//  1 dalis: laiško užsakymas
+// -----------------------------------------------------------------------------
+function rodykPrasyma(pradinisPranesimas) {
+  kortele.innerHTML = `
+    <h1>Slaptažodžio atkūrimas</h1>
+    <p>Įrašyk el. paštą, kuriuo naudojiesi zonoje. Atsiųsime nuorodą naujam slaptažodžiui susikurti.</p>
+
+    <p class="note" id="pranesimas" hidden></p>
+
+    <form id="forma" novalidate>
+      <div class="field">
+        <label for="el-pastas">El. paštas</label>
+        <input id="el-pastas" type="email" autocomplete="email" required>
+        <p class="err" id="klaida-el-pastas" aria-live="polite"></p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block" type="submit" id="siusti">Siųsti nuorodą</button>
+      </div>
+    </form>
+
+    <div class="auth-foot">
+      <a href="index.html">Grįžti į prisijungimą</a>
+    </div>
+  `;
+
+  if (pradinisPranesimas) pranesk($('#pranesimas'), pradinisPranesimas, 'error');
+  $('#el-pastas').focus();
+
+  $('#forma').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const pranesimas = $('#pranesimas');
+    const mygtukas = $('#siusti');
+    const email = $('#el-pastas').value.trim();
+
+    $('#klaida-el-pastas').textContent = '';
+    pranesk(pranesimas, '');
+
+    if (!email) {
+      $('#klaida-el-pastas').textContent = 'Įrašyk el. paštą.';
+      return;
+    }
+
+    mygtukas.disabled = true;
+    mygtukas.textContent = 'Siunčiama';
+
+    const { error } = await db.auth.resetPasswordForEmail(email, {
+      redirectTo: absoliutus('slaptazodis.html'),
+    });
+
+    mygtukas.disabled = false;
+    mygtukas.textContent = 'Siųsti nuorodą';
+
+    if (error) {
+      pranesk(pranesimas, klaidaLT(error), 'error');
+      return;
+    }
+
+    // Atsakymas visada vienodas, nesvarbu, ar toks adresas egzistuoja.
+    // Kitaip forma pasakytų, kurie el. paštai yra užregistruoti.
+    pranesk(pranesimas,
+      'Jei toks adresas zonoje yra, laiškas jau pakeliui. Patikrink pašto dėžutę ir šlamšto aplanką.',
+      'ok');
+    $('#forma').reset();
+  });
+}
+
+// -----------------------------------------------------------------------------
+//  2 dalis: naujas slaptažodis
+// -----------------------------------------------------------------------------
+function rodykNaujoSlaptazodzioForma() {
+  kortele.innerHTML = `
+    <h1>Naujas slaptažodis</h1>
+    <p>Nuoroda patvirtinta. Susikurk naują slaptažodį ir toliau jungsiesi su juo.</p>
+
+    <p class="note" id="pranesimas" hidden></p>
+
+    <form id="forma" novalidate>
+      <div class="field">
+        <label for="slaptazodis">Naujas slaptažodis</label>
+        <input id="slaptazodis" type="password" autocomplete="new-password" required minlength="8">
+        <span class="hint">Bent 8 simboliai.</span>
+        <p class="err" id="klaida-slaptazodis" aria-live="polite"></p>
+      </div>
+      <div class="field">
+        <label for="slaptazodis2">Pakartok</label>
+        <input id="slaptazodis2" type="password" autocomplete="new-password" required>
+        <p class="err" id="klaida-slaptazodis2" aria-live="polite"></p>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block" type="submit" id="siusti">Išsaugoti</button>
+      </div>
+    </form>
+  `;
+
+  $('#slaptazodis').focus();
+
+  $('#forma').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const pranesimas = $('#pranesimas');
+    const mygtukas = $('#siusti');
+    const slapt  = $('#slaptazodis').value;
+    const slapt2 = $('#slaptazodis2').value;
+
+    $('#klaida-slaptazodis').textContent = '';
+    $('#klaida-slaptazodis2').textContent = '';
+    pranesk(pranesimas, '');
+
+    if (slapt.length < 8) {
+      $('#klaida-slaptazodis').textContent = 'Bent 8 simboliai.';
+      return;
+    }
+    if (slapt !== slapt2) {
+      $('#klaida-slaptazodis2').textContent = 'Slaptažodžiai nesutampa.';
+      return;
+    }
+
+    mygtukas.disabled = true;
+    mygtukas.textContent = 'Saugoma';
+
+    const { error } = await db.auth.updateUser({ password: slapt });
+
+    if (error) {
+      mygtukas.disabled = false;
+      mygtukas.textContent = 'Išsaugoti';
+      pranesk(pranesimas, klaidaLT(error), 'error');
+      return;
+    }
+
+    pranesk(pranesimas, 'Slaptažodis pakeistas. Perkeliame į tavo zoną.', 'ok');
+    setTimeout(() => location.replace('mano.html'), 1200);
+  });
+}
+</script>
+</body>
+</html>

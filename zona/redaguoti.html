@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programos redagavimas | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="valdymas.html">Butkus<i>/</i>Coaching<small>Valdymas</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <p style="margin-bottom:var(--s-300)">
+      <a class="btn btn-ghost btn-sm" href="valdymas.html">Atgal į valdymą</a>
+    </p>
+
+    <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+
+    <div id="redaktorius" hidden>
+      <div class="page-head">
+        <h1 id="antraste">Programa</h1>
+        <p id="paantraste"></p>
+      </div>
+
+      <p class="note" id="pranesimas" hidden></p>
+
+      <div class="stack">
+        <section class="card" id="k-detales"></section>
+        <section class="card" id="k-blokai"></section>
+        <section class="card" id="k-priedai"></section>
+        <section class="card" id="k-priskyrimai"></section>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, valdymas</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, data, dydis, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  saugusVardas, videoNuorodaGalioja, priedoIkona, zodis,
+  BUCKET, MAX_FAILO_DYDIS, BUSENOS,
+} from './app.js';
+
+// Naršyklė failo tipą nustato pati ir kartais suklysta: .csv su įdiegtu Excel
+// tampa application/vnd.ms-excel, o .docx be Office lieka visai be tipo.
+// Saugyklos krepšys tikrina būtent tipą, todėl plėtinį paverčiame tipu patys.
+const FAILU_TIPAI = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp',
+  mp4: 'video/mp4', mov: 'video/quicktime',
+  heic: 'image/heic', heif: 'image/heif',
+  txt: 'text/plain', csv: 'text/csv',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+let programa = null;
+let blokai = [];
+let priedai = [];
+let klientai = [];
+let priskyrimai = [];
+let savasId = null;
+let paskutineKlaida = null;
+let priedoSkirtukas = 'failas';
+
+const PROGRAMOS_ID = new URLSearchParams(location.search).get('id');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos({ tikTreneriui: true });
+  if (!s) return;
+  rodykNav(s.profilis, 'valdymas.html', true);
+  savasId = s.vartotojas.id;
+
+  if (!PROGRAMOS_ID || !/^[0-9a-f-]{36}$/i.test(PROGRAMOS_ID)) {
+    $('#kraunasi').innerHTML = '<div class="note note-error">Neteisinga programos nuoroda.</div>';
+    return;
+  }
+
+  await perkrauk();
+
+  if (!programa) {
+    // Pranešimo langelis gyvena paslėptame redaktoriuje, tad kol jo nematyti,
+    // tikrąją priežastį rodome čia. Kitaip kiekvienas gedimas atrodytų
+    // vienodai, tarsi programa būtų ištrinta.
+    $('#kraunasi').innerHTML = `<div class="note note-error">${
+      paskutineKlaida ? esc(klaidaLT(paskutineKlaida)) : 'Programa nerasta.'
+    }</div>`;
+    return;
+  }
+
+  $('#kraunasi').hidden = true;
+  $('#redaktorius').hidden = false;
+}
+
+async function perkrauk() {
+  const [pr, bl, pd, kl, ps] = await Promise.all([
+    db.from('programs').select('id, title, summary, status, created_at, updated_at').eq('id', PROGRAMOS_ID).maybeSingle(),
+    db.from('program_sections').select('id, title, notes, position').eq('program_id', PROGRAMOS_ID)
+      .order('position', { ascending: true }).order('created_at', { ascending: true }),
+    db.from('attachments')
+      .select('id, section_id, kind, title, description, storage_path, external_url, original_name, mime_type, size_bytes, position')
+      .eq('program_id', PROGRAMOS_ID)
+      .order('position', { ascending: true }).order('created_at', { ascending: true }),
+    db.from('profiles').select('id, email, full_name, status').order('full_name', { ascending: true }),
+    db.from('assignments').select('id, client_id, status, starts_on, note').eq('program_id', PROGRAMOS_ID),
+  ]);
+
+  const klaida = pr.error || bl.error || pd.error || kl.error || ps.error;
+  paskutineKlaida = klaida || null;
+  if (klaida) pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+
+  programa = pr.data;
+  blokai = bl.data || [];
+  priedai = pd.data || [];
+  klientai = (kl.data || []).filter((k) => k.id !== savasId);
+  priskyrimai = ps.data || [];
+
+  if (!programa) return;
+
+  document.title = programa.title + ' | Valdymas';
+  $('#antraste').textContent = programa.title;
+  $('#paantraste').textContent = `Sukurta ${data(programa.created_at)}, atnaujinta ${data(programa.updated_at)}`;
+
+  piesDetales();
+  piesBlokus();
+  piesPriedus();
+  piesPriskyrimus();
+}
+
+// =============================================================================
+//  DETALĖS
+// =============================================================================
+function piesDetales() {
+  $('#k-detales').innerHTML = `
+    <div class="card-head"><h2>Pagrindinis</h2></div>
+    <form id="forma-detales" novalidate>
+      <div class="field">
+        <label for="d-pavadinimas">Pavadinimas</label>
+        <input id="d-pavadinimas" type="text" required value="${esc(programa.title)}">
+      </div>
+      <div class="field">
+        <label for="d-aprasas">Aprašas klientui</label>
+        <textarea id="d-aprasas" rows="4">${esc(programa.summary)}</textarea>
+      </div>
+      <div class="field">
+        <label for="d-busena">Būsena</label>
+        <select id="d-busena">
+          <option value="draft"${programa.status === 'draft' ? ' selected' : ''}>Juodraštis, klientai nemato</option>
+          <option value="published"${programa.status === 'published' ? ' selected' : ''}>Paskelbta, priskirti klientai mato</option>
+          <option value="archived"${programa.status === 'archived' ? ' selected' : ''}>Archyve, klientai nemato</option>
+        </select>
+        <span class="hint">Kol programa yra juodraštis, jos nemato niekas, net priskirti klientai.</span>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Išsaugoti</button>
+      </div>
+    </form>`;
+
+  $('#forma-detales').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const { error } = await db.from('programs').update({
+      title: $('#d-pavadinimas').value.trim(),
+      summary: $('#d-aprasas').value.trim(),
+      status: $('#d-busena').value,
+    }).eq('id', PROGRAMOS_ID);
+
+    if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    pranesk($('#pranesimas'), 'Išsaugota.', 'ok');
+    await perkrauk();
+  });
+}
+
+// =============================================================================
+//  BLOKAI
+// =============================================================================
+function piesBlokus() {
+  $('#k-blokai').innerHTML = `
+    <div class="card-head">
+      <h2>Blokai</h2>
+      <span class="row-end muted">${blokai.length}</span>
+    </div>
+    <p class="muted" style="margin-bottom:var(--s-300)">
+      Blokai neprivalomi. Jie padeda suskirstyti programą, pavyzdžiui pagal savaites arba treniruočių dienas.
+      Failai ir vaizdo įrašai gali gulėti bloke arba tiesiog programoje.
+    </p>
+
+    ${blokai.length ? `<div class="stack-sm" style="margin-bottom:var(--s-300)">${blokai.map(bloko_eilute).join('')}</div>` : ''}
+
+    <form id="forma-blokas" novalidate>
+      <div class="field-row">
+        <div class="field">
+          <label for="b-pavadinimas">Naujo bloko pavadinimas</label>
+          <input id="b-pavadinimas" type="text" placeholder="Pavyzdžiui, 1 iki 4 savaitė">
+        </div>
+        <div class="field">
+          <label for="b-eile">Eilė</label>
+          <input id="b-eile" type="number" value="${blokai.length + 1}" min="0" max="999">
+        </div>
+      </div>
+      <div class="field">
+        <label for="b-pastabos">Pastabos</label>
+        <textarea id="b-pastabos" rows="2" placeholder="Neprivaloma"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" type="submit">Pridėti bloką</button>
+      </div>
+    </form>`;
+
+  $('#forma-blokas').addEventListener('submit', pridekBloka);
+  for (const b of $$('.trinti-bloka')) b.addEventListener('click', () => trinkBloka(b.dataset.id, b.dataset.vardas));
+  for (const b of $$('.saugoti-bloka')) b.addEventListener('click', () => saugokBloka(b.dataset.id));
+}
+
+function bloko_eilute(b) {
+  const kiek = priedai.filter((p) => p.section_id === b.id).length;
+  const prieduZodis = zodis(kiek, 'priedas', 'priedai', 'priedų');
+  return `
+    <div class="att" style="align-items:flex-start;flex-direction:column;gap:var(--s-100)">
+      <div class="field-row" style="width:100%">
+        <div class="field">
+          <label for="bl-${esc(b.id)}-t">Pavadinimas</label>
+          <input id="bl-${esc(b.id)}-t" type="text" value="${esc(b.title)}">
+        </div>
+        <div class="field">
+          <label for="bl-${esc(b.id)}-p">Eilė</label>
+          <input id="bl-${esc(b.id)}-p" type="number" value="${b.position}" min="0" max="999">
+        </div>
+      </div>
+      <div class="field" style="width:100%">
+        <label for="bl-${esc(b.id)}-n">Pastabos</label>
+        <textarea id="bl-${esc(b.id)}-n" rows="2">${esc(b.notes)}</textarea>
+      </div>
+      <div class="row" style="width:100%">
+        <span class="chip chip-quiet">${kiek} ${prieduZodis}</span>
+        <span class="row-end row">
+          <button class="btn btn-ghost btn-sm saugoti-bloka" type="button" data-id="${esc(b.id)}">Išsaugoti</button>
+          <button class="btn btn-danger btn-sm trinti-bloka" type="button" data-id="${esc(b.id)}" data-vardas="${esc(b.title)}">Trinti</button>
+        </span>
+      </div>
+    </div>`;
+}
+
+async function pridekBloka(ev) {
+  ev.preventDefault();
+  const pavadinimas = $('#b-pavadinimas').value.trim();
+  if (!pavadinimas) return pranesk($('#pranesimas'), 'Įrašyk bloko pavadinimą.', 'error');
+
+  const { error } = await db.from('program_sections').insert({
+    program_id: PROGRAMOS_ID,
+    title: pavadinimas,
+    notes: $('#b-pastabos').value.trim(),
+    position: Number($('#b-eile').value) || 0,
+  });
+
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+  pranesk($('#pranesimas'), 'Blokas pridėtas.', 'ok');
+  await perkrauk();
+}
+
+async function saugokBloka(id) {
+  const { error } = await db.from('program_sections').update({
+    title: document.getElementById('bl-' + id + '-t').value.trim(),
+    notes: document.getElementById('bl-' + id + '-n').value.trim(),
+    position: Number(document.getElementById('bl-' + id + '-p').value) || 0,
+  }).eq('id', id);
+
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+  pranesk($('#pranesimas'), 'Blokas išsaugotas.', 'ok');
+  await perkrauk();
+}
+
+async function trinkBloka(id, vardas) {
+  if (!confirm(`Ištrinti bloką "${vardas}"?\n\nJame buvę failai ir vaizdo įrašai neišnyks, jie tiesiog persikels į bendrą programos medžiagą.`)) return;
+  const { error } = await db.from('program_sections').delete().eq('id', id);
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+  pranesk($('#pranesimas'), 'Blokas ištrintas.', 'ok');
+  await perkrauk();
+}
+
+// =============================================================================
+//  PRIEDAI
+// =============================================================================
+function piesPriedus() {
+  const parinktys = ['<option value="">Bendra programos medžiaga</option>']
+    .concat(blokai.map((b) => `<option value="${esc(b.id)}">${esc(b.title)}</option>`))
+    .join('');
+
+  $('#k-priedai').innerHTML = `
+    <div class="card-head">
+      <h2>Failai ir vaizdo įrašai</h2>
+      <span class="row-end muted">${priedai.length}</span>
+    </div>
+
+    ${priedai.length ? `<div class="att-list" style="margin-bottom:var(--s-400)">${priedai.map(priedo_eilute).join('')}</div>`
+                     : '<p class="muted" style="margin-bottom:var(--s-400)">Priedų dar nėra.</p>'}
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" type="button" data-forma="failas" aria-selected="${priedoSkirtukas === 'failas'}">Įkelti failą</button>
+      <button class="tab" role="tab" type="button" data-forma="nuoroda" aria-selected="${priedoSkirtukas === 'nuoroda'}">Vaizdo įrašo nuoroda</button>
+    </div>
+
+    <form id="forma-failas" novalidate${priedoSkirtukas === 'failas' ? '' : ' hidden'}>
+      <div class="field">
+        <label for="f-failas">Failas</label>
+        <input id="f-failas" type="file" required
+               accept=".pdf,.jpg,.jpeg,.png,.webp,.heic,.heif,.mp4,.mov,.xlsx,.docx,.txt,.csv">
+        <span class="hint">
+          Leidžiama: PDF, nuotraukos (JPG, PNG, WEBP, HEIC), vaizdo įrašai (MP4, MOV),
+          Word, Excel, tekstas. Didžiausias dydis 50 MB,
+          tai nemokamo plano riba. Ilgus treniruočių vaizdo įrašus dėk į YouTube ir naudok nuorodą.
+        </span>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="f-pavadinimas">Pavadinimas klientui</label>
+          <input id="f-pavadinimas" type="text" placeholder="Jei paliksi tuščią, bus failo vardas">
+        </div>
+        <div class="field">
+          <label for="f-blokas">Kur dėti</label>
+          <select id="f-blokas">${parinktys}</select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="f-aprasas">Paaiškinimas</label>
+        <input id="f-aprasas" type="text" placeholder="Neprivaloma">
+      </div>
+      <div class="progress" id="pazanga" hidden><i></i></div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit" id="ikelti">Įkelti</button>
+      </div>
+    </form>
+
+    <form id="forma-nuoroda" novalidate${priedoSkirtukas === 'nuoroda' ? '' : ' hidden'}>
+      <div class="field">
+        <label for="n-nuoroda">Vaizdo įrašo nuoroda</label>
+        <input id="n-nuoroda" type="url" required placeholder="https://www.youtube.com/watch?v=...">
+        <span class="hint">
+          Tinka YouTube, Vimeo ir Google Drive nuorodos. YouTube įrašą daryk nerodomą sąraše,
+          tada jis pasiekiamas tik turintiems nuorodą.
+        </span>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="n-pavadinimas">Pavadinimas klientui</label>
+          <input id="n-pavadinimas" type="text" required placeholder="Pavyzdžiui, Pritūpimai su štanga">
+        </div>
+        <div class="field">
+          <label for="n-blokas">Kur dėti</label>
+          <select id="n-blokas">${parinktys}</select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="n-aprasas">Paaiškinimas</label>
+        <input id="n-aprasas" type="text" placeholder="Neprivaloma">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Pridėti nuorodą</button>
+      </div>
+    </form>`;
+
+  for (const t of $$('#k-priedai .tab')) {
+    t.addEventListener('click', () => {
+      priedoSkirtukas = t.dataset.forma;
+      for (const kt of $$('#k-priedai .tab')) kt.setAttribute('aria-selected', String(kt === t));
+      $('#forma-failas').hidden = priedoSkirtukas !== 'failas';
+      $('#forma-nuoroda').hidden = priedoSkirtukas !== 'nuoroda';
+    });
+  }
+
+  $('#forma-failas').addEventListener('submit', ikelkFaila);
+  $('#forma-nuoroda').addEventListener('submit', pridekNuoroda);
+  for (const b of $$('.trinti-prieda')) b.addEventListener('click', () => trinkPrieda(b.dataset.id));
+}
+
+function priedo_eilute(p) {
+  const blokas = p.section_id ? blokai.find((b) => b.id === p.section_id)?.title : null;
+  const tipas = p.kind === 'video_link' ? 'Nuoroda' : p.kind === 'video_file' ? 'Vaizdo failas' : 'Failas';
+  const smulkiau = [tipas, blokas || 'Bendra medžiaga', p.original_name, dydis(p.size_bytes)]
+    .filter(Boolean).join(', ');
+
+  return `
+    <div class="att">
+      <span class="att-ico" aria-hidden="true">${priedoIkona(p.kind)}</span>
+      <span class="att-body">
+        <strong>${esc(p.title)}</strong>
+        <span>${esc(smulkiau)}</span>
+        ${p.kind === 'video_link' && !videoNuorodaGalioja(p.external_url)
+          ? '<span style="color:var(--danger)">Šios nuorodos peržiūrėti puslapyje nepavyks</span>' : ''}
+      </span>
+      <span class="att-act">
+        <button class="btn btn-danger btn-sm trinti-prieda" type="button" data-id="${esc(p.id)}">Trinti</button>
+      </span>
+    </div>`;
+}
+
+async function ikelkFaila(ev) {
+  ev.preventDefault();
+
+  const laukas = $('#f-failas');
+  const failas = laukas.files?.[0];
+  if (!failas) return pranesk($('#pranesimas'), 'Pasirink failą.', 'error');
+
+  if (failas.size > MAX_FAILO_DYDIS) {
+    return pranesk($('#pranesimas'),
+      `Failas per didelis, ${dydis(failas.size)}. Riba yra ${dydis(MAX_FAILO_DYDIS)}. Vaizdo įrašą kelk į YouTube ir pridėk nuorodą.`,
+      'error');
+  }
+
+  const pletinys = (failas.name.split('.').pop() || '').toLowerCase();
+  const norimasTipas = FAILU_TIPAI[pletinys];
+  if (!norimasTipas) {
+    return pranesk($('#pranesimas'),
+      'Tokio tipo failo įkelti negalima. Tinka PDF, JPG, PNG, WEBP, HEIC, MP4, MOV, XLSX, DOCX, TXT ir CSV.',
+      'error');
+  }
+  // Failo tipas perrašomas pagal plėtinį. Perpakuoti būtina, nes contentType
+  // parinktis su File kūnu ignoruojama, saugykla žiūri tik į patį failą.
+  const siunciamas = failas.type === norimasTipas
+    ? failas
+    : new File([failas], failas.name, { type: norimasTipas });
+
+  const mygtukas = $('#ikelti');
+  const pazanga = $('#pazanga');
+  mygtukas.disabled = true;
+  mygtukas.textContent = 'Keliama';
+  pazanga.hidden = false;
+  pazanga.querySelector('i').style.width = '15%';
+
+  // Kelias visada prasideda programos id. Pagal jį saugyklos apsauga nusprendžia,
+  // kas failą gali atsisiųsti. Laiko žyma priekyje reiškia, kad tas pats vardas
+  // niekada neperrašo seno failo.
+  const kelias = `${PROGRAMOS_ID}/${Date.now()}-${saugusVardas(failas.name)}`;
+
+  const { error: ikelimoKlaida } = await db.storage.from(BUCKET).upload(kelias, siunciamas, {
+    cacheControl: '3600',
+    upsert: false,
+  });
+
+  pazanga.querySelector('i').style.width = '70%';
+
+  if (ikelimoKlaida) {
+    pazanga.hidden = true;
+    mygtukas.disabled = false;
+    mygtukas.textContent = 'Įkelti';
+    return pranesk($('#pranesimas'), klaidaLT(ikelimoKlaida), 'error');
+  }
+
+  const arVideo = norimasTipas.startsWith('video/');
+
+  const { error: irasoKlaida } = await db.from('attachments').insert({
+    program_id: PROGRAMOS_ID,
+    section_id: $('#f-blokas').value || null,
+    kind: arVideo ? 'video_file' : 'file',
+    title: $('#f-pavadinimas').value.trim() || failas.name,
+    description: $('#f-aprasas').value.trim(),
+    storage_path: kelias,
+    original_name: failas.name,
+    mime_type: norimasTipas,
+    size_bytes: failas.size,
+    position: kitaPozicija(),
+  });
+
+  pazanga.querySelector('i').style.width = '100%';
+
+  if (irasoKlaida) {
+    // Įrašas nepavyko, tad paliktas failas saugykloje būtų šiukšlė.
+    await db.storage.from(BUCKET).remove([kelias]);
+    pazanga.hidden = true;
+    mygtukas.disabled = false;
+    mygtukas.textContent = 'Įkelti';
+    return pranesk($('#pranesimas'), klaidaLT(irasoKlaida), 'error');
+  }
+
+  $('#forma-failas').reset();
+  pazanga.hidden = true;
+  mygtukas.disabled = false;
+  mygtukas.textContent = 'Įkelti';
+  pranesk($('#pranesimas'), 'Failas įkeltas.', 'ok');
+  await perkrauk();
+}
+
+async function pridekNuoroda(ev) {
+  ev.preventDefault();
+
+  const nuoroda = $('#n-nuoroda').value.trim();
+  const pavadinimas = $('#n-pavadinimas').value.trim();
+
+  if (!pavadinimas) return pranesk($('#pranesimas'), 'Įrašyk pavadinimą.', 'error');
+  if (!videoNuorodaGalioja(nuoroda)) {
+    return pranesk($('#pranesimas'),
+      'Tokios nuorodos atpažinti nepavyko. Tinka YouTube, Vimeo ir Google Drive adresai.',
+      'error');
+  }
+
+  const { error } = await db.from('attachments').insert({
+    program_id: PROGRAMOS_ID,
+    section_id: $('#n-blokas').value || null,
+    kind: 'video_link',
+    title: pavadinimas,
+    description: $('#n-aprasas').value.trim(),
+    external_url: nuoroda,
+    position: kitaPozicija(),
+  });
+
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+
+  $('#forma-nuoroda').reset();
+  pranesk($('#pranesimas'), 'Nuoroda pridėta.', 'ok');
+  await perkrauk();
+}
+
+/** Didziausia esama pozicija plius vienas. Sarasо ilgis netinka, nes po
+    trynimo jis susitrauktu ir naujas priedas atsidurtu seno vietoje. */
+function kitaPozicija() {
+  return priedai.reduce((m, p) => Math.max(m, Number(p.position) || 0), 0) + 1;
+}
+
+async function trinkPrieda(id) {
+  const p = priedai.find((x) => x.id === id);
+  if (!p) return;
+  if (!confirm(`Ištrinti "${p.title}"?`)) return;
+
+  // Pirma failas, tik paskui įrašas. Atvirkščiai būtų blogiau: dingus įrašui
+  // kelias saugyklos failo nebebūtų niekur užregistruotas, ir jo nebebūtų
+  // įmanoma nei rasti, nei ištrinti.
+  if (p.storage_path) {
+    const { error: sKlaida } = await db.storage.from(BUCKET).remove([p.storage_path]);
+    if (sKlaida) {
+      return pranesk($('#pranesimas'), 'Failo saugykloje pašalinti nepavyko: ' + klaidaLT(sKlaida), 'error');
+    }
+  }
+
+  const { error } = await db.from('attachments').delete().eq('id', id);
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+
+  pranesk($('#pranesimas'), 'Ištrinta.', 'ok');
+  await perkrauk();
+}
+
+// =============================================================================
+//  PRISKYRIMAI
+// =============================================================================
+function piesPriskyrimus() {
+  const eilutes = klientai.map((k) => {
+    const a = priskyrimai.find((x) => x.client_id === k.id);
+    const aktyvus = a && a.status === 'active';
+
+    return `
+      <tr>
+        <td>
+          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
+        </td>
+        <td><span class="chip ${k.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
+        <td>${a ? `<span class="chip ${aktyvus ? 'chip-volt' : 'chip-quiet'}">${esc(BUSENOS[a.status] || a.status)}</span>` : '<span class="muted">nepriskirta</span>'}</td>
+        <td>
+          ${a
+            ? `<button class="btn btn-danger btn-sm atimti" type="button" data-id="${esc(a.id)}">Atimti</button>`
+            : `<button class="btn btn-ghost btn-sm priskirti" type="button" data-id="${esc(k.id)}">Priskirti</button>`}
+        </td>
+      </tr>`;
+  }).join('');
+
+  const kiek = priskyrimai.filter((a) => a.status === 'active').length;
+
+  $('#k-priskyrimai').innerHTML = `
+    <div class="card-head">
+      <h2>Priskyrimai</h2>
+      <span class="row-end muted">${kiek} ${zodis(kiek, 'klientas', 'klientai', 'klientų')}</span>
+    </div>
+    ${programa.status !== 'published'
+      ? '<p class="note note-info" style="margin-bottom:var(--s-300)">Programa dar nepaskelbta, tad priskirti klientai jos nemato. Būseną pakeisk skiltyje Pagrindinis.</p>'
+      : ''}
+    ${klientai.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Klientas</th><th>Paskyra</th><th>Ši programa</th><th></th></tr></thead>
+          <tbody>${eilutes}</tbody>
+        </table>
+      </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą valdymo skydelyje.</p>'}`;
+
+  for (const b of $$('.priskirti')) b.addEventListener('click', () => priskirk(b.dataset.id));
+  for (const b of $$('.atimti')) b.addEventListener('click', () => atimk(b.dataset.id));
+}
+
+async function priskirk(klientoId) {
+  const { error } = await db.from('assignments').insert({
+    program_id: PROGRAMOS_ID,
+    client_id: klientoId,
+    status: 'active',
+  });
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+  pranesk($('#pranesimas'), 'Programa priskirta.', 'ok');
+  await perkrauk();
+}
+
+async function atimk(priskyrimoId) {
+  if (!confirm('Atimti šią programą iš kliento? Jis jos nebematys.')) return;
+  const { error } = await db.from('assignments').delete().eq('id', priskyrimoId);
+  if (error) return pranesk($('#pranesimas'), klaidaLT(error), 'error');
+  pranesk($('#pranesimas'), 'Priskyrimas panaikintas.', 'ok');
+  await perkrauk();
+}
+</script>
+</body>
+</html>

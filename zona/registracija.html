@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paskyros kūrimas | Butkus Coaching klientų zona</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="../index.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <a class="btn btn-ghost btn-sm" href="index.html">Prisijungti</a>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="auth-wrap">
+    <div class="auth-card" id="kortele">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Tikrinamas kvietimas</span></div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { db, KONFIGURUOTA, $, esc, pranesk, klaidaLT, rodykKonfigKlaida, absoliutus } from './app.js';
+
+const kortele = $('#kortele');
+const RAKTAS_LAUKIA = 'butkuscoaching-kvietimas';
+
+if (!KONFIGURUOTA) {
+  rodykKonfigKlaida();
+} else {
+  paleisk();
+}
+
+async function paleisk() {
+  const token = (new URLSearchParams(location.search).get('kvietimas') || '').trim();
+
+  if (!token) {
+    beKvietimo('Registracija vyksta tik pagal kvietimą.',
+      'Dalius atsiunčia asmeninę nuorodą. Atidaryk ją, ir paskyros kūrimo forma atsiras čia.');
+    return;
+  }
+
+  const { data, error } = await db.rpc('invite_info', { p_token: token });
+
+  if (error) {
+    beKvietimo('Nepavyko patikrinti kvietimo', klaidaLT(error));
+    return;
+  }
+
+  const info = Array.isArray(data) ? data[0] : data;
+
+  if (!info) {
+    beKvietimo('Kvietimas nerastas',
+      'Patikrink, ar nuoroda nukopijuota iki galo. Jei ji atrodo teisinga, paprašyk Daliaus naujos.');
+    return;
+  }
+  if (!info.valid) {
+    beKvietimo('Kvietimas nebegalioja',
+      'Jis jau panaudotas arba baigėsi jo galiojimas. Paprašyk Daliaus naujos nuorodos.');
+    return;
+  }
+
+  rodykForma(token, info);
+}
+
+function beKvietimo(antraste, tekstas) {
+  kortele.innerHTML = `
+    <h1>${esc(antraste)}</h1>
+    <p>${esc(tekstas)}</p>
+    <div class="form-actions">
+      <a class="btn btn-ghost btn-block" href="index.html">Grįžti į prisijungimą</a>
+    </div>
+  `;
+}
+
+function rodykForma(token, info) {
+  const pastasZinomas = Boolean(info.email);
+
+  kortele.innerHTML = `
+    <h1>Susikurk paskyrą</h1>
+    <p>Kvietimas galioja. Užpildyk laukus, ir zona bus tavo.</p>
+
+    <p class="note" id="pranesimas" hidden></p>
+
+    <form id="forma" novalidate>
+      <div class="field">
+        <label for="vardas">Vardas ir pavardė</label>
+        <input id="vardas" type="text" autocomplete="name" required value="${esc(info.full_name || '')}">
+        <p class="err" id="klaida-vardas" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label for="el-pastas">El. paštas</label>
+        <input id="el-pastas" type="email" autocomplete="email" required
+               value="${esc(info.email || '')}"${pastasZinomas ? ' readonly' : ''}>
+        ${pastasZinomas ? '<span class="hint">Šis kvietimas skirtas būtent šiam adresui.</span>' : ''}
+        <p class="err" id="klaida-el-pastas" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label for="slaptazodis">Slaptažodis</label>
+        <input id="slaptazodis" type="password" autocomplete="new-password" required minlength="8">
+        <span class="hint">Bent 8 simboliai.</span>
+        <p class="err" id="klaida-slaptazodis" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label for="slaptazodis2">Pakartok slaptažodį</label>
+        <input id="slaptazodis2" type="password" autocomplete="new-password" required>
+        <p class="err" id="klaida-slaptazodis2" aria-live="polite"></p>
+      </div>
+
+      <div class="field">
+        <label class="check-opt" for="sutikimas">
+          <input id="sutikimas" type="checkbox" required>
+          <span>Sutinku, kad Dalius saugotų mano treniruočių duomenis, kol dirbame kartu.
+                <a href="../privacy.html" target="_blank" rel="noopener">Privatumas</a></span>
+        </label>
+        <p class="err" id="klaida-sutikimas" aria-live="polite"></p>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary btn-block" type="submit" id="siusti">Sukurti paskyrą</button>
+      </div>
+    </form>
+
+    <div class="auth-foot">
+      <a href="index.html">Jau turi paskyrą</a>
+    </div>
+  `;
+
+  $('#forma').addEventListener('submit', (ev) => registruok(ev, token));
+  $(pastasZinomas ? '#vardas' : '#el-pastas').focus();
+}
+
+async function registruok(ev, token) {
+  ev.preventDefault();
+
+  const pranesimas = $('#pranesimas');
+  const mygtukas   = $('#siusti');
+  const vardas     = $('#vardas').value.trim();
+  const email      = $('#el-pastas').value.trim();
+  const slapt      = $('#slaptazodis').value;
+  const slapt2     = $('#slaptazodis2').value;
+  const sutikimas  = $('#sutikimas').checked;
+
+  for (const id of ['vardas', 'el-pastas', 'slaptazodis', 'slaptazodis2', 'sutikimas']) {
+    $('#klaida-' + id).textContent = '';
+  }
+  pranesk(pranesimas, '');
+
+  if (!vardas)                { $('#klaida-vardas').textContent = 'Įrašyk vardą.'; $('#vardas').focus(); return; }
+  if (!email)                 { $('#klaida-el-pastas').textContent = 'Įrašyk el. paštą.'; $('#el-pastas').focus(); return; }
+  if (slapt.length < 8)       { $('#klaida-slaptazodis').textContent = 'Bent 8 simboliai.'; $('#slaptazodis').focus(); return; }
+  if (slapt !== slapt2)       { $('#klaida-slaptazodis2').textContent = 'Slaptažodžiai nesutampa.'; $('#slaptazodis2').focus(); return; }
+  if (!sutikimas)             { $('#klaida-sutikimas').textContent = 'Be sutikimo paskyros sukurti negaliu.'; $('#sutikimas').focus(); return; }
+
+  mygtukas.disabled = true;
+  mygtukas.textContent = 'Kuriama';
+
+  // Kvietimą įsimename dar prieš registraciją. Jei projekte įjungtas el. pašto
+  // patvirtinimas, sesijos dabar nebus, o kvietimą panaudosime po pirmo
+  // prisijungimo, kai jau turėsime teises.
+  try {
+    localStorage.setItem(RAKTAS_LAUKIA, token);
+  } catch {
+    // Privatus naršymo langas gali neleisti rašyti. Tada kvietimas panaudojamas
+    // iškart žemiau, jei sesija atsiranda.
+  }
+
+  const { data, error } = await db.auth.signUp({
+    email,
+    password: slapt,
+    options: {
+      data: { full_name: vardas },
+      emailRedirectTo: absoliutus('index.html'),
+    },
+  });
+
+  if (error) {
+    // Registracija nepavyko, tad žymens palikti negalima: kitu atveju jis
+    // vėliau aktyvuotų visai kito žmogaus paskyrą tame pačiame kompiuteryje.
+    try { localStorage.removeItem(RAKTAS_LAUKIA); } catch {}
+    mygtukas.disabled = false;
+    mygtukas.textContent = 'Sukurti paskyrą';
+    pranesk(pranesimas, klaidaLT(error), 'error');
+    return;
+  }
+
+  // Kai patvirtinimas įjungtas, Supabase saugumo sumetimais neatskleidžia,
+  // kad adresas jau užimtas. Tuščias identities sąrašas yra vienintelis ženklas.
+  if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    try { localStorage.removeItem(RAKTAS_LAUKIA); } catch {}
+    mygtukas.disabled = false;
+    mygtukas.textContent = 'Sukurti paskyrą';
+    pranesk(pranesimas, 'Šis el. paštas jau užregistruotas. Prisijunk arba atkurk slaptažodį.', 'error');
+    return;
+  }
+
+  if (data?.session) {
+    // Patvirtinimas išjungtas, esame prisijungę iškart.
+    const { error: kvKlaida } = await db.rpc('redeem_invite', { p_token: token });
+    try { localStorage.removeItem(RAKTAS_LAUKIA); } catch {}
+
+    if (kvKlaida) {
+      pranesk(pranesimas, klaidaLT(kvKlaida), 'error');
+      mygtukas.disabled = false;
+      mygtukas.textContent = 'Sukurti paskyrą';
+      return;
+    }
+    location.replace('mano.html');
+    return;
+  }
+
+  // Patvirtinimas įjungtas.
+  location.replace('index.html?patvirtink=1');
+}
+</script>
+</body>
+</html>
