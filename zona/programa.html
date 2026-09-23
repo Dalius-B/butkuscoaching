@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programa | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .diena-kortele + .diena-kortele { margin-top: var(--s-300); }
+  .pratimo-kortele { padding: var(--s-300) 0; border-top: 1px solid var(--hair-ink); }
+  .pratimo-kortele:first-child { padding-top: 0; border-top: 0; }
+  .pratimo-tikslas { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
+  .setu-lentele { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-200); }
+  .setu-eilute { display: grid; grid-template-columns: 28px 1fr 1fr; gap: var(--s-100); align-items: center; }
+  .setu-eilute span { font-size: .8125rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .setu-eilute input { min-height: 40px; }
+  .paskutinis { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100) }
+</style>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <p><a class="btn btn-ghost btn-sm" href="mano.html">&larr; Mano programa</a></p>
+      <h1 id="antraste">Programa</h1>
+      <p id="paantraste"></p>
+    </div>
+    <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    <p class="note" id="pranesimas" hidden></p>
+    <div id="turinys-vieta"></div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+} from './app.js';
+
+const programId = new URLSearchParams(location.search).get('id');
+
+let vartotojas = null;
+let dienos = [];
+let pratimai = [];
+let irasaiPagalPratima = new Map();
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+  rodykNav(s.profilis, 'mano.html', s.arTreneris);
+  vartotojas = s.vartotojas;
+
+  if (!programId) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), 'Trūksta programos adreso. Grįžk į savo programų sąrašą.', 'error');
+    return;
+  }
+
+  await ikelk();
+}
+
+async function ikelk() {
+  const { data: programa, error: pKlaida } = await db
+    .from('programs').select('id, title, summary').eq('id', programId).maybeSingle();
+
+  // Programos gali nematyti, jei ji nepriskirta arba nepaskelbta -- has_program_access
+  // taisyklė tokiu atveju tiesiog negrąžina eilutės, ne klaidą.
+  if (pKlaida || !programa) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), pKlaida ? klaidaLT(pKlaida) : 'Šios programos nematai arba jos nebėra.', 'error');
+    return;
+  }
+
+  $('#antraste').textContent = programa.title;
+  $('#paantraste').textContent = programa.summary || '';
+  document.title = programa.title + ' | Butkus Coaching';
+
+  const { data: d, error: dKlaida } = await db
+    .from('program_sections').select('id, title, notes, position')
+    .eq('program_id', programId).order('position', { ascending: true });
+
+  if (dKlaida) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), klaidaLT(dKlaida), 'error');
+    return;
+  }
+  dienos = d || [];
+
+  const sekcijuId = dienos.map((x) => x.id);
+  const { data: p, error: prKlaida } = sekcijuId.length
+    ? await db.from('exercises').select('*').in('section_id', sekcijuId).order('position', { ascending: true })
+    : { data: [] };
+
+  if (prKlaida) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), klaidaLT(prKlaida), 'error');
+    return;
+  }
+  pratimai = p || [];
+
+  await ikelkIrasus();
+
+  $('#kraunasi').hidden = true;
+  piesTurini();
+}
+
+async function ikelkIrasus() {
+  irasaiPagalPratima = new Map();
+  const pratimuId = pratimai.map((p) => p.id);
+  if (!pratimuId.length) return;
+
+  const { data: irasai } = await db
+    .from('exercise_logs')
+    .select('*')
+    .eq('client_id', vartotojas.id)
+    .in('exercise_id', pratimuId)
+    .order('logged_at', { ascending: false });
+
+  for (const i of irasai || []) {
+    if (!irasaiPagalPratima.has(i.exercise_id)) irasaiPagalPratima.set(i.exercise_id, []);
+    irasaiPagalPratima.get(i.exercise_id).push(i);
+  }
+}
+
+function paskutinioDiena(pratimoId) {
+  const irasai = irasaiPagalPratima.get(pratimoId);
+  if (!irasai || !irasai.length) return null;
+  const raktas = new Date(irasai[0].logged_at).toISOString().slice(0, 10);
+  return irasai.filter((i) => new Date(i.logged_at).toISOString().slice(0, 10) === raktas)
+    .sort((a, b) => a.set_index - b.set_index);
+}
+
+function piesTurini() {
+  const vieta = $('#turinys-vieta');
+
+  if (!dienos.length) {
+    vieta.innerHTML = '<div class="empty"><h2>Turinys ruošiamas</h2><p>Dalius dar pildo šią programą. Užsuk vėliau.</p></div>';
+    return;
+  }
+
+  vieta.innerHTML = dienos.map((d) => {
+    const savi = pratimai.filter((p) => p.section_id === d.id);
+    return `
+      <div class="card diena-kortele">
+        <h2 style="margin:0">${esc(d.title)}</h2>
+        ${d.notes ? `<p class="muted" style="font-size:.9375rem;margin-top:4px">${esc(d.notes)}</p>` : ''}
+
+        ${savi.length ? savi.map((p) => pratimoKortele(p)).join('') : '<p class="muted" style="margin-top:var(--s-200)">Pratimų šiai dienai dar nėra.</p>'}
+      </div>`;
+  }).join('');
+
+  for (const f of $$('.forma-setai')) f.addEventListener('submit', issaugokSetus);
+}
+
+function pratimoKortele(p) {
+  const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
+  const paskutinis = paskutinioDiena(p.id);
+
+  const tikslai = [];
+  if (p.target_sets) tikslai.push(`${p.target_sets} setai`);
+  if (p.target_reps) tikslai.push(`${esc(p.target_reps)} kartų`);
+  if (p.target_load) tikslai.push(esc(p.target_load));
+  if (p.rest_seconds) tikslai.push(`${p.rest_seconds} sek poilsis`);
+
+  const setuEilutes = Array.from({ length: kiekSetu }, (_, i) => i + 1).map((n) => `
+    <div class="setu-eilute">
+      <span>${n}.</span>
+      <input type="number" step="0.5" min="0" inputmode="decimal" placeholder="kg" name="svoris-${n}">
+      <input type="number" step="1" min="0" inputmode="numeric" placeholder="kartai" name="kartai-${n}">
+    </div>`).join('');
+
+  return `
+    <div class="pratimo-kortele">
+      <strong>${esc(p.title)}</strong>
+      ${tikslai.length ? `<div class="pratimo-tikslas">${tikslai.map((t) => `<span class="chip chip-quiet">${t}</span>`).join('')}</div>` : ''}
+      ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+      ${p.video_url ? `<p style="margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="font-size:.875rem;text-decoration:underline">Peržiūrėti pavyzdį</a></p>` : ''}
+      ${paskutinis ? `<p class="paskutinis">Paskutinį kartą (${esc(data(paskutinis[0].logged_at))}): ${paskutinis.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ')}</p>` : ''}
+
+      <form class="forma-setai" data-pratimas="${esc(p.id)}" novalidate>
+        <div class="setu-lentele">${setuEilutes}</div>
+        <div class="form-actions">
+          <button class="btn btn-primary btn-sm" type="submit">Išsaugoti šios dienos setus</button>
+        </div>
+        <p class="note" id="statusas-${esc(p.id)}" hidden></p>
+      </form>
+    </div>`;
+}
+
+async function issaugokSetus(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const pratimoId = forma.dataset.pratimas;
+  const fd = new FormData(forma);
+
+  const irasai = [];
+  let n = 1;
+  while (fd.has(`svoris-${n}`) || fd.has(`kartai-${n}`)) {
+    const svoris = fd.get(`svoris-${n}`);
+    const kartai = fd.get(`kartai-${n}`);
+    if (svoris || kartai) {
+      irasai.push({
+        exercise_id: pratimoId,
+        client_id: vartotojas.id,
+        set_index: n,
+        weight_kg: svoris ? Number(svoris) : null,
+        reps: kartai ? Number(kartai) : null,
+      });
+    }
+    n += 1;
+  }
+
+  const busena = $('#statusas-' + pratimoId);
+  if (!irasai.length) {
+    pranesk(busena, 'Įrašyk bent vieno seto svorį arba kartus.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('exercise_logs').insert(irasai);
+  if (error) {
+    pranesk(busena, klaidaLT(error), 'error');
+    return;
+  }
+
+  pranesk(busena, 'Išsaugota.', 'ok');
+  await ikelkIrasus();
+  piesTurini();
+}
+</script>
+</body>
+</html>

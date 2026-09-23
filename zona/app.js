@@ -386,7 +386,10 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   const treneris = arTreneris === true;
   const vardas = profilis?.full_name?.trim() || profilis?.email || '';
 
-  const nuorodos = [{ href: 'mano.html', tekstas: 'Savaitinė ataskaita' }];
+  const nuorodos = [
+    { href: 'mano.html', tekstas: 'Mano programa' },
+    { href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' },
+  ];
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });
 

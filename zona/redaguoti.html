@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programos redagavimas | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .diena-kortele + .diena-kortele { margin-top: var(--s-300); }
+  .pratimo-eilute {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200);
+    padding: var(--s-100) 0; border-top: 1px solid var(--hair-ink);
+  }
+  .pratimo-eilute:first-child { border-top: 0; }
+  .pratimo-meta { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="valdymas.html">Butkus<i>/</i>Coaching<small>Valdymas</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <p><a class="btn btn-ghost btn-sm" href="valdymas.html">&larr; Atgal į valdymą</a></p>
+      <h1 id="antraste">Programos redagavimas</h1>
+    </div>
+
+    <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    <p class="note" id="pranesimas" hidden></p>
+
+    <div id="skydelis" hidden>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" type="button" data-kortele="turinys" aria-selected="true">Turinys</button>
+        <button class="tab" role="tab" type="button" data-kortele="priskyrimai" aria-selected="false">Priskyrimai</button>
+      </div>
+      <section id="kortele-turinys"></section>
+      <section id="kortele-priskyrimai" hidden></section>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, valdymas</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+} from './app.js';
+
+const programId = new URLSearchParams(location.search).get('id');
+
+let programa = null;
+let dienos = [];
+let pratimai = [];
+let klientai = [];
+let priskyrimai = [];
+let savasId = null;
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos({ tikTreneriui: true });
+  if (!s) return;
+  rodykNav(s.profilis, 'valdymas.html', true);
+  savasId = s.vartotojas.id;
+
+  if (!programId) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), 'Trūksta programos adreso. Grįžk į valdymą ir pasirink programą iš sąrašo.', 'error');
+    return;
+  }
+
+  for (const t of $$('.tab')) {
+    t.addEventListener('click', () => rodykKortele(t.dataset.kortele));
+  }
+
+  await perkrauk();
+
+  $('#kraunasi').hidden = true;
+  if (programa) $('#skydelis').hidden = false;
+}
+
+async function perkrauk() {
+  const [p1, p2, p3] = await Promise.all([
+    db.from('programs').select('id, title, summary, status').eq('id', programId).maybeSingle(),
+    db.from('program_sections').select('id, title, notes, position').eq('program_id', programId).order('position', { ascending: true }),
+    db.from('profiles').select('id, email, full_name, status').order('full_name', { ascending: true }),
+  ]);
+
+  if (p1.error || !p1.data) {
+    pranesk($('#pranesimas'), p1.error ? klaidaLT(p1.error) : 'Programa nerasta.', 'error');
+    return;
+  }
+
+  programa = p1.data;
+  dienos   = p2.data || [];
+  klientai = (p3.data || []).filter((k) => k.status !== 'blocked' && k.id !== savasId);
+
+  const sekcijuId = dienos.map((d) => d.id);
+  const [p4, p5] = await Promise.all([
+    sekcijuId.length
+      ? db.from('exercises').select('*').in('section_id', sekcijuId).order('position', { ascending: true })
+      : Promise.resolve({ data: [] }),
+    db.from('assignments').select('id, client_id, status').eq('program_id', programId),
+  ]);
+
+  pratimai    = p4.data || [];
+  priskyrimai = p5.data || [];
+
+  $('#antraste').textContent = programa.title;
+  document.title = programa.title + ' | Butkus Coaching';
+
+  piesTurini();
+  piesPriskyrimus();
+}
+
+function rodykKortele(vardas) {
+  for (const t of $$('.tab')) {
+    t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
+  }
+  for (const k of ['turinys', 'priskyrimai']) {
+    $('#kortele-' + k).hidden = k !== vardas;
+  }
+}
+
+// =============================================================================
+//  TURINYS: pavadinimas, būsena, dienos ir pratimai
+// =============================================================================
+function piesTurini() {
+  $('#kortele-turinys').innerHTML = `
+    <div class="card" style="margin-bottom:var(--s-300)">
+      <div class="card-head"><h2>Apie programą</h2></div>
+      <form id="forma-antraste" novalidate>
+        <div class="field">
+          <label for="pr-pavadinimas">Pavadinimas</label>
+          <input id="pr-pavadinimas" type="text" required value="${esc(programa.title)}">
+        </div>
+        <div class="field">
+          <label for="pr-aprasas">Trumpas aprašas</label>
+          <textarea id="pr-aprasas">${esc(programa.summary || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="pr-busena">Būsena</label>
+          <select id="pr-busena">
+            <option value="draft"${programa.status === 'draft' ? ' selected' : ''}>Juodraštis, klientas nemato</option>
+            <option value="published"${programa.status === 'published' ? ' selected' : ''}>Paskelbta, priskirti klientai mato</option>
+            <option value="archived"${programa.status === 'archived' ? ' selected' : ''}>Archyve</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Išsaugoti</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card-head" style="margin-bottom:var(--s-200)"><h2>Dienos</h2></div>
+    <div id="dienu-sarasas"></div>
+
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head"><h2>Nauja diena</h2></div>
+      <form id="forma-diena" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label for="d-pavadinimas">Pavadinimas</label>
+            <input id="d-pavadinimas" type="text" required placeholder="Pvz., 1 diena — stūmimas">
+          </div>
+          <div class="field">
+            <label for="d-pastabos">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="d-pastabos" type="text" placeholder="Bendra šios dienos pastaba">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Pridėti dieną</button>
+        </div>
+      </form>
+    </div>`;
+
+  $('#forma-antraste').addEventListener('submit', issaugokAntraste);
+  $('#forma-diena').addEventListener('submit', prideDiena);
+  piesDienuSarasa();
+}
+
+async function issaugokAntraste(ev) {
+  ev.preventDefault();
+  const pavadinimas = $('#pr-pavadinimas').value.trim();
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk programos pavadinimą.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('programs').update({
+    title: pavadinimas,
+    summary: $('#pr-aprasas').value.trim(),
+    status: $('#pr-busena').value,
+  }).eq('id', programId);
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Išsaugota.', 'ok');
+  await perkrauk();
+}
+
+function piesDienuSarasa() {
+  const vieta = $('#dienu-sarasas');
+  if (!dienos.length) {
+    vieta.innerHTML = '<p class="muted">Dienų dar nėra. Pridėk pirmą žemiau.</p>';
+    return;
+  }
+
+  vieta.innerHTML = dienos.map((d) => {
+    const savi = pratimai.filter((p) => p.section_id === d.id);
+    return `
+      <div class="card diena-kortele">
+        <div class="card-head">
+          <h3 style="margin:0">${esc(d.title)}</h3>
+          <button class="btn btn-danger btn-sm trinti-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Trinti dieną</button>
+        </div>
+        ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}
+
+        <div id="pratimai-${esc(d.id)}">
+          ${savi.length ? savi.map((p) => `
+            <div class="pratimo-eilute">
+              <div>
+                <strong>${esc(p.title)}</strong>
+                <div class="pratimo-meta muted" style="font-size:.8125rem">
+                  ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
+                  ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
+                  ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
+                  ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
+                </div>
+                ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+              </div>
+              <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+            </div>`).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
+        </div>
+
+        <form class="forma-pratimas" data-sekcija="${esc(d.id)}" novalidate style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+          <div class="field-row">
+            <div class="field">
+              <label for="p-pavadinimas-${esc(d.id)}">Pratimo pavadinimas</label>
+              <input id="p-pavadinimas-${esc(d.id)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint">
+            </div>
+            <div class="field">
+              <label for="p-setai-${esc(d.id)}">Setai</label>
+              <input id="p-setai-${esc(d.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="p-kartai-${esc(d.id)}">Kartai</label>
+              <input id="p-kartai-${esc(d.id)}" name="reps" type="text" placeholder="Pvz., 8-10">
+            </div>
+            <div class="field">
+              <label for="p-svoris-${esc(d.id)}">Svoris / intensyvumas</label>
+              <input id="p-svoris-${esc(d.id)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
+            </div>
+            <div class="field">
+              <label for="p-poilsis-${esc(d.id)}">Poilsis, sek</label>
+              <input id="p-poilsis-${esc(d.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
+            </div>
+          </div>
+          <div class="field">
+            <label for="p-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="p-pastabos-${esc(d.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-ghost btn-sm" type="submit">Pridėti pratimą</button>
+          </div>
+        </form>
+      </div>`;
+  }).join('');
+
+  for (const b of $$('.trinti-diena')) b.addEventListener('click', () => trinkDiena(b.dataset.id, b.dataset.vardas));
+  for (const b of $$('.trinti-pratima')) b.addEventListener('click', () => trinkPratima(b.dataset.id, b.dataset.vardas));
+  for (const f of $$('.forma-pratimas')) f.addEventListener('submit', pridePratima);
+}
+
+async function prideDiena(ev) {
+  ev.preventDefault();
+  const pavadinimas = $('#d-pavadinimas').value.trim();
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk dienos pavadinimą.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('program_sections').insert({
+    program_id: programId,
+    title: pavadinimas,
+    notes: $('#d-pastabos').value.trim(),
+    position: dienos.length,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  await perkrauk();
+}
+
+async function trinkDiena(id, vardas) {
+  if (!confirm(`Ištrinti dieną "${vardas}"? Kartu dings jos pratimai ir kliento įrašyta šios dienos istorija.`)) return;
+  const { error } = await db.from('program_sections').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  await perkrauk();
+}
+
+async function pridePratima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const sectionId = forma.dataset.sekcija;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pratimo pavadinimą.', 'error');
+    return;
+  }
+
+  const kiekSioje = pratimai.filter((p) => p.section_id === sectionId).length;
+
+  const { error } = await db.from('exercises').insert({
+    section_id: sectionId,
+    title: pavadinimas,
+    target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    target_reps: String(fd.get('reps') || '').trim() || null,
+    target_load: String(fd.get('load') || '').trim() || null,
+    rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
+    notes: String(fd.get('notes') || '').trim(),
+    position: kiekSioje,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  await perkrauk();
+}
+
+async function trinkPratima(id, vardas) {
+  if (!confirm(`Ištrinti pratimą "${vardas}"? Kartu dings kliento įrašyta šio pratimo istorija.`)) return;
+  const { error } = await db.from('exercises').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  await perkrauk();
+}
+
+// =============================================================================
+//  PRISKYRIMAI
+// =============================================================================
+function piesPriskyrimus() {
+  const eilutes = klientai.map((k) => {
+    const esamas = priskyrimai.find((a) => a.client_id === k.id);
+    const priskirtas = esamas && esamas.status === 'active';
+    return `
+      <tr>
+        <td>
+          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
+        </td>
+        <td>${priskirtas ? '<span class="chip chip-ok">Priskirta</span>' : '<span class="chip chip-quiet">Nepriskirta</span>'}</td>
+        <td>
+          ${priskirtas
+            ? `<button class="btn btn-ghost btn-sm keisk-priskyrima" type="button" data-client="${esc(k.id)}" data-veiksmas="atimti">Atimti</button>`
+            : `<button class="btn btn-primary btn-sm keisk-priskyrima" type="button" data-client="${esc(k.id)}" data-veiksmas="priskirti">Priskirti</button>`}
+        </td>
+      </tr>`;
+  }).join('');
+
+  $('#kortele-priskyrimai').innerHTML = `
+    <div class="card">
+      <div class="card-head"><h2>Priskyrimai</h2><span class="row-end muted">${klientai.length}</span></div>
+      ${klientai.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Klientas</th><th>Būsena</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Klientų dar nėra.</p>'}
+    </div>`;
+
+  for (const b of $$('.keisk-priskyrima')) {
+    b.addEventListener('click', () => keiskPriskyrima(b.dataset.client, b.dataset.veiksmas));
+  }
+}
+
+async function keiskPriskyrima(clientId, veiksmas) {
+  const esamas = priskyrimai.find((a) => a.client_id === clientId);
+
+  let klaida;
+  if (veiksmas === 'priskirti') {
+    if (esamas) {
+      ({ error: klaida } = await db.from('assignments').update({ status: 'active' }).eq('id', esamas.id));
+    } else {
+      ({ error: klaida } = await db.from('assignments').insert({ program_id: programId, client_id: clientId, status: 'active' }));
+    }
+  } else {
+    ({ error: klaida } = await db.from('assignments').update({ status: 'finished' }).eq('id', esamas.id));
+  }
+
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return;
+  }
+  await perkrauk();
+}
+</script>
+</body>
+</html>
