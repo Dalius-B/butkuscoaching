@@ -128,7 +128,7 @@ async function perkrauk() {
     sekcijuId.length
       ? db.from('exercises').select('*').in('section_id', sekcijuId).order('position', { ascending: true })
       : Promise.resolve({ data: [] }),
-    db.from('assignments').select('id, client_id, status').eq('program_id', programId),
+    db.from('client_programs').select('id, client_id, status').eq('program_id', programId),
   ]);
 
   pratimai    = p4.data || [];
@@ -258,6 +258,7 @@ function piesDienuSarasa() {
                   ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
                 </div>
                 ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+                ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
               </div>
               <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
             </div>`).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
@@ -286,9 +287,15 @@ function piesDienuSarasa() {
               <input id="p-poilsis-${esc(d.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
             </div>
           </div>
-          <div class="field">
-            <label for="p-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
-            <input id="p-pastabos-${esc(d.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+          <div class="field-row">
+            <div class="field">
+              <label for="p-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <input id="p-pastabos-${esc(d.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+            </div>
+            <div class="field">
+              <label for="p-video-${esc(d.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+              <input id="p-video-${esc(d.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
+            </div>
           </div>
           <div class="form-actions">
             <button class="btn btn-ghost btn-sm" type="submit">Pridėti pratimą</button>
@@ -325,7 +332,7 @@ async function prideDiena(ev) {
 }
 
 async function trinkDiena(id, vardas) {
-  if (!confirm(`Ištrinti dieną "${vardas}"? Kartu dings jos pratimai ir kliento įrašyta šios dienos istorija.`)) return;
+  if (!confirm(`Ištrinti dieną "${vardas}"? Kartu dings jos pratimai iš šablono. Jau priskirtos klientų kopijos ir jų istorija nepasikeis.`)) return;
   const { error } = await db.from('program_sections').delete().eq('id', id);
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
@@ -356,6 +363,7 @@ async function pridePratima(ev) {
     target_load: String(fd.get('load') || '').trim() || null,
     rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
     notes: String(fd.get('notes') || '').trim(),
+    video_url: String(fd.get('video') || '').trim() || null,
     position: kiekSioje,
   });
 
@@ -367,7 +375,7 @@ async function pridePratima(ev) {
 }
 
 async function trinkPratima(id, vardas) {
-  if (!confirm(`Ištrinti pratimą "${vardas}"? Kartu dings kliento įrašyta šio pratimo istorija.`)) return;
+  if (!confirm(`Ištrinti pratimą "${vardas}"? Tai paveiks tik šabloną. Jau priskirtos klientų kopijos ir jų istorija nepasikeis.`)) return;
   const { error } = await db.from('exercises').delete().eq('id', id);
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
@@ -378,11 +386,17 @@ async function trinkPratima(id, vardas) {
 
 // =============================================================================
 //  PRISKYRIMAI
+//
+//  Priskyrimas nekuria nuorodos į bendrą šabloną -- jis nukopijuoja dienas ir
+//  pratimus į kliento paties client_programs / client_days / client_exercises
+//  įrašus (žr. assign_program() funkciją, supabase/klientu-kopijos.sql).
+//  Vėliau pakeitus klientui vieną pratimą, šablonas ir kiti klientai lieka
+//  nepaliesti.
 // =============================================================================
 function piesPriskyrimus() {
   const eilutes = klientai.map((k) => {
-    const esamas = priskyrimai.find((a) => a.client_id === k.id);
-    const priskirtas = esamas && esamas.status === 'active';
+    const esamas = priskyrimai.find((a) => a.client_id === k.id && a.status !== 'finished');
+    const priskirtas = Boolean(esamas);
     return `
       <tr>
         <td>
@@ -393,14 +407,29 @@ function piesPriskyrimus() {
         <td>
           ${priskirtas
             ? `<button class="btn btn-ghost btn-sm keisk-priskyrima" type="button" data-client="${esc(k.id)}" data-veiksmas="atimti">Atimti</button>`
-            : `<button class="btn btn-primary btn-sm keisk-priskyrima" type="button" data-client="${esc(k.id)}" data-veiksmas="priskirti">Priskirti</button>`}
+            : `<button class="btn btn-primary btn-sm keisk-priskyrima" type="button" data-client="${esc(k.id)}" data-veiksmas="priskirti">Priskirti kopiją</button>`}
         </td>
       </tr>`;
   }).join('');
 
   $('#kortele-priskyrimai').innerHTML = `
+    <div class="card" style="margin-bottom:var(--s-300)">
+      <div class="card-head"><h2>Pradžios data</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Neprivaloma. Jei nustatysi, ji bus pritaikyta kiekvienai naujai priskiriamai kopijai žemiau.
+      </p>
+      <div class="field" style="max-width:220px">
+        <label for="pr-pradzia">Pradžios data</label>
+        <input id="pr-pradzia" type="date">
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-head"><h2>Priskyrimai</h2><span class="row-end muted">${klientai.length}</span></div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        „Priskirti kopiją“ sukuria klientui savo, nepriklausomą programos kopiją. Vėliau pakeitus jo pratimą, šis
+        šablonas ir kitų klientų kopijos nesikeičia.
+      </p>
       ${klientai.length ? `
         <div class="table-wrap">
           <table>
@@ -411,28 +440,34 @@ function piesPriskyrimus() {
     </div>`;
 
   for (const b of $$('.keisk-priskyrima')) {
-    b.addEventListener('click', () => keiskPriskyrima(b.dataset.client, b.dataset.veiksmas));
+    b.addEventListener('click', () => keiskPriskyrima(b.dataset.client, b.dataset.veiksmas, b));
   }
 }
 
-async function keiskPriskyrima(clientId, veiksmas) {
-  const esamas = priskyrimai.find((a) => a.client_id === clientId);
-
+async function keiskPriskyrima(clientId, veiksmas, mygtukas) {
+  mygtukas.disabled = true;
   let klaida;
+
   if (veiksmas === 'priskirti') {
-    if (esamas) {
-      ({ error: klaida } = await db.from('assignments').update({ status: 'active' }).eq('id', esamas.id));
-    } else {
-      ({ error: klaida } = await db.from('assignments').insert({ program_id: programId, client_id: clientId, status: 'active' }));
-    }
+    const pradzia = $('#pr-pradzia')?.value || null;
+    ({ error: klaida } = await db.rpc('assign_program', {
+      p_program_id: programId,
+      p_client_id: clientId,
+      p_starts_on: pradzia,
+    }));
   } else {
-    ({ error: klaida } = await db.from('assignments').update({ status: 'finished' }).eq('id', esamas.id));
+    const esamas = priskyrimai.find((a) => a.client_id === clientId && a.status !== 'finished');
+    if (esamas) {
+      ({ error: klaida } = await db.from('client_programs').update({ status: 'finished' }).eq('id', esamas.id));
+    }
   }
 
+  mygtukas.disabled = false;
   if (klaida) {
     pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
     return;
   }
+  pranesk($('#pranesimas'), veiksmas === 'priskirti' ? 'Kopija sukurta.' : 'Priskyrimas baigtas.', 'ok');
   await perkrauk();
 }
 </script>

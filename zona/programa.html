@@ -94,9 +94,9 @@ async function paleisk() {
 
 async function ikelk() {
   const { data: programa, error: pKlaida } = await db
-    .from('programs').select('id, title, summary').eq('id', programId).maybeSingle();
+    .from('client_programs').select('id, title, status').eq('id', programId).maybeSingle();
 
-  // Programos gali nematyti, jei ji nepriskirta arba nepaskelbta -- has_program_access
+  // Programos gali nematyti, jei ji ne šio kliento -- owns_client_program
   // taisyklė tokiu atveju tiesiog negrąžina eilutės, ne klaidą.
   if (pKlaida || !programa) {
     $('#kraunasi').hidden = true;
@@ -105,12 +105,11 @@ async function ikelk() {
   }
 
   $('#antraste').textContent = programa.title;
-  $('#paantraste').textContent = programa.summary || '';
   document.title = programa.title + ' | Butkus Coaching';
 
   const { data: d, error: dKlaida } = await db
-    .from('program_sections').select('id, title, notes, position')
-    .eq('program_id', programId).order('position', { ascending: true });
+    .from('client_days').select('id, title, notes, position')
+    .eq('client_program_id', programId).order('position', { ascending: true });
 
   if (dKlaida) {
     $('#kraunasi').hidden = true;
@@ -119,9 +118,9 @@ async function ikelk() {
   }
   dienos = d || [];
 
-  const sekcijuId = dienos.map((x) => x.id);
-  const { data: p, error: prKlaida } = sekcijuId.length
-    ? await db.from('exercises').select('*').in('section_id', sekcijuId).order('position', { ascending: true })
+  const dienuId = dienos.map((x) => x.id);
+  const { data: p, error: prKlaida } = dienuId.length
+    ? await db.from('client_exercises').select('*').in('client_day_id', dienuId).order('position', { ascending: true })
     : { data: [] };
 
   if (prKlaida) {
@@ -146,12 +145,12 @@ async function ikelkIrasus() {
     .from('exercise_logs')
     .select('*')
     .eq('client_id', vartotojas.id)
-    .in('exercise_id', pratimuId)
+    .in('client_exercise_id', pratimuId)
     .order('logged_at', { ascending: false });
 
   for (const i of irasai || []) {
-    if (!irasaiPagalPratima.has(i.exercise_id)) irasaiPagalPratima.set(i.exercise_id, []);
-    irasaiPagalPratima.get(i.exercise_id).push(i);
+    if (!irasaiPagalPratima.has(i.client_exercise_id)) irasaiPagalPratima.set(i.client_exercise_id, []);
+    irasaiPagalPratima.get(i.client_exercise_id).push(i);
   }
 }
 
@@ -233,7 +232,7 @@ async function issaugokSetus(ev) {
     const kartai = fd.get(`kartai-${n}`);
     if (svoris || kartai) {
       irasai.push({
-        exercise_id: pratimoId,
+        client_exercise_id: pratimoId,
         client_id: vartotojas.id,
         set_index: n,
         weight_kg: svoris ? Number(svoris) : null,

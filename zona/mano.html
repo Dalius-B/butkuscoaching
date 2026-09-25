@@ -105,9 +105,9 @@ async function paleisk() {
 }
 
 async function rodykProgramas(arTreneris) {
-  const { data: priskyrimai, error } = await db
-    .from('assignments')
-    .select('id, status, note, starts_on, assigned_at, programs!inner (id, title, summary, status, updated_at)')
+  const { data: mano, error } = await db
+    .from('client_programs')
+    .select('id, title, status, starts_on, assigned_at')
     .eq('status', 'active')
     .order('assigned_at', { ascending: false });
 
@@ -117,7 +117,7 @@ async function rodykProgramas(arTreneris) {
     return;
   }
 
-  const matomos = (priskyrimai || []).filter((p) => p.programs && p.programs.status === 'published');
+  const matomos = mano || [];
 
   if (!matomos.length) {
     paantraste.textContent = '';
@@ -132,27 +132,27 @@ async function rodykProgramas(arTreneris) {
     return;
   }
 
-  // Kiek dienų ir pratimų turi kiekviena programa. Dvi užklausos visoms
-  // programoms iš karto, o ne po vieną kiekvienai kortelei.
-  const idSarasas = matomos.map((p) => p.programs.id);
+  // Kiek dienų ir pratimų turi kiekviena kliento kopija. Dvi užklausos visoms
+  // kopijoms iš karto, o ne po vieną kiekvienai kortelei.
+  const idSarasas = matomos.map((p) => p.id);
   const { data: dienos } = await db
-    .from('program_sections')
-    .select('id, program_id')
-    .in('program_id', idSarasas);
+    .from('client_days')
+    .select('id, client_program_id')
+    .in('client_program_id', idSarasas);
 
-  const sekcijuId = (dienos || []).map((d) => d.id);
-  const { data: pratimai } = sekcijuId.length
-    ? await db.from('exercises').select('id, section_id').in('section_id', sekcijuId)
+  const dienuId = (dienos || []).map((d) => d.id);
+  const { data: pratimai } = dienuId.length
+    ? await db.from('client_exercises').select('id, client_day_id').in('client_day_id', dienuId)
     : { data: [] };
 
   const dienuSkaicius = new Map();
   for (const d of dienos || []) {
-    dienuSkaicius.set(d.program_id, (dienuSkaicius.get(d.program_id) || 0) + 1);
+    dienuSkaicius.set(d.client_program_id, (dienuSkaicius.get(d.client_program_id) || 0) + 1);
   }
-  const sekcijaPrieProgram = new Map((dienos || []).map((d) => [d.id, d.program_id]));
+  const dienaPrieProgram = new Map((dienos || []).map((d) => [d.id, d.client_program_id]));
   const pratimuSkaicius = new Map();
   for (const p of pratimai || []) {
-    const progId = sekcijaPrieProgram.get(p.section_id);
+    const progId = dienaPrieProgram.get(p.client_day_id);
     if (!progId) continue;
     pratimuSkaicius.set(progId, (pratimuSkaicius.get(progId) || 0) + 1);
   }
@@ -163,17 +163,15 @@ async function rodykProgramas(arTreneris) {
 
   sarasas.className = 'grid-cards';
   sarasas.innerHTML = matomos.map((p) => {
-    const pr = p.programs;
-    const kiekDienu = dienuSkaicius.get(pr.id) || 0;
-    const kiekPratimu = pratimuSkaicius.get(pr.id) || 0;
+    const kiekDienu = dienuSkaicius.get(p.id) || 0;
+    const kiekPratimu = pratimuSkaicius.get(p.id) || 0;
     const zymos = [];
     if (kiekDienu)   zymos.push(`${kiekDienu} ${kiekDienu === 1 ? 'diena' : 'dienos'}`);
     if (kiekPratimu) zymos.push(`${kiekPratimu} ${kiekPratimu === 1 ? 'pratimas' : 'pratimai'}`);
 
     return `
-      <a class="card program-card" href="programa.html?id=${encodeURIComponent(pr.id)}">
-        <h3>${esc(pr.title)}</h3>
-        ${pr.summary ? `<p>${esc(trumpink(pr.summary, 140))}</p>` : ''}
+      <a class="card program-card" href="programa.html?id=${encodeURIComponent(p.id)}">
+        <h3>${esc(p.title)}</h3>
         <div class="meta">
           <div class="row">
             ${zymos.length
@@ -186,11 +184,6 @@ async function rodykProgramas(arTreneris) {
         </div>
       </a>`;
   }).join('');
-}
-
-function trumpink(t, n) {
-  const s = String(t || '').trim();
-  return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
 }
 </script>
 </body>

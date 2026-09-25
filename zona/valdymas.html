@@ -102,7 +102,7 @@ async function perkrauk() {
     db.from('profiles').select('id, email, full_name, phone, status, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, created_at').order('created_at', { ascending: false }),
-    db.from('assignments').select('id, program_id, client_id, status'),
+    db.from('client_programs').select('id, program_id, client_id, title, status'),
     db.from('checkins').select('*').order('created_at', { ascending: false }),
   ]);
 
@@ -213,9 +213,10 @@ async function sukurkPrograma(ev) {
 }
 
 async function trinkPrograma(id, vardas) {
-  // Dienos, pratimai, priskyrimai ir kliento įrašyti setai visi turi
-  // on delete cascade ryšį su programa, tad pakanka ištrinti vieną eilutę.
-  if (!confirm(`Ištrinti programą "${vardas}"?\n\nKartu dings jos dienos, pratimai, priskyrimai klientams ir jų įrašyta treniruočių istorija šiai programai. To atstatyti nebus galima.`)) return;
+  // Dienos ir pratimai turi on delete cascade ryšį su programa. Klientų
+  // kopijos (client_programs) nuo šablono nepriklauso -- program_id ten tik
+  // paliekamas tuščias, o kliento kopija ir jos istorija lieka nepaliesta.
+  if (!confirm(`Ištrinti programą "${vardas}"?\n\nKartu dings jos dienos ir pratimai. Klientams jau priskirtos kopijos ir jų įrašyta treniruočių istorija liks nepaliestos. To atstatyti nebus galima.`)) return;
 
   const { error } = await db.from('programs').delete().eq('id', id);
   if (error) {
@@ -234,9 +235,7 @@ function piesKlientus() {
 
   const eilutes = klientai.map((k) => {
     const savos = priskyrimai.filter((a) => a.client_id === k.id && a.status === 'active');
-    const pavadinimai = savos
-      .map((a) => programos.find((p) => p.id === a.program_id)?.title)
-      .filter(Boolean);
+    const pavadinimai = savos.map((a) => a.title).filter(Boolean);
 
     return `
       <tr>
