@@ -23,15 +23,54 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
+  /* Dienos -- <details> vietoje visada matomos kortelės, kad vienu metu
+     matytum tik tos dienos, kurią pasirinkai, pratimus. */
+  .diena-kortele { padding: 0; overflow: hidden; }
   .diena-kortele + .diena-kortele { margin-top: var(--s-300); }
+  .diena-antraste {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-200);
+    padding: var(--s-400); cursor: pointer; list-style: none;
+  }
+  .diena-antraste::-webkit-details-marker { display: none; }
+  .diena-antraste h2 { margin: 0; font-size: 1.5rem; }
+  .diena-antraste .rodykle {
+    flex: none; width: 20px; height: 20px; transition: rotate 180ms var(--ease-out);
+    stroke: var(--ink-soft);
+  }
+  .diena-kortele[open] .diena-antraste .rodykle { rotate: 180deg; }
+  .diena-turinys { padding: 0 var(--s-400) var(--s-400); }
+
   .pratimo-kortele { padding: var(--s-300) 0; border-top: 1px solid var(--hair-ink); }
   .pratimo-kortele:first-child { padding-top: 0; border-top: 0; }
   .pratimo-tikslas { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
-  .setu-lentele { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-200); }
-  .setu-eilute { display: grid; grid-template-columns: 28px 1fr 1fr; gap: var(--s-100); align-items: center; }
-  .setu-eilute span { font-size: .8125rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
-  .setu-eilute input { min-height: 40px; }
   .paskutinis { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100) }
+
+  /* Istorija -- visos ankstesnės sesijos, sulankstomos, kad pratimo kortelė
+     liktų trumpa, kol žmogus tikrai nori pažiūrėti progresą. */
+  .istorija-mygtukas {
+    font-size: .8125rem; font-weight: 600; color: var(--ink); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px; margin-top: var(--s-100); display: inline-block;
+  }
+  .istorija-sarasas { margin-top: var(--s-150, var(--s-100)); display: flex; flex-direction: column; gap: var(--s-75); }
+  .istorija-eilute { display: flex; justify-content: space-between; gap: var(--s-200); font-size: .8125rem; }
+  .istorija-data { color: var(--ink-soft); flex: none; white-space: nowrap; }
+  .istorija-setai { text-align: right; }
+  .istorija-pastaba { color: var(--ink-soft); font-style: italic; margin-top: 2px; }
+
+  /* Setų įvedimas -- viena stulpelių antraštė, o ne pakartotos placeholder
+     reikšmės kiekvienoje eilutėje, ir be gimtųjų rodyklių ant skaičių lauko. */
+  .setu-lentele { margin-top: var(--s-200); }
+  .setu-antraste {
+    display: grid; grid-template-columns: 28px 1fr 1fr; gap: var(--s-100);
+    font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-soft); padding: 0 0 var(--s-75);
+  }
+  .setu-eilute { display: grid; grid-template-columns: 28px 1fr 1fr; gap: var(--s-100); align-items: center; margin-top: var(--s-75); }
+  .setu-eilute span { font-size: .8125rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .setu-eilute input { min-height: 44px; }
+  .setu-eilute input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+  .setu-eilute input[type="number"]::-webkit-inner-spin-button,
+  .setu-eilute input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 </style>
 </head>
 <body>
@@ -154,12 +193,25 @@ async function ikelkIrasus() {
   }
 }
 
-function paskutinioDiena(pratimoId) {
+/** Visos pratimo sesijos, sugrupuotos pagal dieną, naujausia pirma. */
+function grupuokPagalSesijas(pratimoId) {
   const irasai = irasaiPagalPratima.get(pratimoId);
-  if (!irasai || !irasai.length) return null;
-  const raktas = new Date(irasai[0].logged_at).toISOString().slice(0, 10);
-  return irasai.filter((i) => new Date(i.logged_at).toISOString().slice(0, 10) === raktas)
-    .sort((a, b) => a.set_index - b.set_index);
+  if (!irasai || !irasai.length) return [];
+
+  const grupes = new Map();
+  for (const i of irasai) {
+    const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
+    if (!grupes.has(raktas)) grupes.set(raktas, []);
+    grupes.get(raktas).push(i);
+  }
+
+  return Array.from(grupes.entries())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([raktas, setai]) => ({
+      logged_at: setai[0].logged_at,
+      pastaba: setai.map((s) => s.notes).find(Boolean) || '',
+      setai: setai.slice().sort((a, b) => a.set_index - b.set_index),
+    }));
 }
 
 function piesTurini() {
@@ -170,23 +222,45 @@ function piesTurini() {
     return;
   }
 
-  vieta.innerHTML = dienos.map((d) => {
+  vieta.innerHTML = dienos.map((d, i) => {
     const savi = pratimai.filter((p) => p.client_day_id === d.id);
     return `
-      <div class="card diena-kortele">
-        <h2 style="margin:0">${esc(d.title)}</h2>
-        ${d.notes ? `<p class="muted" style="font-size:.9375rem;margin-top:4px">${esc(d.notes)}</p>` : ''}
-
-        ${savi.length ? savi.map((p) => pratimoKortele(p)).join('') : '<p class="muted" style="margin-top:var(--s-200)">Pratimų šiai dienai dar nėra.</p>'}
-      </div>`;
+      <details class="card diena-kortele"${i === 0 ? ' open' : ''}>
+        <summary class="diena-antraste">
+          <div>
+            <h2>${esc(d.title)}</h2>
+            ${d.notes ? `<p class="muted" style="font-size:.9375rem;margin-top:4px">${esc(d.notes)}</p>` : ''}
+          </div>
+          <div class="row" style="align-items:center;gap:var(--s-200)">
+            <span class="chip chip-quiet">${savi.length} ${savi.length === 1 ? 'pratimas' : 'pratimai'}</span>
+            <svg class="rodykle" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </summary>
+        <div class="diena-turinys">
+          ${savi.length ? savi.map((p) => pratimoKortele(p)).join('') : '<p class="muted">Pratimų šiai dienai dar nėra.</p>'}
+        </div>
+      </details>`;
   }).join('');
 
   for (const f of $$('.forma-setai')) f.addEventListener('submit', issaugokSetus);
+  for (const b of $$('.istorija-mygtukas')) b.addEventListener('click', () => rodykIstorija(b));
+}
+
+function rodykIstorija(mygtukas) {
+  const sarasas = document.getElementById(mygtukas.dataset.target);
+  if (!sarasas) return;
+  const rodoma = !sarasas.hidden;
+  sarasas.hidden = rodoma;
+  mygtukas.textContent = rodoma
+    ? mygtukas.textContent.replace('Slėpti', 'Peržiūrėti visą')
+    : mygtukas.textContent.replace('Peržiūrėti visą', 'Slėpti');
 }
 
 function pratimoKortele(p) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
-  const paskutinis = paskutinioDiena(p.id);
+  const sesijos = grupuokPagalSesijas(p.id);
+  const paskutine = sesijos[0] || null;
+  const ankstesnes = sesijos.slice(1);
 
   const tikslai = [];
   if (p.target_sets) tikslai.push(`${p.target_sets} setai`);
@@ -197,8 +271,8 @@ function pratimoKortele(p) {
   const setuEilutes = Array.from({ length: kiekSetu }, (_, i) => i + 1).map((n) => `
     <div class="setu-eilute">
       <span>${n}.</span>
-      <input type="number" step="0.5" min="0" inputmode="decimal" placeholder="kg" name="svoris-${n}">
-      <input type="number" step="1" min="0" inputmode="numeric" placeholder="kartai" name="kartai-${n}">
+      <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}">
+      <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}">
     </div>`).join('');
 
   return `
@@ -207,16 +281,41 @@ function pratimoKortele(p) {
       ${tikslai.length ? `<div class="pratimo-tikslas">${tikslai.map((t) => `<span class="chip chip-quiet">${t}</span>`).join('')}</div>` : ''}
       ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
       ${p.video_url ? `<p style="margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="font-size:.875rem;text-decoration:underline">Peržiūrėti pavyzdį</a></p>` : ''}
-      ${paskutinis ? `<p class="paskutinis">Paskutinį kartą (${esc(data(paskutinis[0].logged_at))}): ${paskutinis.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ')}</p>` : ''}
 
-      <form class="forma-setai" data-pratimas="${esc(p.id)}" novalidate>
-        <div class="setu-lentele">${setuEilutes}</div>
-        <div class="form-actions">
-          <button class="btn btn-primary btn-sm" type="submit">Išsaugoti šios dienos setus</button>
-        </div>
-        <p class="note" id="statusas-${esc(p.id)}" hidden></p>
-      </form>
+      ${paskutine ? `<p class="paskutinis">Paskutinį kartą (${esc(data(paskutine.logged_at))}): ${paskutine.setai.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ')}</p>` : ''}
+      ${ankstesnes.length ? istorijosBlokas(p.id, ankstesnes) : ''}
+
+      <div class="setu-lentele">
+        <div class="setu-antraste"><span></span><span>Svoris, kg</span><span>Kartai</span></div>
+        <form class="forma-setai" data-pratimas="${esc(p.id)}" novalidate>
+          ${setuEilutes}
+          <div class="field" style="margin-top:var(--s-200)">
+            <label for="pastaba-${esc(p.id)}">Pastaba <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <textarea id="pastaba-${esc(p.id)}" name="pastaba" placeholder="Kaip jauteisi, ką verta prisiminti kitą kartą"></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary btn-sm" type="submit">Išsaugoti šios dienos setus</button>
+          </div>
+          <p class="note" id="statusas-${esc(p.id)}" hidden></p>
+        </form>
+      </div>
     </div>`;
+}
+
+function istorijosBlokas(pratimoId, sesijos) {
+  const id = 'istorija-' + pratimoId;
+  const eilutes = sesijos.map((s) => `
+    <div class="istorija-eilute">
+      <span class="istorija-data">${esc(data(s.logged_at))}</span>
+      <span class="istorija-setai">
+        ${s.setai.map((set) => `${set.weight_kg ?? '–'}kg × ${set.reps ?? '–'}`).join(', ')}
+        ${s.pastaba ? `<div class="istorija-pastaba">${esc(s.pastaba)}</div>` : ''}
+      </span>
+    </div>`).join('');
+
+  return `
+    <button type="button" class="istorija-mygtukas" data-target="${id}">Peržiūrėti visą istoriją (${sesijos.length})</button>
+    <div class="istorija-sarasas" id="${id}" hidden>${eilutes}</div>`;
 }
 
 async function issaugokSetus(ev) {
@@ -224,6 +323,7 @@ async function issaugokSetus(ev) {
   const forma = ev.currentTarget;
   const pratimoId = forma.dataset.pratimas;
   const fd = new FormData(forma);
+  const pastaba = String(fd.get('pastaba') || '').trim() || null;
 
   const irasai = [];
   let n = 1;
@@ -237,6 +337,7 @@ async function issaugokSetus(ev) {
         set_index: n,
         weight_kg: svoris ? Number(svoris) : null,
         reps: kartai ? Number(kartai) : null,
+        notes: pastaba,
       });
     }
     n += 1;
