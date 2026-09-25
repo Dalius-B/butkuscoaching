@@ -171,7 +171,7 @@ function piesTurini() {
   }
 
   vieta.innerHTML = dienos.map((d) => {
-    const savi = pratimai.filter((p) => p.section_id === d.id);
+    const savi = pratimai.filter((p) => p.client_day_id === d.id);
     return `
       <div class="card diena-kortele">
         <h2 style="margin:0">${esc(d.title)}</h2>
