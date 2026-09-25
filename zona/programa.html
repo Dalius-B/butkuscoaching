@@ -45,18 +45,6 @@
   .pratimo-tikslas { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
   .paskutinis { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100) }
 
-  /* Istorija -- visos ankstesnės sesijos, sulankstomos, kad pratimo kortelė
-     liktų trumpa, kol žmogus tikrai nori pažiūrėti progresą. */
-  .istorija-mygtukas {
-    font-size: .8125rem; font-weight: 600; color: var(--ink); cursor: pointer;
-    text-decoration: underline; text-underline-offset: 3px; margin-top: var(--s-100); display: inline-block;
-  }
-  .istorija-sarasas { margin-top: var(--s-150, var(--s-100)); display: flex; flex-direction: column; gap: var(--s-75); }
-  .istorija-eilute { display: flex; justify-content: space-between; gap: var(--s-200); font-size: .8125rem; }
-  .istorija-data { color: var(--ink-soft); flex: none; white-space: nowrap; }
-  .istorija-setai { text-align: right; }
-  .istorija-pastaba { color: var(--ink-soft); font-style: italic; margin-top: 2px; }
-
   /* Setų įvedimas -- viena stulpelių antraštė, o ne pakartotos placeholder
      reikšmės kiekvienoje eilutėje, ir be gimtųjų rodyklių ant skaičių lauko. */
   .setu-lentele { margin-top: var(--s-200); }
@@ -85,7 +73,10 @@
 <main id="turinys">
   <div class="shell page">
     <div class="page-head">
-      <p><a class="btn btn-ghost btn-sm" href="mano.html">&larr; Mano programa</a></p>
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <a class="btn btn-ghost btn-sm" href="mano.html">&larr; Mano programa</a>
+        <a class="btn btn-ghost btn-sm" id="istorijos-nuoroda" href="#">Istorija</a>
+      </div>
       <h1 id="antraste">Programa</h1>
       <p id="paantraste"></p>
     </div>
@@ -145,6 +136,7 @@ async function ikelk() {
 
   $('#antraste').textContent = programa.title;
   document.title = programa.title + ' | Butkus Coaching';
+  $('#istorijos-nuoroda').href = 'istorija.html?id=' + encodeURIComponent(programId);
 
   const { data: d, error: dKlaida } = await db
     .from('client_days').select('id, title, notes, position')
@@ -243,24 +235,11 @@ function piesTurini() {
   }).join('');
 
   for (const f of $$('.forma-setai')) f.addEventListener('submit', issaugokSetus);
-  for (const b of $$('.istorija-mygtukas')) b.addEventListener('click', () => rodykIstorija(b));
-}
-
-function rodykIstorija(mygtukas) {
-  const sarasas = document.getElementById(mygtukas.dataset.target);
-  if (!sarasas) return;
-  const rodoma = !sarasas.hidden;
-  sarasas.hidden = rodoma;
-  mygtukas.textContent = rodoma
-    ? mygtukas.textContent.replace('Slėpti', 'Peržiūrėti visą')
-    : mygtukas.textContent.replace('Peržiūrėti visą', 'Slėpti');
 }
 
 function pratimoKortele(p) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
-  const sesijos = grupuokPagalSesijas(p.id);
-  const paskutine = sesijos[0] || null;
-  const ankstesnes = sesijos.slice(1);
+  const paskutine = grupuokPagalSesijas(p.id)[0] || null;
 
   const tikslai = [];
   if (p.target_sets) tikslai.push(`${p.target_sets} setai`);
@@ -283,7 +262,6 @@ function pratimoKortele(p) {
       ${p.video_url ? `<p style="margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="font-size:.875rem;text-decoration:underline">Peržiūrėti pavyzdį</a></p>` : ''}
 
       ${paskutine ? `<p class="paskutinis">Paskutinį kartą (${esc(data(paskutine.logged_at))}): ${paskutine.setai.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ')}</p>` : ''}
-      ${ankstesnes.length ? istorijosBlokas(p.id, ankstesnes) : ''}
 
       <div class="setu-lentele">
         <div class="setu-antraste"><span></span><span>Svoris, kg</span><span>Kartai</span></div>
@@ -300,22 +278,6 @@ function pratimoKortele(p) {
         </form>
       </div>
     </div>`;
-}
-
-function istorijosBlokas(pratimoId, sesijos) {
-  const id = 'istorija-' + pratimoId;
-  const eilutes = sesijos.map((s) => `
-    <div class="istorija-eilute">
-      <span class="istorija-data">${esc(data(s.logged_at))}</span>
-      <span class="istorija-setai">
-        ${s.setai.map((set) => `${set.weight_kg ?? '–'}kg × ${set.reps ?? '–'}`).join(', ')}
-        ${s.pastaba ? `<div class="istorija-pastaba">${esc(s.pastaba)}</div>` : ''}
-      </span>
-    </div>`).join('');
-
-  return `
-    <button type="button" class="istorija-mygtukas" data-target="${id}">Peržiūrėti visą istoriją (${sesijos.length})</button>
-    <div class="istorija-sarasas" id="${id}" hidden>${eilutes}</div>`;
 }
 
 async function issaugokSetus(ev) {

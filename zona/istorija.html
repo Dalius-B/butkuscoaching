@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Istorija | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .sesija-kortele + .sesija-kortele { margin-top: var(--s-300); }
+  .sesija-antraste { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-200); margin-bottom: var(--s-200); }
+  .sesija-antraste h2 { margin: 0; font-size: 1.125rem; }
+  table.istorija { width: 100%; border-collapse: collapse; }
+  table.istorija th {
+    text-align: left; font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-soft); padding: 0 var(--s-100) var(--s-75); border-bottom: 1px solid var(--hair-ink);
+  }
+  table.istorija td { padding: var(--s-100); border-bottom: 1px solid var(--hair-ink); font-size: .9375rem; vertical-align: top; }
+  table.istorija tr:last-child td { border-bottom: 0; }
+  table.istorija td.skaicius { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.istorija td.pastaba { color: var(--ink-soft); font-size: .875rem; }
+</style>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <p><a class="btn btn-ghost btn-sm" id="atgal-nuoroda" href="mano.html">&larr; Programa</a></p>
+      <h1 id="antraste">Istorija</h1>
+      <p id="paantraste"></p>
+    </div>
+    <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    <p class="note" id="pranesimas" hidden></p>
+    <div id="turinys-vieta"></div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import { db, $, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav } from './app.js';
+
+const programId = new URLSearchParams(location.search).get('id');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+  rodykNav(s.profilis, 'mano.html', s.arTreneris);
+
+  if (!programId) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), 'Trūksta programos adreso. Grįžk į savo programų sąrašą.', 'error');
+    return;
+  }
+  $('#atgal-nuoroda').href = 'programa.html?id=' + encodeURIComponent(programId);
+
+  await ikelk(s.vartotojas.id);
+}
+
+async function ikelk(vartotojoId) {
+  const { data: programa, error: pKlaida } = await db
+    .from('client_programs').select('id, title').eq('id', programId).maybeSingle();
+
+  if (pKlaida || !programa) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), pKlaida ? klaidaLT(pKlaida) : 'Šios programos nematai arba jos nebėra.', 'error');
+    return;
+  }
+
+  $('#paantraste').textContent = programa.title;
+  document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';
+
+  const { data: dienos, error: dKlaida } = await db
+    .from('client_days').select('id, title').eq('client_program_id', programId);
+  if (dKlaida) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), klaidaLT(dKlaida), 'error');
+    return;
+  }
+
+  const dienuId = (dienos || []).map((d) => d.id);
+  const { data: pratimai, error: prKlaida } = dienuId.length
+    ? await db.from('client_exercises').select('id, title, client_day_id').in('client_day_id', dienuId)
+    : { data: [] };
+  if (prKlaida) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), klaidaLT(prKlaida), 'error');
+    return;
+  }
+
+  const dienaPavadinimas = new Map((dienos || []).map((d) => [d.id, d.title]));
+  const pratimoInfo = new Map((pratimai || []).map((p) => [p.id, {
+    pavadinimas: p.title,
+    diena: dienaPavadinimas.get(p.client_day_id) || '',
+  }]));
+
+  const pratimuId = (pratimai || []).map((p) => p.id);
+  const { data: irasai, error: iKlaida } = pratimuId.length
+    ? await db.from('exercise_logs').select('*').eq('client_id', vartotojoId).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
+    : { data: [] };
+  if (iKlaida) {
+    $('#kraunasi').hidden = true;
+    pranesk($('#pranesimas'), klaidaLT(iKlaida), 'error');
+    return;
+  }
+
+  $('#kraunasi').hidden = true;
+  piesIstorija(irasai || [], pratimoInfo);
+}
+
+function piesIstorija(irasai, pratimoInfo) {
+  const vieta = $('#turinys-vieta');
+
+  if (!irasai.length) {
+    vieta.innerHTML = '<div class="empty"><h2>Kol kas tuščia</h2><p>Kai pradėsi žymėti setus programoje, jų istorija rodysis čia.</p></div>';
+    return;
+  }
+
+  // Sugrupuojama pagal dieną, kurią setai buvo įrašyti, ne pagal treniruočių
+  // dienos pavadinimą programoje -- tai realaus apsilankymo sporto salėje data.
+  const sesijos = new Map();
+  for (const i of irasai) {
+    const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
+    if (!sesijos.has(raktas)) sesijos.set(raktas, []);
+    sesijos.get(raktas).push(i);
+  }
+
+  vieta.innerHTML = Array.from(sesijos.entries()).map(([raktas, eilutes]) => {
+    const eilutesHtml = eilutes.map((i) => {
+      const info = pratimoInfo.get(i.client_exercise_id) || { pavadinimas: '(pratimas ištrintas)', diena: '' };
+      return `
+        <tr>
+          <td><strong>${esc(info.pavadinimas)}</strong>${info.diena ? `<div class="muted" style="font-size:.8125rem">${esc(info.diena)}</div>` : ''}</td>
+          <td class="skaicius">${i.weight_kg ?? '–'} kg</td>
+          <td class="skaicius">${i.reps ?? '–'}</td>
+          <td class="pastaba">${i.notes ? esc(i.notes) : ''}</td>
+        </tr>`;
+    }).join('');
+
+    return `
+      <div class="card sesija-kortele">
+        <div class="sesija-antraste"><h2>${esc(data(eilutes[0].logged_at))}</h2></div>
+        <div class="table-wrap">
+          <table class="istorija">
+            <thead><tr><th>Pratimas</th><th>Svoris</th><th>Kartai</th><th>Pastaba</th></tr></thead>
+            <tbody>${eilutesHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
