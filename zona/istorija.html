@@ -23,9 +23,20 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
+  .sesija-kortele { padding: 0; overflow: hidden; }
   .sesija-kortele + .sesija-kortele { margin-top: var(--s-300); }
-  .sesija-antraste { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s-200); margin-bottom: var(--s-200); }
+  .sesija-antraste {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-200);
+    padding: var(--s-400); cursor: pointer; list-style: none;
+  }
+  .sesija-antraste::-webkit-details-marker { display: none; }
   .sesija-antraste h2 { margin: 0; font-size: 1.125rem; }
+  .sesija-antraste .rodykle {
+    flex: none; width: 20px; height: 20px; transition: rotate 180ms var(--ease-out);
+    stroke: var(--ink-soft);
+  }
+  .sesija-kortele[open] .sesija-antraste .rodykle { rotate: 180deg; }
+  .sesija-turinys { padding: 0 var(--s-400) var(--s-400); }
   table.istorija { width: 100%; border-collapse: collapse; }
   table.istorija th {
     text-align: left; font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
@@ -33,7 +44,7 @@
   }
   table.istorija td { padding: var(--s-100); border-bottom: 1px solid var(--hair-ink); font-size: .9375rem; vertical-align: top; }
   table.istorija tr:last-child td { border-bottom: 0; }
-  table.istorija td.skaicius { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.istorija td.setai { font-variant-numeric: tabular-nums; }
   table.istorija td.pastaba { color: var(--ink-soft); font-size: .875rem; }
 </style>
 </head>
@@ -156,28 +167,44 @@ function piesIstorija(irasai, pratimoInfo) {
     sesijos.get(raktas).push(i);
   }
 
-  vieta.innerHTML = Array.from(sesijos.entries()).map(([raktas, eilutes]) => {
-    const eilutesHtml = eilutes.map((i) => {
-      const info = pratimoInfo.get(i.client_exercise_id) || { pavadinimas: '(pratimas ištrintas)', diena: '' };
+  vieta.innerHTML = Array.from(sesijos.entries()).map(([raktas, eilutes], sesijosIndex) => {
+    // Viena sesijos diena gali turėti kelis to pačio pratimo setus (setas 1,
+    // setas 2 ...) -- juos sugrupuojame į vieną eilutę, kad "viena eilutė =
+    // vienas pratimas", o ne kartojame pratimo pavadinimą per kelias eilutes.
+    const pagalPratima = new Map();
+    for (const i of eilutes) {
+      if (!pagalPratima.has(i.client_exercise_id)) pagalPratima.set(i.client_exercise_id, []);
+      pagalPratima.get(i.client_exercise_id).push(i);
+    }
+
+    const eilutesHtml = Array.from(pagalPratima.entries()).map(([pratimoId, setai]) => {
+      const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)', diena: '' };
+      const setaiRusiuoti = setai.slice().sort((a, b) => (a.set_index ?? 0) - (b.set_index ?? 0));
+      const setuTekstas = setaiRusiuoti.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ');
+      const pastaba = setaiRusiuoti.map((s) => s.notes).find(Boolean) || '';
       return `
         <tr>
           <td><strong>${esc(info.pavadinimas)}</strong>${info.diena ? `<div class="muted" style="font-size:.8125rem">${esc(info.diena)}</div>` : ''}</td>
-          <td class="skaicius">${i.weight_kg ?? '–'} kg</td>
-          <td class="skaicius">${i.reps ?? '–'}</td>
-          <td class="pastaba">${i.notes ? esc(i.notes) : ''}</td>
+          <td class="setai">${esc(setuTekstas)}</td>
+          <td class="pastaba">${pastaba ? esc(pastaba) : ''}</td>
         </tr>`;
     }).join('');
 
     return `
-      <div class="card sesija-kortele">
-        <div class="sesija-antraste"><h2>${esc(data(eilutes[0].logged_at))}</h2></div>
-        <div class="table-wrap">
-          <table class="istorija">
-            <thead><tr><th>Pratimas</th><th>Svoris</th><th>Kartai</th><th>Pastaba</th></tr></thead>
-            <tbody>${eilutesHtml}</tbody>
-          </table>
+      <details class="card sesija-kortele"${sesijosIndex === 0 ? ' open' : ''}>
+        <summary class="sesija-antraste">
+          <h2>${esc(data(eilutes[0].logged_at))}</h2>
+          <svg class="rodykle" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </summary>
+        <div class="sesija-turinys">
+          <div class="table-wrap">
+            <table class="istorija">
+              <thead><tr><th>Pratimas</th><th>Setai</th><th>Pastaba</th></tr></thead>
+              <tbody>${eilutesHtml}</tbody>
+            </table>
+          </div>
         </div>
-      </div>`;
+      </details>`;
   }).join('');
 }
 </script>
