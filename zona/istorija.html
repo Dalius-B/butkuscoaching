@@ -60,6 +60,16 @@
 
   #rodinys-pratimas .field { max-width: 360px; }
 
+  /* Asmeniniai rekordai -- du kompaktiški skaitliukai virš istorijos
+     lentelės, kad klientas iš karto matytų savo geriausią rezultatą, o ne
+     turėtų ieškoti jo pats per visą lentelę. */
+  .pb-tinklelis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-200); margin: var(--s-300) 0; }
+  .pb-korta { background: var(--surface); border-radius: var(--r-md); padding: var(--s-200) var(--s-300); }
+  .pb-etikete { display: block; font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
+  .pb-reiksme { display: block; font-size: 1.375rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .pb-reiksme small { font-size: .8125rem; font-weight: 400; color: var(--ink-soft); }
+  .pb-data { display: block; font-size: .75rem; color: var(--ink-soft); margin-top: 2px; }
+
   @media (max-width: 620px) {
     .sesija-antraste { padding: var(--s-200) var(--s-300); }
     .sesija-turinys { padding: 0 var(--s-300) var(--s-300); }
@@ -316,12 +326,55 @@ function piesPratimoProgresa(pagalPavadinima, raktas) {
     </tr>`).join('');
 
   vieta.innerHTML = `
+    ${pbBlokas(grupe.irasai)}
     <div class="table-wrap">
       <table class="istorija">
         <thead><tr><th>Data</th><th>Setai</th><th>Pastaba</th></tr></thead>
         <tbody>${eilutesHtml}</tbody>
       </table>
     </div>`;
+}
+
+/** Sunkiausias kada nors pakeltas svoris ir daugiausiai kada nors padarytų
+ * vieno seto kartų -- ne visos istorijos vidurkis, o rekordinė reikšmė. */
+function pbSantrauka(irasai) {
+  let pbSvoris = null;
+  let pbKartai = null;
+  for (const i of irasai) {
+    if (i.weight_kg != null && (!pbSvoris || i.weight_kg > pbSvoris.weight_kg
+      || (i.weight_kg === pbSvoris.weight_kg && (i.reps ?? 0) > (pbSvoris.reps ?? 0)))) {
+      pbSvoris = i;
+    }
+    if (i.reps != null && (!pbKartai || i.reps > pbKartai.reps
+      || (i.reps === pbKartai.reps && (i.weight_kg ?? 0) > (pbKartai.weight_kg ?? 0)))) {
+      pbKartai = i;
+    }
+  }
+  return { pbSvoris, pbKartai };
+}
+
+function pbBlokas(irasai) {
+  const { pbSvoris, pbKartai } = pbSantrauka(irasai);
+  if (!pbSvoris && !pbKartai) return '';
+
+  const kortos = [];
+  if (pbSvoris) {
+    kortos.push(`
+      <div class="pb-korta">
+        <span class="pb-etikete">PB svoris</span>
+        <strong class="pb-reiksme">${pbSvoris.weight_kg}kg <small>&times; ${pbSvoris.reps ?? '–'}</small></strong>
+        <span class="pb-data">${esc(data(pbSvoris.logged_at))}</span>
+      </div>`);
+  }
+  if (pbKartai) {
+    kortos.push(`
+      <div class="pb-korta">
+        <span class="pb-etikete">PB kartai</span>
+        <strong class="pb-reiksme">${pbKartai.reps}${pbKartai.weight_kg != null ? ` <small>&times; ${pbKartai.weight_kg}kg</small>` : ''}</strong>
+        <span class="pb-data">${esc(data(pbKartai.logged_at))}</span>
+      </div>`);
+  }
+  return `<div class="pb-tinklelis">${kortos.join('')}</div>`;
 }
 
 function setuTekstas(setai) {
