@@ -50,8 +50,14 @@
   }
   .pratimo-kortele { padding: var(--s-300); border: 1px solid var(--hair-ink); border-radius: var(--r-md); }
   .pratimo-virsus { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200); }
-  .pratimo-tikslas { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
   .video-mygtukas { flex: none; white-space: nowrap; }
+
+  /* Tikslo eilutė (setai/kartai/svoris/poilsis) -- viena kompaktiška teksto
+     eilutė su pagrindiniu skaičiumi paryškintu, o ne krūva atskirų "piliulės"
+     formos ženkliukų, kurie iš arti atrodo netvarkingai. */
+  .pratimo-tikslas { margin-top: 2px; font-size: .875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .pratimo-tikslas strong { color: var(--ink); font-weight: 700; }
+  .pratimo-tikslas .taskas { margin: 0 var(--s-75); color: rgba(16,16,16,0.28); }
 
   /* Setų įvedimas -- kompaktiški, fiksuoto pločio laukai, nes čia visada
      įvedami trumpi skaičiai, o ne laisvas tekstas. Viena stulpelių antraštė,
@@ -218,14 +224,20 @@ function piesTurini() {
   for (const f of $$('.forma-setai')) f.addEventListener('submit', issaugokSetus);
 }
 
+/** Kompaktiška "4 × 5 · 80kg · 90s poilsis" eilutė vietoj kelių atskirų ženkliukų. */
+function tiksloEilute(p) {
+  const dalys = [];
+  if (p.target_sets && p.target_reps) dalys.push(`<strong>${p.target_sets} × ${esc(p.target_reps)}</strong>`);
+  else if (p.target_sets) dalys.push(`<strong>${p.target_sets} setai</strong>`);
+  else if (p.target_reps) dalys.push(`<strong>${esc(p.target_reps)} kartų</strong>`);
+  if (p.target_load) dalys.push(esc(p.target_load));
+  if (p.rest_seconds) dalys.push(`${p.rest_seconds}s poilsis`);
+  return dalys.join(' <span class="taskas">&middot;</span> ');
+}
+
 function pratimoKortele(p) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
-
-  const tikslai = [];
-  if (p.target_sets) tikslai.push(`${p.target_sets} setai`);
-  if (p.target_reps) tikslai.push(`${esc(p.target_reps)} kartų`);
-  if (p.target_load) tikslai.push(esc(p.target_load));
-  if (p.rest_seconds) tikslai.push(`${p.rest_seconds} sek poilsis`);
+  const tikslas = tiksloEilute(p);
 
   const setuEilutes = Array.from({ length: kiekSetu }, (_, i) => i + 1).map((n) => `
     <div class="setu-eilute">
@@ -239,7 +251,7 @@ function pratimoKortele(p) {
       <div class="pratimo-virsus">
         <div>
           <strong>${esc(p.title)}</strong>
-          ${tikslai.length ? `<div class="pratimo-tikslas">${tikslai.map((t) => `<span class="chip chip-quiet">${t}</span>`).join('')}</div>` : ''}
+          ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>

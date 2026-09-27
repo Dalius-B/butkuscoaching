@@ -23,20 +23,31 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
+  /* Treniruočių diena (Leg Day, Upper Body...) -- viršutinis grupavimo
+     lygis, kad klientas iškart matytų tik tos dienos istoriją, o ne visą
+     programą sumaišytą kartu. */
+  .treniruotes-diena + .treniruotes-diena { margin-top: var(--s-600); }
+  .treniruotes-diena-antraste {
+    font-size: .8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-soft); padding-bottom: var(--s-200); margin-bottom: var(--s-300);
+    border-bottom: 1px solid var(--hair-ink);
+  }
+
   .sesija-kortele { padding: 0; overflow: hidden; }
-  .sesija-kortele + .sesija-kortele { margin-top: var(--s-300); }
+  .sesija-kortele + .sesija-kortele { margin-top: var(--s-200); }
   .sesija-antraste {
     display: flex; align-items: center; justify-content: space-between; gap: var(--s-200);
-    padding: var(--s-400); cursor: pointer; list-style: none;
+    padding: var(--s-300) var(--s-400); cursor: pointer; list-style: none;
   }
   .sesija-antraste::-webkit-details-marker { display: none; }
-  .sesija-antraste h2 { margin: 0; font-size: 1.125rem; }
+  .sesija-antraste h3 { margin: 0; font-size: 1.0625rem; }
   .sesija-antraste .rodykle {
     flex: none; width: 20px; height: 20px; transition: rotate 180ms var(--ease-out);
     stroke: var(--ink-soft);
   }
   .sesija-kortele[open] .sesija-antraste .rodykle { rotate: 180deg; }
   .sesija-turinys { padding: 0 var(--s-400) var(--s-400); }
+
   table.istorija { width: 100%; border-collapse: collapse; }
   table.istorija th {
     text-align: left; font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
@@ -46,6 +57,13 @@
   table.istorija tr:last-child td { border-bottom: 0; }
   table.istorija td.setai { font-variant-numeric: tabular-nums; }
   table.istorija td.pastaba { color: var(--ink-soft); font-size: .875rem; }
+
+  #rodinys-pratimas .field { max-width: 360px; }
+
+  @media (max-width: 620px) {
+    .sesija-antraste { padding: var(--s-200) var(--s-300); }
+    .sesija-turinys { padding: 0 var(--s-300) var(--s-300); }
+  }
 </style>
 </head>
 <body>
@@ -66,7 +84,23 @@
     </div>
     <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
     <p class="note" id="pranesimas" hidden></p>
-    <div id="turinys-vieta"></div>
+
+    <div id="skydelis" hidden>
+      <div class="tabs" role="tablist" id="rodinio-tabs">
+        <button class="tab" role="tab" type="button" data-rodinys="diena" aria-selected="true">Pagal treniruočių dieną</button>
+        <button class="tab" role="tab" type="button" data-rodinys="pratimas" aria-selected="false">Pagal pratimą</button>
+      </div>
+
+      <div id="rodinys-diena"></div>
+
+      <div id="rodinys-pratimas" hidden>
+        <div class="field">
+          <label for="pratimo-pasirinkimas">Pratimas</label>
+          <select id="pratimo-pasirinkimas"></select>
+        </div>
+        <div id="pratimo-progresas" style="margin-top:var(--s-300)"></div>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -78,7 +112,7 @@
 </footer>
 
 <script type="module">
-import { db, $, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav } from './app.js';
+import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav } from './app.js';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -113,7 +147,7 @@ async function ikelk(vartotojoId) {
   document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';
 
   const { data: dienos, error: dKlaida } = await db
-    .from('client_days').select('id, title').eq('client_program_id', programId);
+    .from('client_days').select('id, title, position').eq('client_program_id', programId).order('position', { ascending: true });
   if (dKlaida) {
     $('#kraunasi').hidden = true;
     pranesk($('#pranesimas'), klaidaLT(dKlaida), 'error');
@@ -130,12 +164,6 @@ async function ikelk(vartotojoId) {
     return;
   }
 
-  const dienaPavadinimas = new Map((dienos || []).map((d) => [d.id, d.title]));
-  const pratimoInfo = new Map((pratimai || []).map((p) => [p.id, {
-    pavadinimas: p.title,
-    diena: dienaPavadinimas.get(p.client_day_id) || '',
-  }]));
-
   const pratimuId = (pratimai || []).map((p) => p.id);
   const { data: irasai, error: iKlaida } = pratimuId.length
     ? await db.from('exercise_logs').select('*').eq('client_id', vartotojoId).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
@@ -147,65 +175,162 @@ async function ikelk(vartotojoId) {
   }
 
   $('#kraunasi').hidden = true;
-  piesIstorija(irasai || [], pratimoInfo);
+  paruoskRodinius(dienos || [], pratimai || [], irasai || []);
 }
 
-function piesIstorija(irasai, pratimoInfo) {
-  const vieta = $('#turinys-vieta');
-
+function paruoskRodinius(dienos, pratimai, irasai) {
   if (!irasai.length) {
-    vieta.innerHTML = '<div class="empty"><h2>Kol kas tuščia</h2><p>Kai pradėsi žymėti setus programoje, jų istorija rodysis čia.</p></div>';
+    $('#pranesimas').hidden = true;
+    $('#skydelis').hidden = true;
+    $('#turinys').querySelector('.page').insertAdjacentHTML('beforeend',
+      '<div class="empty"><h2>Kol kas tuščia</h2><p>Kai pradėsi žymėti setus programoje, jų istorija rodysis čia.</p></div>');
     return;
   }
 
-  // Sugrupuojama pagal dieną, kurią setai buvo įrašyti, ne pagal treniruočių
-  // dienos pavadinimą programoje -- tai realaus apsilankymo sporto salėje data.
-  const sesijos = new Map();
-  for (const i of irasai) {
-    const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
-    if (!sesijos.has(raktas)) sesijos.set(raktas, []);
-    sesijos.get(raktas).push(i);
-  }
+  $('#skydelis').hidden = false;
+  const pratimoInfo = new Map(pratimai.map((p) => [p.id, { pavadinimas: p.title, dienaId: p.client_day_id }]));
 
-  vieta.innerHTML = Array.from(sesijos.entries()).map(([raktas, eilutes], sesijosIndex) => {
-    // Viena sesijos diena gali turėti kelis to pačio pratimo setus (setas 1,
-    // setas 2 ...) -- juos sugrupuojame į vieną eilutę, kad "viena eilutė =
-    // vienas pratimas", o ne kartojame pratimo pavadinimą per kelias eilutes.
-    const pagalPratima = new Map();
-    for (const i of eilutes) {
-      if (!pagalPratima.has(i.client_exercise_id)) pagalPratima.set(i.client_exercise_id, []);
-      pagalPratima.get(i.client_exercise_id).push(i);
+  piesPagalDiena(dienos, pratimai, irasai, pratimoInfo);
+  piesPagalPratima(pratimoInfo, irasai);
+
+  for (const t of $$('#rodinio-tabs .tab')) {
+    t.addEventListener('click', () => perjunkRodini(t.dataset.rodinys));
+  }
+}
+
+function perjunkRodini(vardas) {
+  for (const t of $$('#rodinio-tabs .tab')) t.setAttribute('aria-selected', String(t.dataset.rodinys === vardas));
+  $('#rodinys-diena').hidden = vardas !== 'diena';
+  $('#rodinys-pratimas').hidden = vardas !== 'pratimas';
+}
+
+// =============================================================================
+//  PAGAL TRENIRUOČIŲ DIENĄ -- diena (Leg Day, Upper Body...) -> sesijos data
+// =============================================================================
+function piesPagalDiena(dienos, pratimai, irasai, pratimoInfo) {
+  const vieta = $('#rodinys-diena');
+
+  const dienosSuIrasais = dienos.filter((d) => irasai.some((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id));
+
+  vieta.innerHTML = dienosSuIrasais.map((d) => {
+    const dienosIrasai = irasai.filter((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id);
+
+    // Sugrupuojama pagal dieną, kurią setai buvo įrašyti, ne pagal
+    // treniruočių dienos pavadinimą -- tai realaus apsilankymo sporto
+    // salėje data.
+    const sesijos = new Map();
+    for (const i of dienosIrasai) {
+      const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
+      if (!sesijos.has(raktas)) sesijos.set(raktas, []);
+      sesijos.get(raktas).push(i);
     }
 
-    const eilutesHtml = Array.from(pagalPratima.entries()).map(([pratimoId, setai]) => {
-      const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)', diena: '' };
-      const setaiRusiuoti = setai.slice().sort((a, b) => (a.set_index ?? 0) - (b.set_index ?? 0));
-      const setuTekstas = setaiRusiuoti.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(' | ');
-      const pastaba = setaiRusiuoti.map((s) => s.notes).find(Boolean) || '';
-      return `
-        <tr>
-          <td><strong>${esc(info.pavadinimas)}</strong>${info.diena ? `<div class="muted" style="font-size:.8125rem">${esc(info.diena)}</div>` : ''}</td>
-          <td class="setai">${esc(setuTekstas)}</td>
-          <td class="pastaba">${pastaba ? esc(pastaba) : ''}</td>
-        </tr>`;
-    }).join('');
+    const sesijuHtml = Array.from(sesijos.entries())
+      .map(([, eilutes], idx) => sesijosKortele(eilutes, pratimoInfo, idx === 0))
+      .join('');
 
     return `
-      <details class="card sesija-kortele"${sesijosIndex === 0 ? ' open' : ''}>
-        <summary class="sesija-antraste">
-          <h2>${esc(data(eilutes[0].logged_at))}</h2>
-          <svg class="rodykle" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </summary>
-        <div class="sesija-turinys">
-          <div class="table-wrap">
-            <table class="istorija">
-              <thead><tr><th>Pratimas</th><th>Setai</th><th>Pastaba</th></tr></thead>
-              <tbody>${eilutesHtml}</tbody>
-            </table>
-          </div>
-        </div>
-      </details>`;
+      <section class="treniruotes-diena">
+        <h2 class="treniruotes-diena-antraste">${esc(d.title)}</h2>
+        ${sesijuHtml}
+      </section>`;
   }).join('');
+}
+
+function sesijosKortele(eilutes, pratimoInfo, atidaryta) {
+  // Viena sesijos diena gali turėti kelis to pačio pratimo setus (setas 1,
+  // setas 2 ...) -- juos sugrupuojame į vieną eilutę, kad "viena eilutė =
+  // vienas pratimas", o ne kartojame pratimo pavadinimą per kelias eilutes.
+  const pagalPratima = new Map();
+  for (const i of eilutes) {
+    if (!pagalPratima.has(i.client_exercise_id)) pagalPratima.set(i.client_exercise_id, []);
+    pagalPratima.get(i.client_exercise_id).push(i);
+  }
+
+  const eilutesHtml = Array.from(pagalPratima.entries()).map(([pratimoId, setai]) => {
+    const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)' };
+    return `
+      <tr>
+        <td><strong>${esc(info.pavadinimas)}</strong></td>
+        <td class="setai">${esc(setuTekstas(setai))}</td>
+        <td class="pastaba">${esc(pastabosTekstas(setai))}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <details class="card sesija-kortele"${atidaryta ? ' open' : ''}>
+      <summary class="sesija-antraste">
+        <h3>${esc(data(eilutes[0].logged_at))}</h3>
+        <svg class="rodykle" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </summary>
+      <div class="sesija-turinys">
+        <div class="table-wrap">
+          <table class="istorija">
+            <thead><tr><th>Pratimas</th><th>Setai</th><th>Pastaba</th></tr></thead>
+            <tbody>${eilutesHtml}</tbody>
+          </table>
+        </div>
+      </div>
+    </details>`;
+}
+
+// =============================================================================
+//  PAGAL PRATIMĄ -- visa vieno pratimo (pvz. Squat) istorija chronologiškai,
+//  kad klientas iš karto matytų savo progresą, o ne rausiantis po dešimtis
+//  sesijų kortelių.
+// =============================================================================
+function piesPagalPratima(pratimoInfo, irasai) {
+  const pagalPavadinima = new Map();
+  for (const i of irasai) {
+    const pavadinimas = pratimoInfo.get(i.client_exercise_id)?.pavadinimas || '(pratimas ištrintas)';
+    const raktas = pavadinimas.trim().toLowerCase();
+    if (!pagalPavadinima.has(raktas)) pagalPavadinima.set(raktas, { pavadinimas, irasai: [] });
+    pagalPavadinima.get(raktas).irasai.push(i);
+  }
+
+  const isrikiuoti = Array.from(pagalPavadinima.entries()).sort((a, b) => a[1].pavadinimas.localeCompare(b[1].pavadinimas, 'lt'));
+
+  const pasirinkimas = $('#pratimo-pasirinkimas');
+  pasirinkimas.innerHTML = isrikiuoti.map(([raktas, v]) => `<option value="${esc(raktas)}">${esc(v.pavadinimas)}</option>`).join('');
+  pasirinkimas.addEventListener('change', () => piesPratimoProgresa(pagalPavadinima, pasirinkimas.value));
+  if (isrikiuoti.length) piesPratimoProgresa(pagalPavadinima, isrikiuoti[0][0]);
+}
+
+function piesPratimoProgresa(pagalPavadinima, raktas) {
+  const vieta = $('#pratimo-progresas');
+  const grupe = pagalPavadinima.get(raktas);
+  if (!grupe) { vieta.innerHTML = ''; return; }
+
+  const sesijos = new Map();
+  for (const i of grupe.irasai) {
+    const raktasData = new Date(i.logged_at).toISOString().slice(0, 10);
+    if (!sesijos.has(raktasData)) sesijos.set(raktasData, []);
+    sesijos.get(raktasData).push(i);
+  }
+
+  const eilutesHtml = Array.from(sesijos.values()).map((setai) => `
+    <tr>
+      <td>${esc(data(setai[0].logged_at))}</td>
+      <td class="setai">${esc(setuTekstas(setai))}</td>
+      <td class="pastaba">${esc(pastabosTekstas(setai))}</td>
+    </tr>`).join('');
+
+  vieta.innerHTML = `
+    <div class="table-wrap">
+      <table class="istorija">
+        <thead><tr><th>Data</th><th>Setai</th><th>Pastaba</th></tr></thead>
+        <tbody>${eilutesHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+function setuTekstas(setai) {
+  return setai.slice().sort((a, b) => (a.set_index ?? 0) - (b.set_index ?? 0))
+    .map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(' | ');
+}
+
+function pastabosTekstas(setai) {
+  return setai.map((s) => s.notes).find(Boolean) || '';
 }
 </script>
 </body>
