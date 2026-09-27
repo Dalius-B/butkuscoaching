@@ -58,7 +58,9 @@
   .pratimo-tikslas { margin-top: 2px; font-size: .875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .pratimo-tikslas strong { color: var(--ink); font-weight: 700; }
   .pratimo-tikslas .taskas { margin: 0 var(--s-75); color: rgba(16,16,16,0.28); }
-  .siulomo-uzuomina { font-size: .8125rem; color: var(--ink-soft); font-style: italic; margin-top: var(--s-75); }
+  .siulomo-info { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-75); max-width: 46ch; }
+  .paskutine-sesija { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100); }
+  .paskutine-sesija strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 
   /* Setų įvedimas -- kompaktiški, fiksuoto pločio laukai, nes čia visada
      įvedami trumpi skaičiai, o ne laisvas tekstas. Viena stulpelių antraštė,
@@ -125,7 +127,7 @@
 
 <script type="module">
 import {
-  db, $, $$, esc, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
 } from './app.js';
 
 const programId = new URLSearchParams(location.search).get('id');
@@ -133,7 +135,7 @@ const programId = new URLSearchParams(location.search).get('id');
 let vartotojas = null;
 let dienos = [];
 let pratimai = [];
-let pratimaiSuIrasais = new Set();
+let paskutineSesija = new Map();
 
 paleisk();
 
@@ -191,17 +193,43 @@ async function ikelk() {
   }
   pratimai = p || [];
 
-  // Reikia žinoti, kurie pratimai jau turi bent vieną įrašą, kad siūlomas
-  // pradžios svoris (target_load) būtų įrašomas į lauką tik pirmą kartą --
-  // po to klientas svorį didina pats, o mes jo nebesiūlome.
+  // Reikia žinoti kiekvieno pratimo paskutinę sesiją, kad: 1) pradinio
+  // svorio pasiūlymą rodytume tik kol dar nėra jokio įrašo, ir 2) vėliau
+  // klientas matytų, kokį sunkiausią svorį naudojo praėjusį kartą.
   const pratimuId = pratimai.map((x) => x.id);
   const { data: irasai } = pratimuId.length
-    ? await db.from('exercise_logs').select('client_exercise_id').eq('client_id', vartotojas.id).in('client_exercise_id', pratimuId)
+    ? await db.from('exercise_logs').select('client_exercise_id, weight_kg, reps, logged_at')
+        .eq('client_id', vartotojas.id).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
     : { data: [] };
-  pratimaiSuIrasais = new Set((irasai || []).map((i) => i.client_exercise_id));
+  paskutineSesija = apskaiciuokPaskutinesSesijas(irasai || []);
 
   $('#kraunasi').hidden = true;
   piesTurini();
+}
+
+/** pratimoId -> paskutinės sesijos {data, weight_kg, reps} (sunkiausias tos
+ * dienos setas). Kadangi irasai jau surikiuoti nuo naujausios datos, pirmas
+ * kiekvieno pratimo pasirodymas visada priklauso jo naujausiai sesijai. */
+function apskaiciuokPaskutinesSesijas(irasai) {
+  const grupes = new Map();
+  for (const i of irasai) {
+    const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
+    const esama = grupes.get(i.client_exercise_id);
+    if (!esama) grupes.set(i.client_exercise_id, { data: raktas, irasai: [i] });
+    else if (raktas === esama.data) esama.irasai.push(i);
+  }
+
+  const rezultatas = new Map();
+  for (const [pratimoId, grupe] of grupes) {
+    const suSvoriu = grupe.irasai.filter((i) => i.weight_kg != null);
+    const sunkiausias = suSvoriu.length ? suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a)) : null;
+    rezultatas.set(pratimoId, {
+      data: grupe.data,
+      weight_kg: sunkiausias ? sunkiausias.weight_kg : null,
+      reps: sunkiausias ? sunkiausias.reps : null,
+    });
+  }
+  return rezultatas;
 }
 
 function piesTurini() {
@@ -246,23 +274,29 @@ function tiksloEilute(p) {
   return dalys.join(' <span class="taskas">&middot;</span> ');
 }
 
-/** Ištraukia skaičių iš laisvo teksto ("60 kg" -> "60"), kad būtų kuo įrašyti
- * į svorio lauką. Jei skaičiaus nėra (pvz. "RPE 8"), siūlymo tiesiog nerodome. */
-function siulomasSvoris(p) {
-  if (pratimaiSuIrasais.has(p.id) || !p.target_load) return null;
-  const atitikmuo = String(p.target_load).match(/\d+(\.\d+)?/);
-  return atitikmuo ? atitikmuo[0] : null;
+/** Rodoma tik kol pratimas dar neturi nė vieno įrašo -- paaiškina, ką reiškia
+ * target_load skaičius tikslo eilutėje, o ne tiesiog jį pakartoja. */
+function pradinioSvorioUzuomina(p) {
+  if (paskutineSesija.has(p.id) || !p.target_load) return '';
+  return '<p class="siulomo-info">Tai — pasiūlytas pradinis svoris programos pradžiai. Keisk jį pagal savo pojūtį: paskutiniai kartojimai turėtų būti sunkiai atliekami.</p>';
+}
+
+/** Rodoma, kai pratimas jau turi bent vieną įrašą -- kokį sunkiausią svorį
+ * klientas naudojo praėjusią treniruotę, kad turėtų nuo ko atsispirti. */
+function paskutinesSesijosEilute(p) {
+  const s = paskutineSesija.get(p.id);
+  if (!s || s.weight_kg == null) return '';
+  return `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${s.weight_kg}kg${s.reps != null ? ` × ${s.reps}` : ''}</strong> (${esc(data(s.data))})</p>`;
 }
 
 function pratimoKortele(p) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
   const tikslas = tiksloEilute(p);
-  const siulomas = siulomasSvoris(p);
 
   const setuEilutes = Array.from({ length: kiekSetu }, (_, i) => i + 1).map((n) => `
     <div class="setu-eilute">
       <span>${n}.</span>
-      <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}"${siulomas ? ` value="${esc(siulomas)}"` : ''}>
+      <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}">
       <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}">
     </div>`).join('');
 
@@ -272,11 +306,12 @@ function pratimoKortele(p) {
         <div>
           <strong>${esc(p.title)}</strong>
           ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
+          ${pradinioSvorioUzuomina(p)}
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>
       ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
-      ${siulomas ? `<p class="siulomo-uzuomina">Įrašytas siūlomas pradžios svoris — pakeisk pagal savo pojūtį.</p>` : ''}
+      ${paskutinesSesijosEilute(p)}
 
       <div class="setu-lentele">
         <div class="setu-antraste"><span></span><span>Svoris, kg</span><span>Kartai</span></div>
@@ -333,7 +368,17 @@ async function issaugokSetus(ev) {
   }
 
   pranesk(busena, 'Išsaugota.', 'ok');
-  pratimaiSuIrasais.add(pratimoId);
+  const suSvoriu = irasai.filter((i) => i.weight_kg != null);
+  if (suSvoriu.length) {
+    const sunkiausias = suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a));
+    paskutineSesija.set(pratimoId, {
+      data: new Date().toISOString().slice(0, 10),
+      weight_kg: sunkiausias.weight_kg,
+      reps: sunkiausias.reps,
+    });
+  } else if (!paskutineSesija.has(pratimoId)) {
+    paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null });
+  }
   piesTurini();
 }
 </script>
