@@ -180,7 +180,7 @@ function piesIstorija(irasai, pratimoInfo) {
     const eilutesHtml = Array.from(pagalPratima.entries()).map(([pratimoId, setai]) => {
       const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)', diena: '' };
       const setaiRusiuoti = setai.slice().sort((a, b) => (a.set_index ?? 0) - (b.set_index ?? 0));
-      const setuTekstas = setaiRusiuoti.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(', ');
+      const setuTekstas = setaiRusiuoti.map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(' | ');
       const pastaba = setaiRusiuoti.map((s) => s.notes).find(Boolean) || '';
       return `
         <tr>

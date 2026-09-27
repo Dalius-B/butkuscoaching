@@ -40,9 +40,18 @@
   .diena-kortele[open] .diena-antraste .rodykle { rotate: 180deg; }
   .diena-turinys { padding: 0 var(--s-400) var(--s-400); }
 
-  .pratimo-kortele { padding: var(--s-300) 0; border-top: 1px solid var(--hair-ink); }
-  .pratimo-kortele:first-child { padding-top: 0; border-top: 0; }
+  /* Kelios pratimo kortelės vienoje eilutėje platesniame ekrane -- panaudoja
+     laisvą vietą šalia kompaktiškos setų lentelės, o ne palieka ją tuščią.
+     min(280px, 100%) apsaugo, kad kortelė nepersirikiuotų už siauro
+     telefono ekrano ribų. */
+  .pratimo-tinklelis {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+    gap: var(--s-300);
+  }
+  .pratimo-kortele { padding: var(--s-300); border: 1px solid var(--hair-ink); border-radius: var(--r-md); }
+  .pratimo-virsus { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200); }
   .pratimo-tikslas { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
+  .video-mygtukas { flex: none; white-space: nowrap; }
 
   /* Setų įvedimas -- kompaktiški, fiksuoto pločio laukai, nes čia visada
      įvedami trumpi skaičiai, o ne laisvas tekstas. Viena stulpelių antraštė,
@@ -67,6 +76,12 @@
   .setu-eilute input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
   .setu-eilute input[type="number"]::-webkit-inner-spin-button,
   .setu-eilute input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  @media (max-width: 620px) {
+    .diena-antraste { padding: var(--s-300); flex-wrap: wrap; }
+    .diena-turinys { padding: 0 var(--s-300) var(--s-300); }
+    .pratimo-tinklelis { gap: var(--s-200); }
+  }
 </style>
 </head>
 <body>
@@ -195,7 +210,7 @@ function piesTurini() {
           </div>
         </summary>
         <div class="diena-turinys">
-          ${savi.length ? savi.map((p) => pratimoKortele(p)).join('') : '<p class="muted">Pratimų šiai dienai dar nėra.</p>'}
+          ${savi.length ? `<div class="pratimo-tinklelis">${savi.map((p) => pratimoKortele(p)).join('')}</div>` : '<p class="muted">Pratimų šiai dienai dar nėra.</p>'}
         </div>
       </details>`;
   }).join('');
@@ -221,10 +236,14 @@ function pratimoKortele(p) {
 
   return `
     <div class="pratimo-kortele">
-      <strong>${esc(p.title)}</strong>
-      ${tikslai.length ? `<div class="pratimo-tikslas">${tikslai.map((t) => `<span class="chip chip-quiet">${t}</span>`).join('')}</div>` : ''}
+      <div class="pratimo-virsus">
+        <div>
+          <strong>${esc(p.title)}</strong>
+          ${tikslai.length ? `<div class="pratimo-tikslas">${tikslai.map((t) => `<span class="chip chip-quiet">${t}</span>`).join('')}</div>` : ''}
+        </div>
+        ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
+      </div>
       ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
-      ${p.video_url ? `<p style="margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="font-size:.875rem;text-decoration:underline">Peržiūrėti pavyzdį</a></p>` : ''}
 
       <div class="setu-lentele">
         <div class="setu-antraste"><span></span><span>Svoris, kg</span><span>Kartai</span></div>
