@@ -82,6 +82,7 @@ let pratimai = [];
 let klientai = [];
 let priskyrimai = [];
 let savasId = null;
+let redaguojamoPratimoId = null;
 
 paleisk();
 
@@ -247,7 +248,7 @@ function piesDienuSarasa() {
         ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}
 
         <div id="pratimai-${esc(d.id)}">
-          ${savi.length ? savi.map((p) => `
+          ${savi.length ? savi.map((p) => p.id === redaguojamoPratimoId ? pratimoRedagavimoForma(p) : `
             <div class="pratimo-eilute">
               <div>
                 <strong>${esc(p.title)}</strong>
@@ -260,7 +261,10 @@ function piesDienuSarasa() {
                 ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
                 ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
               </div>
-              <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+              <div class="row" style="gap:var(--s-100);flex:none">
+                <button class="btn btn-ghost btn-sm redaguoti-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
+                <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+              </div>
             </div>`).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
         </div>
 
@@ -307,6 +311,55 @@ function piesDienuSarasa() {
   for (const b of $$('.trinti-diena')) b.addEventListener('click', () => trinkDiena(b.dataset.id, b.dataset.vardas));
   for (const b of $$('.trinti-pratima')) b.addEventListener('click', () => trinkPratima(b.dataset.id, b.dataset.vardas));
   for (const f of $$('.forma-pratimas')) f.addEventListener('submit', pridePratima);
+  for (const b of $$('.redaguoti-pratima')) {
+    b.addEventListener('click', () => { redaguojamoPratimoId = b.dataset.id; piesDienuSarasa(); });
+  }
+  for (const b of $$('.atsaukti-redagavima')) {
+    b.addEventListener('click', () => { redaguojamoPratimoId = null; piesDienuSarasa(); });
+  }
+  for (const f of $$('.forma-redaguoti-pratima')) f.addEventListener('submit', issaugokPratimoRedagavima);
+}
+
+function pratimoRedagavimoForma(p) {
+  return `
+    <form class="pratimo-eilute forma-redaguoti-pratima" data-id="${esc(p.id)}" novalidate style="flex-direction:column;align-items:stretch;gap:var(--s-200)">
+      <div class="field-row">
+        <div class="field">
+          <label for="rp-pavadinimas-${esc(p.id)}">Pratimo pavadinimas</label>
+          <input id="rp-pavadinimas-${esc(p.id)}" name="title" type="text" required value="${esc(p.title)}">
+        </div>
+        <div class="field">
+          <label for="rp-setai-${esc(p.id)}">Setai</label>
+          <input id="rp-setai-${esc(p.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric" value="${p.target_sets ?? ''}">
+        </div>
+        <div class="field">
+          <label for="rp-kartai-${esc(p.id)}">Kartai</label>
+          <input id="rp-kartai-${esc(p.id)}" name="reps" type="text" placeholder="Pvz., 8-10" value="${esc(p.target_reps || '')}">
+        </div>
+        <div class="field">
+          <label for="rp-svoris-${esc(p.id)}">Svoris / intensyvumas</label>
+          <input id="rp-svoris-${esc(p.id)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8" value="${esc(p.target_load || '')}">
+        </div>
+        <div class="field">
+          <label for="rp-poilsis-${esc(p.id)}">Poilsis, sek</label>
+          <input id="rp-poilsis-${esc(p.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric" value="${p.rest_seconds ?? ''}">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="rp-pastabos-${esc(p.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="rp-pastabos-${esc(p.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui" value="${esc(p.notes || '')}">
+        </div>
+        <div class="field">
+          <label for="rp-video-${esc(p.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="rp-video-${esc(p.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda" value="${esc(p.video_url || '')}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-redagavima" type="button">Atšaukti</button>
+      </div>
+    </form>`;
 }
 
 async function prideDiena(ev) {
@@ -371,6 +424,37 @@ async function pridePratima(ev) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
     return;
   }
+  await perkrauk();
+}
+
+async function issaugokPratimoRedagavima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pratimo pavadinimą.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('exercises').update({
+    title: pavadinimas,
+    target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    target_reps: String(fd.get('reps') || '').trim() || null,
+    target_load: String(fd.get('load') || '').trim() || null,
+    rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
+    notes: String(fd.get('notes') || '').trim(),
+    video_url: String(fd.get('video') || '').trim() || null,
+  }).eq('id', id);
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  redaguojamoPratimoId = null;
+  pranesk($('#pranesimas'), 'Pratimas atnaujintas.', 'ok');
   await perkrauk();
 }
 
