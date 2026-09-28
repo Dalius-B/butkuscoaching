@@ -59,7 +59,6 @@
   .pratimo-tikslas { margin-top: 2px; font-size: .875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .pratimo-tikslas strong { color: var(--ink); font-weight: 700; }
   .pratimo-tikslas .taskas { margin: 0 var(--s-75); color: rgba(16,16,16,0.28); }
-  .siulomo-info { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-75); max-width: 46ch; }
   .paskutine-sesija { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100); }
   .paskutine-sesija strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 
@@ -320,13 +319,6 @@ function tiksloEilute(p) {
   return dalys.join(' <span class="taskas">&middot;</span> ');
 }
 
-/** Rodoma tik kol pratimas dar neturi nė vieno įrašo -- paaiškina, ką reiškia
- * target_load skaičius tikslo eilutėje, o ne tiesiog jį pakartoja. */
-function pradinioSvorioUzuomina(p) {
-  if (paskutineSesija.has(p.id) || !p.target_load) return '';
-  return '<p class="siulomo-info">Tai — pasiūlytas pradinis svoris programos pradžiai. Keisk jį pagal savo pojūtį: paskutiniai kartojimai turėtų būti sunkiai atliekami.</p>';
-}
-
 /** Rodoma, kai pratimas jau turi bent vieną įrašą -- kokį sunkiausią svorį
  * klientas naudojo praėjusią treniruotę, kad turėtų nuo ko atsispirti. */
 function paskutinesSesijosEilute(p) {
@@ -353,7 +345,6 @@ function pratimoKortele(p) {
         <div>
           <strong class="pratimo-pavadinimas">${esc(p.title)}</strong>
           ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
-          <div id="uzuomina-${esc(p.id)}">${pradinioSvorioUzuomina(p)}</div>
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>
@@ -433,11 +424,9 @@ async function issaugokSetus(ev) {
     paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null });
   }
 
-  // Atnaujiname tik šio pratimo užuominas, o ne visą dienos turinį -- kitaip
+  // Atnaujiname tik šio pratimo užuominą, o ne visą dienos turinį -- kitaip
   // ką tik parodytas "Setai išsaugoti" pranešimas ir išvalytas laukas iškart
   // dingtų perpiešiant visą kortelę.
-  const uzuominaEl = $('#uzuomina-' + pratimoId);
-  if (uzuominaEl) uzuominaEl.innerHTML = pradinioSvorioUzuomina({ id: pratimoId });
   const paskutineEl = $('#paskutine-' + pratimoId);
   if (paskutineEl) paskutineEl.innerHTML = paskutinesSesijosEilute({ id: pratimoId });
 }
