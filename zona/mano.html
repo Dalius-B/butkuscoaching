@@ -78,7 +78,7 @@ async function paleisk() {
   if (await panaudokLaukiantiKvietima(profilis)) {
     const { data: naujas } = await db
       .from('profiles')
-      .select('id, email, full_name, phone, status, created_at')
+      .select('id, email, full_name, phone, status, plan_type, created_at')
       .eq('id', s.vartotojas.id)
       .maybeSingle();
     if (naujas) profilis = naujas;

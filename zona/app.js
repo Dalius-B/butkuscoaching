@@ -330,7 +330,7 @@ export async function reikiaSesijos({ tikTreneriui = false } = {}) {
   // puslapio atidarymas sutaupo vieną kelionę į serverį.
   const [profilioAtsakas, trenerioAtsakas] = await Promise.all([
     db.from('profiles')
-      .select('id, email, full_name, phone, status, created_at')
+      .select('id, email, full_name, phone, status, plan_type, created_at')
       .eq('id', vartotojas.id)
       .maybeSingle(),
     db.rpc('ar_treneris'),
@@ -449,8 +449,12 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
 
   const nuorodos = [{ href: 'mano.html', tekstas: 'Mano programa' }];
   // Savaitinė ataskaita yra kliento savaitinis pildomas dalykas -- treneriui
-  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome.
-  if (!treneris) nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
+  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. "Tik
+  // programa" tipo klientui ataskaitos taip pat nerodome -- jo paketas
+  // apima tik programą ir istoriją, be savaitinio patikrinimo.
+  if (!treneris && profilis?.plan_type !== 'tik_programa') {
+    nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
+  }
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });
 

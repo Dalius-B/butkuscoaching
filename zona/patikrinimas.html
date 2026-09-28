@@ -100,7 +100,7 @@ async function paleisk() {
   if (await panaudokLaukiantiKvietima(profilis)) {
     const { data: naujas } = await db
       .from('profiles')
-      .select('id, email, full_name, phone, status, created_at')
+      .select('id, email, full_name, phone, status, plan_type, created_at')
       .eq('id', vartotojas.id)
       .maybeSingle();
     if (naujas) profilis = naujas;
@@ -115,6 +115,24 @@ async function paleisk() {
         <h2>Paskyra sukurta</h2>
         <p>Kvietimas dar nepatvirtintas. Kai Dalius patvirtins tavo prieigą, čia galėsi
            pildyti savaitinę ataskaitą.</p>
+      </div>`;
+    return;
+  }
+
+  // Rodymo lygmuo (rodykNav) meniu punktą jau paslėpė, bet tai tik
+  // patogumas -- tikra apsauga yra duomenų bazės taisyklėse. Čia rodome
+  // aiškų paaiškinimą, o ne tiesiog leidžiame pildyti formą, kurios
+  // išsaugoti vis tiek nepavyktų.
+  if (!s.arTreneris && profilis?.plan_type === 'tik_programa') {
+    paantraste.textContent = '';
+    vieta.innerHTML = `
+      <div class="empty">
+        <h2>Ši dalis neįtraukta į tavo paketą</h2>
+        <p>Tavo paketas apima programą ir jos istoriją, be savaitinės ataskaitos. Jei norėtum
+           ją įsijungti, susisiek su Daliumi.</p>
+        <div class="form-actions" style="justify-content:center">
+          <a class="btn btn-primary" href="mano.html">Į mano programą</a>
+        </div>
       </div>`;
     return;
   }
