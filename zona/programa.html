@@ -59,10 +59,10 @@
   /* flex + wrap, o ne tekstas su tarpais -- kad kiekviena dalis (pvz. "60s
      poilsis") vyniotųsi kaip vientisas blokas kartu su savo taškeliu, o ne
      paliktų taškelį vieną kabantį eilutės pradžioje siaurame ekrane. */
-  .pratimo-tikslas { margin-top: 2px; font-size: .875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; row-gap: 2px; }
+  .pratimo-tikslas { margin-top: var(--s-75); font-size: .875rem; color: var(--ink-soft); font-variant-numeric: tabular-nums; display: flex; flex-wrap: wrap; row-gap: 4px; }
   .pratimo-tikslas strong { color: var(--ink); font-weight: 700; }
   .pratimo-tikslas .dalis:not(:first-child)::before { content: '\00b7'; margin: 0 var(--s-75); color: rgba(16,16,16,0.28); }
-  .paskutine-sesija { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-100); }
+  .paskutine-sesija { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-200); }
   .paskutine-sesija strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 
   /* Setų įvedimas -- kompaktiški, fiksuoto pločio laukai, nes čia visada
@@ -356,7 +356,7 @@ function pratimoKortele(p) {
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>
-      ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+      ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:var(--s-200)">${esc(p.notes)}</p>` : ''}
       <div id="paskutine-${esc(p.id)}">${paskutinesSesijosEilute(p)}</div>
 
       <div class="setu-lentele">
