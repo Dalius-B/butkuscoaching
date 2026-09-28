@@ -25,11 +25,32 @@
 <style>
   .diena-kortele + .diena-kortele { margin-top: var(--s-300); }
   .pratimo-eilute {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200);
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-100) var(--s-200);
     padding: var(--s-100) 0; border-top: 1px solid var(--hair-ink);
   }
   .pratimo-eilute:first-child { border-top: 0; }
   .pratimo-meta { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
+  .pratimo-eilute-info { flex: 1 1 180px; min-width: 0; }
+  .pratimo-eilute-valdymas { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; flex: none; margin-left: auto; }
+
+  /* Pratimų tvarkos keitimas -- pele tempiant rankeną, arba mygtukais ten,
+     kur tempimas nepatogus ar neveikia (dauguma liečiamų ekranų). */
+  .pratimo-eilute[draggable="true"] { cursor: grab; }
+  .pratimo-eilute.velkama { opacity: .35; }
+  .pratimo-eilute.uzleista { border-top-color: var(--ink); }
+  .tvarkos-rankena {
+    flex: none; align-self: center; color: var(--ink-soft); font-size: 1.125rem;
+    line-height: 1; padding-right: var(--s-100); user-select: none;
+  }
+  .tvarkos-mygtukai { display: flex; flex-direction: column; gap: 2px; flex: none; }
+  .tvarkos-mygtukai button {
+    width: 26px; height: 22px; padding: 0; line-height: 1; font-size: .75rem;
+    border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm); background: var(--white); cursor: pointer;
+  }
+  .tvarkos-mygtukai button:hover:not(:disabled) { border-color: rgba(16,16,16,0.42); }
+  .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
+
+  .diena-antraste-redagavimas { display: flex; flex-direction: column; gap: var(--s-200); margin-bottom: var(--s-200); }
 </style>
 </head>
 <body>
@@ -83,6 +104,8 @@ let klientai = [];
 let priskyrimai = [];
 let savasId = null;
 let redaguojamoPratimoId = null;
+let redaguojamosDienosId = null;
+let velkamaEilute = null;
 
 paleisk();
 
@@ -241,16 +264,21 @@ function piesDienuSarasa() {
     const savi = pratimai.filter((p) => p.section_id === d.id);
     return `
       <div class="card diena-kortele">
-        <div class="card-head">
-          <h3 style="margin:0">${esc(d.title)}</h3>
-          <button class="btn btn-danger btn-sm trinti-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Trinti dieną</button>
-        </div>
-        ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}
+        ${d.id === redaguojamosDienosId ? dienosRedagavimoForma(d) : `
+          <div class="card-head">
+            <h3 style="margin:0">${esc(d.title)}</h3>
+            <div class="row" style="gap:var(--s-100)">
+              <button class="btn btn-ghost btn-sm redaguoti-diena" type="button" data-id="${esc(d.id)}">Redaguoti</button>
+              <button class="btn btn-danger btn-sm trinti-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Trinti dieną</button>
+            </div>
+          </div>
+          ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}`}
 
-        <div id="pratimai-${esc(d.id)}">
-          ${savi.length ? savi.map((p) => p.id === redaguojamoPratimoId ? pratimoRedagavimoForma(p) : `
-            <div class="pratimo-eilute">
-              <div>
+        <div id="pratimai-${esc(d.id)}" data-sekcija="${esc(d.id)}">
+          ${savi.length ? savi.map((p, i) => p.id === redaguojamoPratimoId ? pratimoRedagavimoForma(p) : `
+            <div class="pratimo-eilute" draggable="true" data-id="${esc(p.id)}">
+              <span class="tvarkos-rankena" title="Tempk, kad pakeistum tvarką">⠿</span>
+              <div class="pratimo-eilute-info">
                 <strong>${esc(p.title)}</strong>
                 <div class="pratimo-meta muted" style="font-size:.8125rem">
                   ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
@@ -261,7 +289,11 @@ function piesDienuSarasa() {
                 ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
                 ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
               </div>
-              <div class="row" style="gap:var(--s-100);flex:none">
+              <div class="pratimo-eilute-valdymas">
+                <div class="tvarkos-mygtukai">
+                  <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+                  <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === savi.length - 1 ? ' disabled' : ''}>&#9660;</button>
+                </div>
                 <button class="btn btn-ghost btn-sm redaguoti-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
                 <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
               </div>
@@ -318,6 +350,133 @@ function piesDienuSarasa() {
     b.addEventListener('click', () => { redaguojamoPratimoId = null; piesDienuSarasa(); });
   }
   for (const f of $$('.forma-redaguoti-pratima')) f.addEventListener('submit', issaugokPratimoRedagavima);
+
+  for (const b of $$('.redaguoti-diena')) {
+    b.addEventListener('click', () => { redaguojamosDienosId = b.dataset.id; piesDienuSarasa(); });
+  }
+  for (const b of $$('.atsaukti-dienos-redagavima')) {
+    b.addEventListener('click', () => { redaguojamosDienosId = null; piesDienuSarasa(); });
+  }
+  for (const f of $$('.forma-redaguoti-diena')) f.addEventListener('submit', issaugokDienosRedagavima);
+
+  for (const b of $$('.kelk-pratima')) {
+    b.addEventListener('click', () => perkelkPratima(b.dataset.id, Number(b.dataset.kryptis)));
+  }
+  for (const konteineris of $$('#dienu-sarasas [id^="pratimai-"]')) prijunkTempima(konteineris);
+}
+
+function dienosRedagavimoForma(d) {
+  return `
+    <form class="diena-antraste-redagavimas forma-redaguoti-diena" data-id="${esc(d.id)}" novalidate>
+      <div class="field-row">
+        <div class="field">
+          <label for="rd-pavadinimas-${esc(d.id)}">Dienos pavadinimas</label>
+          <input id="rd-pavadinimas-${esc(d.id)}" name="title" type="text" required value="${esc(d.title)}">
+        </div>
+        <div class="field">
+          <label for="rd-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="rd-pastabos-${esc(d.id)}" name="notes" type="text" value="${esc(d.notes || '')}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-dienos-redagavima" type="button">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function issaugokDienosRedagavima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk dienos pavadinimą.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('program_sections').update({
+    title: pavadinimas,
+    notes: String(fd.get('notes') || '').trim(),
+  }).eq('id', id);
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  redaguojamosDienosId = null;
+  pranesk($('#pranesimas'), 'Diena atnaujinta.', 'ok');
+  await perkrauk();
+}
+
+// =============================================================================
+//  PRATIMŲ TVARKA -- tempimas pele arba mygtukai ten, kur tempimas nepatogu
+//  (dauguma liečiamų ekranų HTML5 tempimo įvykių gerai nepalaiko).
+// =============================================================================
+async function issaugokTvarka(sectionId, tvarkaId) {
+  const atnaujinimai = tvarkaId.map((id, i) => db.from('exercises').update({ position: i }).eq('id', id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return false;
+  }
+  // Vietinė tvarka atnaujinama iškart, kad neliktų trumpo senos tvarkos
+  // blyksnio kol laukiame naujo perkrauk() atsakymo.
+  tvarkaId.forEach((id, i) => {
+    const p = pratimai.find((x) => x.id === id);
+    if (p) p.position = i;
+  });
+  pratimai.sort((a, b) => a.position - b.position);
+  return true;
+}
+
+async function perkelkPratima(pratimoId, kryptis) {
+  const p = pratimai.find((x) => x.id === pratimoId);
+  if (!p) return;
+  const savi = pratimai.filter((x) => x.section_id === p.section_id).sort((a, b) => a.position - b.position);
+  const idx = savi.findIndex((x) => x.id === pratimoId);
+  const naujasIdx = idx + kryptis;
+  if (naujasIdx < 0 || naujasIdx >= savi.length) return;
+
+  [savi[idx], savi[naujasIdx]] = [savi[naujasIdx], savi[idx]];
+  const sekme = await issaugokTvarka(p.section_id, savi.map((x) => x.id));
+  if (sekme) piesDienuSarasa();
+}
+
+function prijunkTempima(konteineris) {
+  konteineris.addEventListener('dragstart', (ev) => {
+    const eilute = ev.target.closest('.pratimo-eilute');
+    if (!eilute || !eilute.dataset.id) return;
+    velkamaEilute = eilute;
+    eilute.classList.add('velkama');
+    ev.dataTransfer.effectAllowed = 'move';
+  });
+
+  konteineris.addEventListener('dragend', () => {
+    velkamaEilute?.classList.remove('velkama');
+    velkamaEilute = null;
+  });
+
+  konteineris.addEventListener('dragover', (ev) => {
+    if (!velkamaEilute) return;
+    ev.preventDefault();
+    const virsEilutes = ev.target.closest('.pratimo-eilute');
+    if (!virsEilutes || virsEilutes === velkamaEilute) return;
+    const stacija = virsEilutes.getBoundingClientRect();
+    const dedamPo = (ev.clientY - stacija.top) / stacija.height > 0.5;
+    konteineris.insertBefore(velkamaEilute, dedamPo ? virsEilutes.nextSibling : virsEilutes);
+  });
+
+  konteineris.addEventListener('drop', async (ev) => {
+    if (!velkamaEilute) return;
+    ev.preventDefault();
+    const tvarka = $$('.pratimo-eilute', konteineris).map((el) => el.dataset.id).filter(Boolean);
+    const sekme = await issaugokTvarka(konteineris.dataset.sekcija, tvarka);
+    if (sekme) piesDienuSarasa();
+  });
 }
 
 function pratimoRedagavimoForma(p) {
