@@ -163,6 +163,15 @@ p { text-wrap: pretty; }
 }
 .nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--paper); }
 
+/* Meniu mygtukas -- rodomas tik siaurame ekrane vietoj į šoną slenkančių
+   nuorodų (žr. mobilų bloką žemiau). */
+.nav-meniu-mygtukas {
+  display: none; flex: none; align-items: center; justify-content: center;
+  width: 40px; height: 40px; background: transparent; color: var(--paper);
+  border: 1px solid var(--hair-paper); border-radius: var(--r-sm); cursor: pointer;
+}
+.nav-meniu-mygtukas:hover { border-color: var(--paper); }
+
 /* -----------------------------------------------------------------------------
    Puslapio karkasas
    ----------------------------------------------------------------------------- */
@@ -455,22 +464,37 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
 /* -----------------------------------------------------------------------------
    Mobilus
    ----------------------------------------------------------------------------- */
-/* Viršutinė juosta į dvi eiles, kai vienoje netelpa vardas, meniu ir mygtukas. */
+/* Siaurame ekrane nuorodos nebetelpa vienoje eilutėje ir nebeverčiamos
+   slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. */
 @media (max-width: 760px) {
-  .nav-inner {
-    height: auto; flex-wrap: wrap; align-items: center;
-    padding-block: var(--s-75); gap: var(--s-75);
-  }
   .wordmark small { display: none; }
-  .nav-user { display: none; }
-  .nav-right {
-    width: 100%; justify-content: space-between; gap: var(--s-100);
-    padding-bottom: var(--s-50);
+  .nav-links, .nav-user, .nav-right > #atsijungti { display: none; }
+  .nav-meniu-mygtukas { display: inline-flex; }
+
+  .nav-meniu-skydelis:not([hidden]) {
+    position: absolute; top: 100%; left: 0; right: 0;
+    background: var(--ink); border-top: 1px solid var(--hair-paper);
+    padding: var(--s-300); box-shadow: 0 12px 24px rgba(0,0,0,.28);
   }
-  .nav-links { gap: var(--s-300); min-width: 0; overflow-x: auto; scrollbar-width: none; }
-  .nav-links::-webkit-scrollbar { display: none; }
-  .nav-links a { white-space: nowrap; min-height: 38px; }
-  .nav-right .btn { min-height: 38px; }
+  .nav-meniu-nuorodos { display: flex; flex-direction: column; gap: var(--s-50); }
+  .nav-meniu-nuorodos a {
+    font-size: .9375rem; font-weight: 600; font-stretch: 88%;
+    text-transform: uppercase; letter-spacing: 0.1em; text-decoration: none;
+    color: var(--soft-paper); display: flex; align-items: center;
+    min-height: 44px; padding: 0 var(--s-100); border-radius: var(--r-sm);
+  }
+  .nav-meniu-nuorodos a:hover, .nav-meniu-nuorodos a[aria-current="page"] {
+    color: var(--paper); background: rgba(232,232,227,0.08);
+  }
+  .nav-meniu-apacia {
+    display: flex; align-items: center; justify-content: space-between; gap: var(--s-200);
+    margin-top: var(--s-300); padding-top: var(--s-300); border-top: 1px solid var(--hair-paper);
+  }
+  .nav-user-mobilus {
+    font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
+    text-transform: uppercase; letter-spacing: 0.12em; color: var(--soft-paper);
+    max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 }
 
 @media (max-width: 620px) {

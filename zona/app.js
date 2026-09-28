@@ -393,15 +393,51 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });
 
+  const nuorodosHtml = nuorodos
+    .map((n) => `<a href="${n.href}"${n.href === aktyvus ? ' aria-current="page"' : ''}>${esc(n.tekstas)}</a>`)
+    .join('');
+
+  // Vienoje eilutėje su horizontaliu slinkimu meniu netilpdavo plačiuose
+  // telefonuose -- dabar iki 760px pločio nuorodos slepiamos į "meniu"
+  // mygtuko atidaromą skydelį, o ne verčia slinkti į šoną.
   holder.innerHTML = `
-    <nav class="nav-links" aria-label="Zonos meniu">
-      ${nuorodos.map((n) => `<a href="${n.href}"${n.href === aktyvus ? ' aria-current="page"' : ''}>${esc(n.tekstas)}</a>`).join('')}
-    </nav>
+    <nav class="nav-links" aria-label="Zonos meniu">${nuorodosHtml}</nav>
     <span class="nav-user">${esc(vardas)}</span>
     <button class="btn btn-ghost btn-sm" type="button" id="atsijungti">Atsijungti</button>
+    <button class="nav-meniu-mygtukas" type="button" id="nav-meniu-mygtukas" aria-expanded="false" aria-controls="nav-meniu-skydelis" aria-label="Meniu">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="nav-meniu-skydelis" id="nav-meniu-skydelis" hidden>
+      <nav class="nav-meniu-nuorodos" aria-label="Zonos meniu (mobilus)">${nuorodosHtml}</nav>
+      <div class="nav-meniu-apacia">
+        ${vardas ? `<span class="nav-user-mobilus">${esc(vardas)}</span>` : ''}
+        <button class="btn btn-ghost btn-sm" type="button" id="atsijungti-mobilus">Atsijungti</button>
+      </div>
+    </div>
   `;
 
   $('#atsijungti')?.addEventListener('click', atsijungti);
+  $('#atsijungti-mobilus')?.addEventListener('click', atsijungti);
+
+  const mygtukas = $('#nav-meniu-mygtukas');
+  const skydelis = $('#nav-meniu-skydelis');
+  mygtukas?.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const busAtidarytas = skydelis.hidden;
+    skydelis.hidden = !busAtidarytas;
+    mygtukas.setAttribute('aria-expanded', String(busAtidarytas));
+  });
+  document.addEventListener('click', (ev) => {
+    if (skydelis.hidden || skydelis.contains(ev.target) || mygtukas.contains(ev.target)) return;
+    skydelis.hidden = true;
+    mygtukas.setAttribute('aria-expanded', 'false');
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && !skydelis.hidden) {
+      skydelis.hidden = true;
+      mygtukas.setAttribute('aria-expanded', 'false');
+    }
+  });
 }
 
 export function rodykKonfigKlaida() {
