@@ -127,7 +127,7 @@
 
 <script type="module">
 import {
-  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
 } from './app.js';
 
 const programId = new URLSearchParams(location.search).get('id');
@@ -260,7 +260,52 @@ function piesTurini() {
       </details>`;
   }).join('');
 
-  for (const f of $$('.forma-setai')) f.addEventListener('submit', issaugokSetus);
+  for (const f of $$('.forma-setai')) {
+    f.addEventListener('submit', issaugokSetus);
+    f.addEventListener('input', () => issaugokDrafta(f));
+  }
+}
+
+// =============================================================================
+//  NEIŠSAUGOTO ĮVEDIMO JUODRAŠTIS -- kad neprisijungęs interneto ryšys ar
+//  atsitiktinis puslapio atnaujinimas prieš paspaudžiant "Išsaugoti" nenutrintų
+//  klientui ką tik įvestų skaičių. Saugoma tik iki paspaudimo -- po sėkmingo
+//  išsaugojimo duomenų bazėje juodraštis ištrinamas.
+// =============================================================================
+function draftoRaktas(pratimoId) {
+  return 'zona-draftas:' + pratimoId;
+}
+
+function issaugokDrafta(forma) {
+  const pratimoId = forma.dataset.pratimas;
+  const fd = new FormData(forma);
+  const objektas = {};
+  for (const [raktas, reiksme] of fd.entries()) {
+    if (reiksme) objektas[raktas] = reiksme;
+  }
+  try {
+    if (Object.keys(objektas).length) localStorage.setItem(draftoRaktas(pratimoId), JSON.stringify(objektas));
+    else localStorage.removeItem(draftoRaktas(pratimoId));
+  } catch {
+    // Privatus naršymo režimas ar užblokuota saugykla -- juodraštis tiesiog neišliks.
+  }
+}
+
+function atstatytasDraftas(pratimoId) {
+  try {
+    const rew = localStorage.getItem(draftoRaktas(pratimoId));
+    return rew ? JSON.parse(rew) : {};
+  } catch {
+    return {};
+  }
+}
+
+function istrinkDrafta(pratimoId) {
+  try {
+    localStorage.removeItem(draftoRaktas(pratimoId));
+  } catch {
+    // nesvarbu -- jei saugykla neveikia, ir įrašyti niekas negalėjo
+  }
 }
 
 /** Kompaktiška "4 × 5 · 80kg · 90s poilsis" eilutė vietoj kelių atskirų ženkliukų. */
@@ -292,12 +337,13 @@ function paskutinesSesijosEilute(p) {
 function pratimoKortele(p) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
   const tikslas = tiksloEilute(p);
+  const draftas = atstatytasDraftas(p.id);
 
   const setuEilutes = Array.from({ length: kiekSetu }, (_, i) => i + 1).map((n) => `
     <div class="setu-eilute">
       <span>${n}.</span>
-      <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}">
-      <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}">
+      <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}"${draftas[`svoris-${n}`] ? ` value="${esc(draftas[`svoris-${n}`])}"` : ''}>
+      <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
     </div>`).join('');
 
   return `
@@ -306,12 +352,12 @@ function pratimoKortele(p) {
         <div>
           <strong>${esc(p.title)}</strong>
           ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
-          ${pradinioSvorioUzuomina(p)}
+          <div id="uzuomina-${esc(p.id)}">${pradinioSvorioUzuomina(p)}</div>
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>
       ${p.notes ? `<p class="muted" style="font-size:.875rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
-      ${paskutinesSesijosEilute(p)}
+      <div id="paskutine-${esc(p.id)}">${paskutinesSesijosEilute(p)}</div>
 
       <div class="setu-lentele">
         <div class="setu-antraste"><span></span><span>Svoris, kg</span><span>Kartai</span></div>
@@ -319,7 +365,7 @@ function pratimoKortele(p) {
           ${setuEilutes}
           <div class="field" style="margin-top:var(--s-200)">
             <label for="pastaba-${esc(p.id)}">Pastaba <span class="hint" style="display:inline">(neprivaloma)</span></label>
-            <textarea id="pastaba-${esc(p.id)}" name="pastaba" placeholder="Kaip jauteisi, ką verta prisiminti kitą kartą"></textarea>
+            <textarea id="pastaba-${esc(p.id)}" name="pastaba" placeholder="Kaip jauteisi, ką verta prisiminti kitą kartą">${draftas.pastaba ? esc(draftas.pastaba) : ''}</textarea>
           </div>
           <div class="form-actions">
             <button class="btn btn-primary btn-sm" type="submit">Išsaugoti šios dienos setus</button>
@@ -367,7 +413,13 @@ async function issaugokSetus(ev) {
     return;
   }
 
-  pranesk(busena, 'Išsaugota.', 'ok');
+  pranesk(busena, 'Setai išsaugoti ✓', 'ok');
+  clearTimeout(forma._pranesimoLaikmatis);
+  forma._pranesimoLaikmatis = setTimeout(() => valyk(busena), 4000);
+
+  istrinkDrafta(pratimoId);
+  for (const laukas of forma.querySelectorAll('input, textarea')) laukas.value = '';
+
   const suSvoriu = irasai.filter((i) => i.weight_kg != null);
   if (suSvoriu.length) {
     const sunkiausias = suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a));
@@ -379,7 +431,14 @@ async function issaugokSetus(ev) {
   } else if (!paskutineSesija.has(pratimoId)) {
     paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null });
   }
-  piesTurini();
+
+  // Atnaujiname tik šio pratimo užuominas, o ne visą dienos turinį -- kitaip
+  // ką tik parodytas "Setai išsaugoti" pranešimas ir išvalytas laukas iškart
+  // dingtų perpiešiant visą kortelę.
+  const uzuominaEl = $('#uzuomina-' + pratimoId);
+  if (uzuominaEl) uzuominaEl.innerHTML = pradinioSvorioUzuomina({ id: pratimoId });
+  const paskutineEl = $('#paskutine-' + pratimoId);
+  if (paskutineEl) paskutineEl.innerHTML = paskutinesSesijosEilute({ id: pratimoId });
 }
 </script>
 </body>
