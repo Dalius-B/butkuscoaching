@@ -54,7 +54,7 @@
 <script type="module">
 import {
   db, $, esc, data, klaidaLT, reikiaSesijos, rodykNav,
-  panaudokLaukiantiKvietima,
+  panaudokLaukiantiKvietima, programosSavaite,
 } from './app.js';
 
 const sarasas    = $('#sarasas');
@@ -169,6 +169,7 @@ async function rodykProgramas(arTreneris) {
   const kortele = (p, baigta) => {
     const kiekDienu = dienuSkaicius.get(p.id) || 0;
     const kiekPratimu = pratimuSkaicius.get(p.id) || 0;
+    const savaite = baigta ? null : programosSavaite(p);
     const zymos = [];
     if (kiekDienu)   zymos.push(`${kiekDienu} ${kiekDienu === 1 ? 'diena' : 'dienos'}`);
     if (kiekPratimu) zymos.push(`${kiekPratimu} ${kiekPratimu === 1 ? 'pratimas' : 'pratimai'}`);
@@ -179,6 +180,7 @@ async function rodykProgramas(arTreneris) {
         <div class="meta">
           <div class="row">
             ${baigta ? '<span class="chip chip-quiet">Ankstesnė programa</span>' : ''}
+            ${savaite ? `<span class="chip chip-ok">${savaite} savaitė</span>` : ''}
             ${zymos.length
               ? zymos.map((z) => `<span class="chip chip-quiet">${esc(z)}</span>`).join('')
               : '<span class="chip chip-quiet">Turinys ruošiamas</span>'}

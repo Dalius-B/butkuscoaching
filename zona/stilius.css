@@ -221,7 +221,7 @@ p { text-wrap: pretty; }
 }
 .card-head .row-end { margin-left: auto; }
 
-.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-300); }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--s-300); }
 
 .program-card { display: flex; flex-direction: column; gap: var(--s-200); text-decoration: none; }
 .program-card:hover { box-shadow: 0 2px 4px rgba(16,16,16,0.10), 0 16px 40px -22px rgba(16,16,16,0.5); }
@@ -284,7 +284,7 @@ p { text-wrap: pretty; }
 }
 .field [aria-invalid="true"] { border-color: var(--danger); }
 
-.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s-200); }
+.field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: var(--s-200); }
 .field-row .field + .field { margin-top: 0; }
 
 .err { font-size: 0.8125rem; font-stretch: 92%; color: var(--danger); }

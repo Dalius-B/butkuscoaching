@@ -63,7 +63,7 @@
   /* Asmeniniai rekordai -- du kompaktiški skaitliukai virš istorijos
      lentelės, kad klientas iš karto matytų savo geriausią rezultatą, o ne
      turėtų ieškoti jo pats per visą lentelę. */
-  .pb-tinklelis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: var(--s-200); margin: var(--s-300) 0; }
+  .pb-tinklelis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: var(--s-200); margin: var(--s-300) 0; }
   .pb-korta { background: var(--surface); border-radius: var(--r-md); padding: var(--s-200) var(--s-300); }
   .pb-etikete { display: block; font-size: .6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-soft); }
   .pb-reiksme { display: block; font-size: 1.375rem; margin-top: 2px; font-variant-numeric: tabular-nums; }

@@ -537,13 +537,13 @@ function rodykKlientoPatikrinimus(clientId) {
         <h3 style="margin:0">${esc(c.program_week || 'Savaitė nenurodyta')}</h3>
         <span class="row-end muted">${esc(data(c.created_at, true))}</span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--s-100) var(--s-300);font-size:.9375rem;margin-top:var(--s-100)">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr));gap:var(--s-100) var(--s-300);font-size:.9375rem;margin-top:var(--s-100)">
         <div><span class="muted">Treniruotės</span><br>${esc(c.sessions_completed)}</div>
         <div><span class="muted">Pastangos</span><br>${esc(c.effort_rating)}/10</div>
         <div><span class="muted">Skausmas</span><br>${esc(c.pain_status)}</div>
         <div><span class="muted">Svoris</span><br>${esc(c.weight_kg)} kg</div>
         <div><span class="muted">Miegas</span><br>${esc(c.sleep_hours)}, kokybė ${esc(c.sleep_quality)}/10</div>
-        <div><span class="muted">Mityba</span><br>laikymasis ${esc(c.nutrition_adherence)}/10, baltymai ${esc(c.protein_intake)}</div>
+        ${c.nutrition_adherence != null ? `<div><span class="muted">Mityba</span><br>laikymasis ${esc(c.nutrition_adherence)}/10${c.protein_intake ? `, baltymai ${esc(c.protein_intake)}` : ''}</div>` : ''}
         <div><span class="muted">Energija</span><br>${esc(c.energy_level)}/10</div>
         <div><span class="muted">Stresas</span><br>${esc(c.stress_level)}/10</div>
         <div><span class="muted">Progresas</span><br>${esc(c.progress_feeling)}/10</div>
@@ -554,7 +554,7 @@ function rodykKlientoPatikrinimus(clientId) {
         <div style="margin-top:var(--s-100);display:flex;flex-direction:column;gap:var(--s-100);font-size:.9375rem">
           ${c.pain_detail ? `<div><strong>Skausmo detalės</strong><br>${esc(c.pain_detail)}</div>` : ''}
           ${c.sleep_disruptions ? `<div><strong>Miego trikdžiai</strong><br>${esc(c.sleep_disruptions)}</div>` : ''}
-          <div><strong>Mitybos sunkumai</strong><br>${esc(c.nutrition_struggles)}</div>
+          ${c.nutrition_struggles ? `<div><strong>Mitybos sunkumai</strong><br>${esc(c.nutrition_struggles)}</div>` : ''}
           ${c.stress_source ? `<div><strong>Streso šaltinis</strong><br>${esc(c.stress_source)}</div>` : ''}
           <div><strong>Kuo didžiuojasi</strong><br>${esc(c.proud_of)}</div>
           <div><strong>Didžiausias iššūkis</strong><br>${esc(c.biggest_challenge)}</div>

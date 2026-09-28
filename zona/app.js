@@ -99,6 +99,27 @@ export function data(iso, suLaiku = false) {
   return out;
 }
 
+/**
+ * Programos savaitės numeris pagal jos pradžios datą (starts_on), o jei ji
+ * nenustatyta -- pagal priskyrimo datą (assigned_at). Grąžina null, jei
+ * programa dar neprasidėjo (pradžios data ateityje) arba nėra jokios datos.
+ * Skaičiuojama pagal kalendorines dienas, ne pagal savaitės dieną, kad
+ * numeris nepasikeistų vidury savaitės netikėtai.
+ */
+export function programosSavaite(programa) {
+  const pradziosData = programa?.starts_on || programa?.assigned_at;
+  if (!pradziosData) return null;
+  const p = new Date(pradziosData);
+  if (Number.isNaN(p.getTime())) return null;
+  const dabar = new Date();
+  const dienuSkirtumas = Math.floor(
+    (Date.UTC(dabar.getFullYear(), dabar.getMonth(), dabar.getDate())
+      - Date.UTC(p.getFullYear(), p.getMonth(), p.getDate())) / 86400000,
+  );
+  if (dienuSkirtumas < 0) return null;
+  return Math.floor(dienuSkirtumas / 7) + 1;
+}
+
 
 /**
  * Lietuviška daugiskaita: 1 failas, 2 failai, 10 failų, 11 failų, 21 failas.
