@@ -51,6 +51,18 @@
   .pratimo-kortele { padding: var(--s-300); border: 1px solid var(--hair-ink); border-radius: var(--r-md); }
   .pratimo-virsus { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200); }
   .pratimo-pavadinimas { font-size: 1.1875rem; }
+
+  /* Supersetai -- kortelėje rodomas rėmelis ir A1/A2 ženklelis, kad
+     klientas žinotų, jog šis pratimas atliekamas kartu su kitu, be poilsio
+     tarp jų (rėmelio kryptis kortelių tinklelyje gali nesutapti, tad
+     pasikliaujama žodine užuomina, o ne vien vizualiu ryšiu). */
+  .pratimo-kortele.supersete { box-shadow: inset 0 0 0 2px var(--volt); }
+  .superseto-zenklas {
+    display: inline-block; font-size: .6875rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--ink); background: var(--volt); border-radius: var(--r-sm); padding: 1px 6px; margin-left: 4px;
+    vertical-align: middle;
+  }
+  .superseto-uzuomina { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-75); }
   .video-mygtukas { flex: none; white-space: nowrap; }
 
   /* Tikslo eilutė (setai/kartai/svoris/poilsis) -- viena kompaktiška teksto
@@ -131,6 +143,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav, programosSavaite,
+  apskaiciuokSupersetuZenklus,
 } from './app.js';
 
 const programId = new URLSearchParams(location.search).get('id');
@@ -250,6 +263,7 @@ function piesTurini() {
 
   vieta.innerHTML = dienos.map((d) => {
     const savi = pratimai.filter((p) => p.client_day_id === d.id);
+    const supersetuZenklai = apskaiciuokSupersetuZenklus(savi);
     return `
       <details class="card diena-kortele">
         <summary class="diena-antraste">
@@ -263,7 +277,7 @@ function piesTurini() {
           </div>
         </summary>
         <div class="diena-turinys">
-          ${savi.length ? `<div class="pratimo-tinklelis">${savi.map((p) => pratimoKortele(p)).join('')}</div>` : '<p class="muted">Pratimų šiai dienai dar nėra.</p>'}
+          ${savi.length ? `<div class="pratimo-tinklelis">${savi.map((p) => pratimoKortele(p, supersetuZenklai.get(p.id))).join('')}</div>` : '<p class="muted">Pratimų šiai dienai dar nėra.</p>'}
         </div>
       </details>`;
   }).join('');
@@ -335,7 +349,7 @@ function paskutinesSesijosEilute(p) {
   return `<p class="paskutine-sesija">Praėjusią treniruotę tavo sunkiausias svoris buvo: <strong>${s.weight_kg}kg${s.reps != null ? ` × ${s.reps}` : ''}</strong> (${esc(data(s.data))})</p>`;
 }
 
-function pratimoKortele(p) {
+function pratimoKortele(p, supersetoZenklas) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
   const tikslas = tiksloEilute(p);
   const draftas = atstatytasDraftas(p.id);
@@ -348,11 +362,12 @@ function pratimoKortele(p) {
     </div>`).join('');
 
   return `
-    <div class="pratimo-kortele">
+    <div class="pratimo-kortele${supersetoZenklas ? ' supersete' : ''}">
       <div class="pratimo-virsus">
         <div>
-          <strong class="pratimo-pavadinimas">${esc(p.title)}</strong>
+          <strong class="pratimo-pavadinimas">${esc(p.title)}</strong>${supersetoZenklas ? ` <span class="superseto-zenklas">${supersetoZenklas}</span>` : ''}
           ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
+          ${supersetoZenklas ? '<p class="superseto-uzuomina">Supersetas -- atlik iš karto po poros pratimo, be poilsio tarp jų.</p>' : ''}
         </div>
         ${p.video_url ? `<a class="btn btn-ghost btn-sm video-mygtukas" href="${esc(p.video_url)}" target="_blank" rel="noopener">&#9654; Video</a>` : ''}
       </div>

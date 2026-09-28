@@ -120,6 +120,32 @@ export function programosSavaite(programa) {
   return Math.floor(dienuSkirtumas / 7) + 1;
 }
 
+/**
+ * Supersetų grupės -- ne atskiras stulpelis grupei, o vien tik gretimų
+ * pratimų (pagal position) grandinė, kur kiekvienas paženklintas
+ * superset_with_previous. Grupė rodoma (A1, A2...) tik jei joje 2+ nariai --
+ * viena pažymėta eilutė be poros tiesiog nėra supersetas. Naudojama ir
+ * treneriui redaguojant šabloną, ir klientui matant savo programą, tad
+ * abi vietos visada sutaria dėl tos pačios tvarkos.
+ */
+export function apskaiciuokSupersetuZenklus(pratimai) {
+  const zenklai = new Map();
+  let raideIndex = -1;
+  let i = 0;
+  while (i < pratimai.length) {
+    let j = i + 1;
+    while (j < pratimai.length && pratimai[j].superset_with_previous) j += 1;
+    const dydis = j - i;
+    if (dydis > 1) {
+      raideIndex += 1;
+      const raide = String.fromCharCode(65 + raideIndex);
+      for (let k = i; k < j; k += 1) zenklai.set(pratimai[k].id, `${raide}${k - i + 1}`);
+    }
+    i = j;
+  }
+  return zenklai;
+}
+
 // -----------------------------------------------------------------------------
 //  Progreso nuotraukos (savaitinė ataskaita)
 //  Kibirys privatus -- nuorodos niekada nesaugomos, tik keliai. Rodymo metu

@@ -50,6 +50,15 @@
   .tvarkos-mygtukai button:hover:not(:disabled) { border-color: rgba(16,16,16,0.42); }
   .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
 
+  /* Supersetai -- kairinis rėmelis jungia grupės nares, o A1/A2 ženklelis
+     parodo, kokia tvarka jos atliekamos. */
+  .pratimo-eilute.supersete { border-left: 3px solid var(--volt); padding-left: var(--s-100); margin-left: -1px; }
+  .pratimo-eilute.supersete-tesinys { border-top: 0; padding-top: 2px; }
+  .superseto-zenklas {
+    display: inline-block; font-size: .6875rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--ink); background: var(--volt); border-radius: var(--r-sm); padding: 1px 6px; margin-left: 4px;
+  }
+
   .diena-antraste-redagavimas { display: flex; flex-direction: column; gap: var(--s-200); margin-bottom: var(--s-200); }
 </style>
 </head>
@@ -93,6 +102,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  apskaiciuokSupersetuZenklus,
 } from './app.js';
 
 const programId = new URLSearchParams(location.search).get('id');
@@ -262,6 +272,7 @@ function piesDienuSarasa() {
 
   vieta.innerHTML = dienos.map((d) => {
     const savi = pratimai.filter((p) => p.section_id === d.id);
+    const supersetuZenklai = apskaiciuokSupersetuZenklus(savi);
     return `
       <div class="card diena-kortele">
         ${d.id === redaguojamosDienosId ? dienosRedagavimoForma(d) : `
@@ -275,11 +286,15 @@ function piesDienuSarasa() {
           ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}`}
 
         <div id="pratimai-${esc(d.id)}" data-sekcija="${esc(d.id)}">
-          ${savi.length ? savi.map((p, i) => p.id === redaguojamoPratimoId ? pratimoRedagavimoForma(p) : `
-            <div class="pratimo-eilute" draggable="true" data-id="${esc(p.id)}">
+          ${savi.length ? savi.map((p, i) => {
+            if (p.id === redaguojamoPratimoId) return pratimoRedagavimoForma(p);
+            const zenklas = supersetuZenklai.get(p.id);
+            const tesinys = i > 0 && p.superset_with_previous && zenklas;
+            return `
+            <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${tesinys ? ' supersete-tesinys' : ''}" draggable="true" data-id="${esc(p.id)}">
               <span class="tvarkos-rankena" title="Tempk, kad pakeistum tvarką">⠿</span>
               <div class="pratimo-eilute-info">
-                <strong>${esc(p.title)}</strong>
+                <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
                 <div class="pratimo-meta muted" style="font-size:.8125rem">
                   ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
                   ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
@@ -297,7 +312,8 @@ function piesDienuSarasa() {
                 <button class="btn btn-ghost btn-sm redaguoti-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
                 <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
               </div>
-            </div>`).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
+            </div>`;
+          }).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
         </div>
 
         ${pratimai.length ? `
@@ -351,6 +367,12 @@ function piesDienuSarasa() {
               <label for="p-video-${esc(d.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
               <input id="p-video-${esc(d.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
             </div>
+          </div>
+          <div class="field">
+            <label class="check-opt" for="p-supersetas-${esc(d.id)}">
+              <input id="p-supersetas-${esc(d.id)}" name="superset" type="checkbox">
+              <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+            </label>
           </div>
           <div class="form-actions">
             <button class="btn btn-ghost btn-sm" type="submit">Pridėti pratimą</button>
@@ -406,6 +428,7 @@ async function kopijuokPratima(targetSectionId, sourceExerciseId) {
     rest_seconds: originalas.rest_seconds,
     notes: originalas.notes,
     video_url: originalas.video_url,
+    superset_with_previous: false,
     position: kiekSioje,
   });
 
@@ -566,6 +589,12 @@ function pratimoRedagavimoForma(p) {
           <input id="rp-video-${esc(p.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda" value="${esc(p.video_url || '')}">
         </div>
       </div>
+      <div class="field">
+        <label class="check-opt" for="rp-supersetas-${esc(p.id)}">
+          <input id="rp-supersetas-${esc(p.id)}" name="superset" type="checkbox"${p.superset_with_previous ? ' checked' : ''}>
+          <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+        </label>
+      </div>
       <div class="form-actions">
         <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
         <button class="btn btn-ghost btn-sm atsaukti-redagavima" type="button">Atšaukti</button>
@@ -628,6 +657,7 @@ async function pridePratima(ev) {
     rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
+    superset_with_previous: fd.get('superset') === 'on',
     position: kiekSioje,
   });
 
@@ -658,6 +688,7 @@ async function issaugokPratimoRedagavima(ev) {
     rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
+    superset_with_previous: fd.get('superset') === 'on',
   }).eq('id', id);
 
   if (error) {
