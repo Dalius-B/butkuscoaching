@@ -111,7 +111,7 @@ async function perkrauk() {
     db.from('profiles').select('id, email, full_name, phone, status, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, created_at').order('created_at', { ascending: false }),
-    db.from('client_programs').select('id, program_id, client_id, title, status'),
+    db.from('client_programs').select('id, program_id, client_id, title, status, starts_on, assigned_at'),
     db.from('checkins').select('*').order('created_at', { ascending: false }),
   ]);
 
@@ -258,6 +258,7 @@ function piesKlientus() {
         <td>${esc(data(k.created_at))}</td>
         <td>
           <div class="row">
+            <button class="btn btn-ghost btn-sm zr-programos" type="button" data-id="${esc(k.id)}"${priskyrimai.some((a) => a.client_id === k.id) ? '' : ' disabled'}>Programos</button>
             ${k.status === 'blocked'
               ? `<button class="btn btn-ghost btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="active">Grąžinti prieigą</button>`
               : `<button class="btn btn-danger btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="blocked">Sustabdyti</button>`}
@@ -284,6 +285,8 @@ function piesKlientus() {
         </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
     </div>
 
+    <div id="klientu-programu-detale"></div>
+
     <div class="card" style="margin-top:var(--s-300)">
       <p class="muted" style="font-size:.875rem;margin:0">
         Trenerio teisės suteikiamos tik per Supabase SQL redaktorių, iš šio puslapio to padaryti negalima.
@@ -293,6 +296,9 @@ function piesKlientus() {
 
   for (const b of $$('.busena')) {
     b.addEventListener('click', () => keiskBusena(b.dataset.id, b.dataset.busena));
+  }
+  for (const b of $$('.zr-programos')) {
+    b.addEventListener('click', () => rodykKlientoProgramas(b.dataset.id));
   }
 }
 
@@ -306,6 +312,58 @@ async function keiskBusena(id, busena) {
   }
   pranesk($('#pranesimas'), busena === 'blocked' ? 'Prieiga sustabdyta.' : 'Prieiga grąžinta.', 'ok');
   await perkrauk();
+}
+
+// Kliento visos programos kopijos (aktyvios ir baigtos), su galimybe
+// nereikalingą (pvz. bandomąją) visam laikui ištrinti. Tai skiriasi nuo
+// "Atimti" priskyrimų skiltyje -- ten tik pažymima 'finished' ir istorija
+// lieka, o čia eilutė (ir per cascade jos dienos/pratimai/įrašai) dingsta.
+function rodykKlientoProgramas(clientId) {
+  const klientas = profiliai.find((p) => p.id === clientId);
+  if (!klientas) return;
+  const savos = priskyrimai.filter((a) => a.client_id === clientId)
+    .sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at));
+
+  const eilutes = savos.map((a) => `
+    <tr>
+      <td>${esc(a.title)}</td>
+      <td><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
+      <td>${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
+      <td><button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button></td>
+    </tr>`).join('');
+
+  $('#klientu-programu-detale').innerHTML = `
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head">
+        <h2>${esc(klientas.full_name || klientas.email)} -- programos</h2>
+        <span class="row-end muted">${savos.length}</span>
+      </div>
+      ${savos.length ? `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Programa</th><th>Būsena</th><th>Pradžia</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Programų nėra.</p>'}
+    </div>`;
+
+  for (const b of $$('.trinti-kliento-programa')) {
+    b.addEventListener('click', () => trinkKlientoPrograma(b.dataset.id, b.dataset.vardas, clientId));
+  }
+  $('#klientu-programu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function trinkKlientoPrograma(id, vardas, clientId) {
+  if (!confirm(`Ištrinti "${vardas}" kopiją visam laikui?\n\nKartu dings jos dienos, pratimai ir visa įrašyta treniruočių istorija. To atstatyti nebus galima.`)) return;
+
+  const { error } = await db.from('client_programs').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Programa ištrinta.', 'ok');
+  await perkrauk();
+  rodykKlientoProgramas(clientId);
 }
 
 // =============================================================================
