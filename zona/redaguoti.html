@@ -29,6 +29,11 @@
     padding: var(--s-100) 0; border-top: 1px solid var(--hair-ink);
   }
   .pratimo-eilute:first-child { border-top: 0; }
+  /* Redagavimo forma dalinasi .pratimo-eilute klase (dėl bendro rėmelio),
+     bet ji nėra tas pats vaizdas -- flex-wrap paveldėtas iš aukščiau kartu
+     su inline flex-direction:column verčia Chromium siaubingai išpūsti
+     kiekvienos eilutės aukštį. Forma visada rikiuojama viena kolona. */
+  .forma-redaguoti-pratima { flex-wrap: nowrap; }
   .pratimo-meta { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
   .pratimo-eilute-info { flex: 1 1 180px; min-width: 0; }
   .pratimo-eilute-valdymas { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; flex: none; margin-left: auto; }
