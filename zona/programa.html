@@ -248,10 +248,10 @@ function piesTurini() {
     return;
   }
 
-  vieta.innerHTML = dienos.map((d, i) => {
+  vieta.innerHTML = dienos.map((d) => {
     const savi = pratimai.filter((p) => p.client_day_id === d.id);
     return `
-      <details class="card diena-kortele"${i === 0 ? ' open' : ''}>
+      <details class="card diena-kortele">
         <summary class="diena-antraste">
           <div>
             <h2>${esc(d.title)}</h2>
