@@ -300,6 +300,25 @@ function piesDienuSarasa() {
             </div>`).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
         </div>
 
+        ${pratimai.length ? `
+          <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+            <div class="field">
+              <label for="kp-pasirinkimas-${esc(d.id)}">Kopijuoti esamą pratimą į šią dieną</label>
+              <select id="kp-pasirinkimas-${esc(d.id)}">
+                ${dienos.map((diena) => {
+                  const jos = pratimai.filter((p) => p.section_id === diena.id);
+                  if (!jos.length) return '';
+                  return `<optgroup label="${esc(diena.title)}">
+                    ${jos.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}
+                  </optgroup>`;
+                }).join('')}
+              </select>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-ghost btn-sm kopijuoti-pratima" type="button" data-sekcija="${esc(d.id)}">Kopijuoti</button>
+            </div>
+          </div>` : ''}
+
         <form class="forma-pratimas" data-sekcija="${esc(d.id)}" novalidate style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
           <div class="field-row">
             <div class="field">
@@ -363,6 +382,39 @@ function piesDienuSarasa() {
     b.addEventListener('click', () => perkelkPratima(b.dataset.id, Number(b.dataset.kryptis)));
   }
   for (const konteineris of $$('#dienu-sarasas [id^="pratimai-"]')) prijunkTempima(konteineris);
+  for (const b of $$('.kopijuoti-pratima')) {
+    b.addEventListener('click', () => {
+      const sectionId = b.dataset.sekcija;
+      const pasirinkimas = $('#kp-pasirinkimas-' + sectionId);
+      if (pasirinkimas?.value) kopijuokPratima(sectionId, pasirinkimas.value);
+    });
+  }
+}
+
+async function kopijuokPratima(targetSectionId, sourceExerciseId) {
+  const originalas = pratimai.find((p) => p.id === sourceExerciseId);
+  if (!originalas) return;
+
+  const kiekSioje = pratimai.filter((p) => p.section_id === targetSectionId).length;
+
+  const { error } = await db.from('exercises').insert({
+    section_id: targetSectionId,
+    title: originalas.title,
+    target_sets: originalas.target_sets,
+    target_reps: originalas.target_reps,
+    target_load: originalas.target_load,
+    rest_seconds: originalas.rest_seconds,
+    notes: originalas.notes,
+    video_url: originalas.video_url,
+    position: kiekSioje,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Pratimas nukopijuotas.', 'ok');
+  await perkrauk();
 }
 
 function dienosRedagavimoForma(d) {
