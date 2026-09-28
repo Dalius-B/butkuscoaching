@@ -91,6 +91,7 @@
       <p><a class="btn btn-ghost btn-sm" id="atgal-nuoroda" href="mano.html">&larr; Programa</a></p>
       <h1 id="antraste">Istorija</h1>
       <p id="paantraste"></p>
+      <p id="ankstesnes-zyma" hidden style="margin-top:var(--s-100)"><span class="chip chip-quiet">Ankstesnė programa</span></p>
     </div>
     <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
     <p class="note" id="pranesimas" hidden></p>
@@ -145,7 +146,7 @@ async function paleisk() {
 
 async function ikelk(vartotojoId) {
   const { data: programa, error: pKlaida } = await db
-    .from('client_programs').select('id, title').eq('id', programId).maybeSingle();
+    .from('client_programs').select('id, title, status').eq('id', programId).maybeSingle();
 
   if (pKlaida || !programa) {
     $('#kraunasi').hidden = true;
@@ -155,6 +156,12 @@ async function ikelk(vartotojoId) {
 
   $('#paantraste').textContent = programa.title;
   document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';
+
+  if (programa.status === 'finished') {
+    $('#ankstesnes-zyma').hidden = false;
+    $('#atgal-nuoroda').href = 'mano.html';
+    $('#atgal-nuoroda').textContent = '← Mano programos';
+  }
 
   const { data: dienos, error: dKlaida } = await db
     .from('client_days').select('id, title, position').eq('client_program_id', programId).order('position', { ascending: true });

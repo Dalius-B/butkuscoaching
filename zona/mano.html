@@ -105,10 +105,12 @@ async function paleisk() {
 }
 
 async function rodykProgramas(arTreneris) {
+  // Nefiltruojame pagal būseną iš karto -- baigtos (status='finished')
+  // programos rodomos atskirai žemiau, kad klientas nepamestų jų istorijos
+  // vien todėl, kad Dalius priskyrė naują programą.
   const { data: mano, error } = await db
     .from('client_programs')
     .select('id, title, status, starts_on, assigned_at')
-    .eq('status', 'active')
     .order('assigned_at', { ascending: false });
 
   if (error) {
@@ -117,9 +119,9 @@ async function rodykProgramas(arTreneris) {
     return;
   }
 
-  const matomos = mano || [];
+  const visos = mano || [];
 
-  if (!matomos.length) {
+  if (!visos.length) {
     paantraste.textContent = '';
     sarasas.innerHTML = `
       <div class="empty">
@@ -132,9 +134,12 @@ async function rodykProgramas(arTreneris) {
     return;
   }
 
-  // Kiek dienų ir pratimų turi kiekviena kliento kopija. Dvi užklausos visoms
-  // kopijoms iš karto, o ne po vieną kiekvienai kortelei.
-  const idSarasas = matomos.map((p) => p.id);
+  const aktyvios = visos.filter((p) => p.status !== 'finished');
+  const baigtos  = visos.filter((p) => p.status === 'finished');
+
+  // Kiek dienų ir pratimų turi kiekviena kliento kopija (ir aktyvios, ir
+  // baigtos). Dvi užklausos visoms kopijoms iš karto, o ne po vieną kiekvienai kortelei.
+  const idSarasas = visos.map((p) => p.id);
   const { data: dienos } = await db
     .from('client_days')
     .select('id, client_program_id')
@@ -157,12 +162,11 @@ async function rodykProgramas(arTreneris) {
     pratimuSkaicius.set(progId, (pratimuSkaicius.get(progId) || 0) + 1);
   }
 
-  paantraste.textContent = matomos.length === 1
+  paantraste.textContent = aktyvios.length === 1
     ? 'Viena aktyvi programa.'
-    : `Aktyvių programų: ${matomos.length}.`;
+    : aktyvios.length ? `Aktyvių programų: ${aktyvios.length}.` : 'Šiuo metu aktyvių programų nėra.';
 
-  sarasas.className = 'grid-cards';
-  sarasas.innerHTML = matomos.map((p) => {
+  const kortele = (p, baigta) => {
     const kiekDienu = dienuSkaicius.get(p.id) || 0;
     const kiekPratimu = pratimuSkaicius.get(p.id) || 0;
     const zymos = [];
@@ -170,20 +174,35 @@ async function rodykProgramas(arTreneris) {
     if (kiekPratimu) zymos.push(`${kiekPratimu} ${kiekPratimu === 1 ? 'pratimas' : 'pratimai'}`);
 
     return `
-      <a class="card program-card" href="programa.html?id=${encodeURIComponent(p.id)}">
+      <a class="card program-card" href="${baigta ? 'istorija.html' : 'programa.html'}?id=${encodeURIComponent(p.id)}">
         <h3>${esc(p.title)}</h3>
         <div class="meta">
           <div class="row">
+            ${baigta ? '<span class="chip chip-quiet">Ankstesnė programa</span>' : ''}
             ${zymos.length
               ? zymos.map((z) => `<span class="chip chip-quiet">${esc(z)}</span>`).join('')
               : '<span class="chip chip-quiet">Turinys ruošiamas</span>'}
           </div>
           <p class="muted" style="font-size:.8125rem;margin-top:8px">
-            ${p.starts_on ? 'Pradžia ' + esc(data(p.starts_on)) : 'Priskirta ' + esc(data(p.assigned_at))}
+            ${baigta ? 'Peržiūrėti istoriją' : (p.starts_on ? 'Pradžia ' + esc(data(p.starts_on)) : 'Priskirta ' + esc(data(p.assigned_at)))}
           </p>
         </div>
       </a>`;
-  }).join('');
+  };
+
+  let html = aktyvios.length ? `<div class="grid-cards">${aktyvios.map((p) => kortele(p, false)).join('')}</div>` : '';
+
+  if (baigtos.length) {
+    html += `
+      <div class="card-head" style="margin-top:var(--s-500)"><h2>Ankstesnės programos</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Baigtos programos -- jų istorija ir progresas išlieka, naujų setų čia nebeįrašysi.
+      </p>
+      <div class="grid-cards">${baigtos.map((p) => kortele(p, true)).join('')}</div>`;
+  }
+
+  sarasas.className = '';
+  sarasas.innerHTML = html;
 }
 </script>
 </body>
