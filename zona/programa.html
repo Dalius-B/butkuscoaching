@@ -50,6 +50,7 @@
   }
   .pratimo-kortele { padding: var(--s-300); border: 1px solid var(--hair-ink); border-radius: var(--r-md); }
   .pratimo-virsus { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-200); }
+  .pratimo-pavadinimas { font-size: 1.1875rem; }
   .video-mygtukas { flex: none; white-space: nowrap; }
 
   /* Tikslo eilutė (setai/kartai/svoris/poilsis) -- viena kompaktiška teksto
@@ -331,7 +332,7 @@ function pradinioSvorioUzuomina(p) {
 function paskutinesSesijosEilute(p) {
   const s = paskutineSesija.get(p.id);
   if (!s || s.weight_kg == null) return '';
-  return `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${s.weight_kg}kg${s.reps != null ? ` × ${s.reps}` : ''}</strong> (${esc(data(s.data))})</p>`;
+  return `<p class="paskutine-sesija">Praėjusią treniruotę tavo sunkiausias svoris buvo: <strong>${s.weight_kg}kg${s.reps != null ? ` × ${s.reps}` : ''}</strong> (${esc(data(s.data))})</p>`;
 }
 
 function pratimoKortele(p) {
@@ -350,7 +351,7 @@ function pratimoKortele(p) {
     <div class="pratimo-kortele">
       <div class="pratimo-virsus">
         <div>
-          <strong>${esc(p.title)}</strong>
+          <strong class="pratimo-pavadinimas">${esc(p.title)}</strong>
           ${tikslas ? `<p class="pratimo-tikslas">${tikslas}</p>` : ''}
           <div id="uzuomina-${esc(p.id)}">${pradinioSvorioUzuomina(p)}</div>
         </div>
