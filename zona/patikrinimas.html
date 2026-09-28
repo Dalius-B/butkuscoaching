@@ -22,6 +22,22 @@
   Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .nuotrauku-perziura {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(84px, 100%), 1fr));
+    gap: var(--s-100); margin-top: var(--s-100);
+  }
+  .nuotrauku-perziura:empty { display: none; }
+  .nuotrauku-korta { position: relative; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; background: var(--surface); }
+  .nuotrauku-korta img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .nuotrauku-galerija {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(96px, 100%), 1fr));
+    gap: var(--s-100); margin-top: var(--s-100);
+  }
+  .nuotrauku-galerija a { display: block; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; }
+  .nuotrauku-galerija img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
+  .nuotrauku-galerija img:hover { opacity: .85; }
+</style>
 </head>
 <body>
 
@@ -53,8 +69,9 @@
 
 <script type="module">
 import {
-  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   panaudokLaukiantiKvietima, programosSavaite,
+  ikelkNuotraukas, nuotraukuNuorodos, NUOTRAUKU_LIMITAS, NUOTRAUKOS_MAX_MB,
 } from './app.js';
 
 const vieta      = $('#turinio-vieta');
@@ -166,6 +183,13 @@ function piesTurini(savaite) {
             <label for="f-steps">Kiek vidutiniškai žingsnių padarei per dieną <span class="hint" style="display:inline">(neprivaloma)</span></label>
             <input id="f-steps" name="avg_daily_steps" type="number" min="0" step="1" inputmode="numeric" placeholder="Pvz., 8000">
           </div>
+          <div class="field">
+            <label for="f-nuotraukos">Progreso nuotraukos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <p class="hint">Iki ${NUOTRAUKU_LIMITAS} nuotraukų, kiekviena iki ${NUOTRAUKOS_MAX_MB} MB. Matys tik Dalius.</p>
+            <input id="f-nuotraukos" name="photos" type="file" accept="image/*" multiple>
+            <div class="nuotrauku-perziura" id="nuotrauku-perziura"></div>
+            <p class="note" id="nuotrauku-klaida" hidden></p>
+          </div>
         </fieldset>
 
         <fieldset style="border:0;margin-top:var(--s-400)">
@@ -231,6 +255,44 @@ function piesTurini(savaite) {
     <div id="istorija"></div>`;
 
   $('#ataskaitosForma').addEventListener('submit', siųskAtaskaita);
+  prijunkNuotraukuPerziura();
+}
+
+/** Peržiūros miniatiūros ir kiekio/dydžio patikra iškart pasirinkus failus,
+ * o ne tik siunčiant formą -- kad klientas iš karto matytų klaidą. */
+function prijunkNuotraukuPerziura() {
+  const ivestis = $('#f-nuotraukos');
+  if (!ivestis) return;
+
+  ivestis.addEventListener('change', () => {
+    const perziura = $('#nuotrauku-perziura');
+    const klaidosVieta = $('#nuotrauku-klaida');
+    perziura.innerHTML = '';
+    valyk(klaidosVieta);
+
+    const failai = Array.from(ivestis.files || []);
+    if (failai.length > NUOTRAUKU_LIMITAS) {
+      pranesk(klaidosVieta, `Gali pridėti ne daugiau kaip ${NUOTRAUKU_LIMITAS} nuotraukų vienu kartu.`, 'error');
+      ivestis.value = '';
+      return;
+    }
+    const perDidele = failai.find((f) => f.size > NUOTRAUKOS_MAX_MB * 1024 * 1024);
+    if (perDidele) {
+      pranesk(klaidosVieta, `„${perDidele.name}“ per didelė — didžiausias leidžiamas dydis ${NUOTRAUKOS_MAX_MB} MB.`, 'error');
+      ivestis.value = '';
+      return;
+    }
+
+    for (const failas of failai) {
+      const korta = document.createElement('div');
+      korta.className = 'nuotrauku-korta';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(failas);
+      img.alt = '';
+      korta.appendChild(img);
+      perziura.appendChild(korta);
+    }
+  });
 }
 
 function skale(vardas, klausimas, kaireEnd, desineEnd) {
@@ -255,6 +317,35 @@ async function siųskAtaskaita(ev) {
   const forma = ev.currentTarget;
   if (!forma.reportValidity()) return;
 
+  const nuotraukuIvestis = $('#f-nuotraukos');
+  const failai = Array.from(nuotraukuIvestis?.files || []);
+  const klaidosVieta = $('#nuotrauku-klaida');
+  if (failai.length > NUOTRAUKU_LIMITAS) {
+    pranesk(klaidosVieta, `Gali pridėti ne daugiau kaip ${NUOTRAUKU_LIMITAS} nuotraukų vienu kartu.`, 'error');
+    return;
+  }
+  if (failai.some((f) => f.size > NUOTRAUKOS_MAX_MB * 1024 * 1024)) {
+    pranesk(klaidosVieta, `Viena iš nuotraukų per didelė — didžiausias leidžiamas dydis ${NUOTRAUKOS_MAX_MB} MB.`, 'error');
+    return;
+  }
+
+  const btn = $('#siustiBtn');
+  btn.disabled = true;
+  pranesk($('#formosPranesimas'), '', 'info');
+
+  let nuotraukuKeliai = [];
+  if (failai.length) {
+    btn.textContent = 'Įkeliamos nuotraukos';
+    try {
+      nuotraukuKeliai = await ikelkNuotraukas(failai, vartotojas.id);
+    } catch (nkKlaida) {
+      btn.disabled = false;
+      btn.textContent = 'Siųsti ataskaitą';
+      pranesk($('#formosPranesimas'), klaidaLT(nkKlaida), 'error');
+      return;
+    }
+  }
+
   const fd = new FormData(forma);
   const eilute = {
     user_id: vartotojas.id,
@@ -278,12 +369,10 @@ async function siųskAtaskaita(ev) {
     biggest_challenge: fd.get('biggest_challenge'),
     additional_notes: fd.get('additional_notes') || null,
     program_adjustment: fd.get('program_adjustment') || null,
+    photo_paths: nuotraukuKeliai.length ? nuotraukuKeliai : null,
   };
 
-  const btn = $('#siustiBtn');
-  btn.disabled = true;
   btn.textContent = 'Siunčiama';
-  pranesk($('#formosPranesimas'), '', 'info');
 
   const { error } = await db.from('checkins').insert([eilute]);
 
@@ -297,6 +386,7 @@ async function siųskAtaskaita(ev) {
 
   pranesk($('#formosPranesimas'), 'Ataskaita gauta. Ačiū!', 'ok');
   forma.reset();
+  $('#nuotrauku-perziura').innerHTML = '';
   await ikelkSavoAtsakymus();
 }
 
@@ -323,6 +413,9 @@ async function ikelkSavoAtsakymus() {
     return;
   }
 
+  const visiKeliai = savoAtsakymai.flatMap((c) => c.photo_paths || []);
+  const nuorodos = await nuotraukuNuorodos(visiKeliai);
+
   laukas.innerHTML = savoAtsakymai.map((c) => `
     <div class="card" style="margin-top:var(--s-200)">
       <div class="card-head">
@@ -339,6 +432,12 @@ async function ikelkSavoAtsakymus() {
         <div><span class="muted">Stresas</span><br>${esc(c.stress_level)}/10</div>
         <div><span class="muted">Progresas</span><br>${esc(c.progress_feeling)}/10</div>
       </div>
+      ${(c.photo_paths || []).length ? `
+        <div class="nuotrauku-galerija">
+          ${c.photo_paths.map((kelias) => nuorodos.get(kelias)
+            ? `<a href="${esc(nuorodos.get(kelias))}" target="_blank" rel="noopener"><img src="${esc(nuorodos.get(kelias))}" alt="Progreso nuotrauka" loading="lazy"></a>`
+            : '').join('')}
+        </div>` : ''}
       <details style="margin-top:var(--s-200)">
         <summary class="muted" style="cursor:pointer;font-size:.875rem">Visas tekstas</summary>
         <div style="margin-top:var(--s-100);display:flex;flex-direction:column;gap:var(--s-100);font-size:.9375rem">

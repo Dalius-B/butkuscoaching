@@ -22,6 +22,15 @@
   Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .nuotrauku-galerija {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(96px, 100%), 1fr));
+    gap: var(--s-100); margin-top: var(--s-100);
+  }
+  .nuotrauku-galerija a { display: block; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; }
+  .nuotrauku-galerija img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
+  .nuotrauku-galerija img:hover { opacity: .85; }
+</style>
 </head>
 <body>
 
@@ -69,7 +78,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
-  atsitiktinis, absoliutus, BUSENOS, zodis,
+  atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos,
 } from './app.js';
 
 let profiliai = [];
@@ -526,10 +535,13 @@ function piesPatikrinimus() {
   }
 }
 
-function rodykKlientoPatikrinimus(clientId) {
+async function rodykKlientoPatikrinimus(clientId) {
   const klientas = profiliai.find((p) => p.id === clientId);
   if (!klientas) return;
   const savi = klientoPatikrinimai(klientas);
+
+  const visiKeliai = savi.flatMap((c) => c.photo_paths || []);
+  const nuorodos = await nuotraukuNuorodos(visiKeliai);
 
   const kortos = savi.map((c) => `
     <div class="card" style="margin-top:var(--s-200)">
@@ -549,6 +561,12 @@ function rodykKlientoPatikrinimus(clientId) {
         <div><span class="muted">Progresas</span><br>${esc(c.progress_feeling)}/10</div>
         ${c.avg_daily_steps ? `<div><span class="muted">Žingsniai</span><br>${esc(c.avg_daily_steps)}</div>` : ''}
       </div>
+      ${(c.photo_paths || []).length ? `
+        <div class="nuotrauku-galerija">
+          ${c.photo_paths.map((kelias) => nuorodos.get(kelias)
+            ? `<a href="${esc(nuorodos.get(kelias))}" target="_blank" rel="noopener"><img src="${esc(nuorodos.get(kelias))}" alt="Progreso nuotrauka" loading="lazy"></a>`
+            : '').join('')}
+        </div>` : ''}
       <details style="margin-top:var(--s-200)">
         <summary class="muted" style="cursor:pointer;font-size:.875rem">Visas tekstas</summary>
         <div style="margin-top:var(--s-100);display:flex;flex-direction:column;gap:var(--s-100);font-size:.9375rem">

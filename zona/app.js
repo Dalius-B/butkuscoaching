@@ -120,6 +120,46 @@ export function programosSavaite(programa) {
   return Math.floor(dienuSkirtumas / 7) + 1;
 }
 
+// -----------------------------------------------------------------------------
+//  Progreso nuotraukos (savaitinė ataskaita)
+//  Kibirys privatus -- nuorodos niekada nesaugomos, tik keliai. Rodymo metu
+//  nuoroda sugeneruojama laikinai per nuotraukuNuorodos().
+// -----------------------------------------------------------------------------
+const NUOTRAUKU_KIBIRAS = 'progreso-nuotraukos';
+export const NUOTRAUKU_LIMITAS = 6;
+export const NUOTRAUKOS_MAX_MB = 10;
+
+/** Įkelia nuotraukas į kliento aplanką kibiryje ir grąžina jų saugojimo kelius. */
+export async function ikelkNuotraukas(failai, vartotojoId) {
+  const keliai = [];
+  for (let i = 0; i < failai.length; i += 1) {
+    const failas = failai[i];
+    const saugusVardas = failas.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase();
+    const kelias = `${vartotojoId}/${Date.now()}-${i}-${saugusVardas}`;
+    // eslint-disable-next-line no-await-in-loop -- kiekvienas kelias turi būti unikalus (Date.now()), tad įkeliame paeiliui
+    const { error } = await db.storage.from(NUOTRAUKU_KIBIRAS).upload(kelias, failas, {
+      contentType: failas.type || 'application/octet-stream',
+      upsert: false,
+    });
+    if (error) throw error;
+    keliai.push(kelias);
+  }
+  return keliai;
+}
+
+/** kelias -> laikina (1 val.) nuoroda peržiūrėti privačiame kibiryje saugomą nuotrauką. */
+export async function nuotraukuNuorodos(keliai) {
+  const rezultatas = new Map();
+  if (!keliai?.length) return rezultatas;
+  const { data: pasirasytos, error } = await db.storage
+    .from(NUOTRAUKU_KIBIRAS)
+    .createSignedUrls(keliai, 3600);
+  if (error || !pasirasytos) return rezultatas;
+  for (const p of pasirasytos) {
+    if (p.signedUrl) rezultatas.set(p.path, p.signedUrl);
+  }
+  return rezultatas;
+}
 
 /**
  * Lietuviška daugiskaita: 1 failas, 2 failai, 10 failų, 11 failų, 21 failas.
