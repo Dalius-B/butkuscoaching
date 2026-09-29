@@ -503,6 +503,19 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
   .page { padding-block: var(--s-500) var(--s-600); }
   .form-actions .btn { width: 100%; }
   .btn { white-space: normal; }
+  /* Antraštės mygtukas turi likti vienoje eilutėje -- kitaip lūžta į dvi
+     eilutes ir peraugą fiksuoto aukščio juostą. */
+  .nav-inner .btn { white-space: nowrap; }
+}
+
+/* Labai siauruose telefonuose žodžio ženklas + antraštės mygtukas
+   nebetelpa vienoje eilutėje net ir be lūžio -- sumažiname tarpus ir
+   šriftą, kad juosta liktų vienos eilutės aukščio. */
+@media (max-width: 400px) {
+  .nav .shell { padding-inline: var(--s-200); }
+  .nav-inner { gap: var(--s-75); }
+  .wordmark { font-size: 1rem; gap: 4px; }
+  .nav-inner .btn.btn-sm { padding-inline: var(--s-75); font-size: 0.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
