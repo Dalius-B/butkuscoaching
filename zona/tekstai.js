@@ -13,7 +13,7 @@ export const T = {
   siandien: 'Šiandien',
   siandienosUzduotys: 'Šiandienos užduotys',
   papildomosUzduotys: 'Papildomos užduotys',
-  papildomosPaaiskinimas: 'Neprivalomos, bet duoda papildomų XP. Serijai jų atlikti nereikia.',
+  papildomosPaaiskinimas: 'Neprivalomos, bet duoda papildomų taškų. Serijai jų atlikti nereikia.',
   papildoma: 'Papildoma',
   atlikta: 'Atlikta ✓',
   pazymeti: 'Pažymėti kaip atliktą',
@@ -28,20 +28,20 @@ export const T = {
   darLiko: (n) => `Dar liko ${n} ${zodisUzduotis(n)}`,
   visosAtliktos: 'Puiku! Visos šiandienos užduotys atliktos.',
   dienaBaigta: 'Diena baigta!',
-  uzduotisAtlikta: (xp) => `Užduotis atlikta! +${xp} XP`,
+  uzduotisAtlikta: (xp) => `Užduotis atlikta! +${taskai(xp)}`,
   zymejimasAtsauktas: 'Žymėjimas atšauktas',
-  surinkai: (xp) => `Tu surinkai ${xp} XP`,
+  surinkai: (xp) => `Tu surinkai ${taskai(xp)}`,
   siandienNieko: 'Šiandien dar nieko nesurinkai. Pradėk nuo pirmos užduoties.',
 
   serija: (n) => (n > 0 ? `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'dienos' : 'dienų'} serija 🔥` : 'Serija dar nepradėta'),
   serijosPasiulymas: 'Atlik visas šiandienos užduotis ir pradėk naują seriją.',
   dabartineSerija: 'Dabartinė serija',
   ilgiausiaSerija: 'Ilgiausia serija',
-  visoXp: 'Iš viso XP',
+  visoXp: 'Iš viso taškų',
   pilnosDienos: 'Pilnos dienos',
   atliktosUzduotys: 'Atliktos užduotys',
   lygis: (n) => `${n} lygis`,
-  iki: (kiek, lygis) => `Dar ${kiek} XP iki ${lygis} lygio`,
+  iki: (kiek, lygis) => `Dar ${taskai(kiek)} iki ${lygis} lygio`,
   dienos: (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'diena' : (n % 10 === 0 || (n % 100 >= 11 && n % 100 <= 19)) ? 'dienų' : 'dienos'}`,
 
   aiskinimasSerija: 'Diena skaičiuojama į seriją, kai atlieki visas tos dienos privalomas užduotis. Poilsio dienos serijos nenutraukia.',
@@ -65,6 +65,14 @@ export const T = {
   neprieigos: 'Ši skiltis tau dar neįjungta. Jei manai, kad tai klaida, parašyk Daliui.',
   bandytiDarKarta: 'Bandyti dar kartą',
 };
+
+/** 1 taškas, 2 taškai, 10 taškų, 21 taškas. */
+export function taskai(n) {
+  const p = n % 10;
+  const pp = Math.floor(n / 10) % 10;
+  const forma = (pp === 1 || p === 0) ? 'taškų' : p === 1 ? 'taškas' : 'taškai';
+  return `${n} ${forma}`;
+}
 
 /** Užduotis / užduotys / užduočių. */
 export function zodisUzduotis(n) {
@@ -142,9 +150,9 @@ export const PASIEKIMAI = [
   { id: 'serija7',   ikona: '🚀', pavadinimas: 'Savaitės serija',       aprasas: '7 dienų serija',                   rodiklis: 'ilgiausiaSerija', tikslas: 7 },
   { id: 'serija14',  ikona: '💪', pavadinimas: 'Dviejų savaičių serija', aprasas: '14 dienų serija',                  rodiklis: 'ilgiausiaSerija', tikslas: 14 },
   { id: 'serija30',  ikona: '🏆', pavadinimas: 'Mėnesio serija',        aprasas: '30 dienų serija',                  rodiklis: 'ilgiausiaSerija', tikslas: 30 },
-  { id: 'xp100',     ikona: '⚡', pavadinimas: 'Pirmi 100 XP',          aprasas: 'Surink 100 XP',                    rodiklis: 'visoXp',          tikslas: 100 },
-  { id: 'xp500',     ikona: '💎', pavadinimas: '500 XP',                aprasas: 'Surink 500 XP',                    rodiklis: 'visoXp',          tikslas: 500 },
-  { id: 'xp1000',    ikona: '👑', pavadinimas: '1000 XP',               aprasas: 'Surink 1000 XP',                   rodiklis: 'visoXp',          tikslas: 1000 },
+  { id: 'xp100',     ikona: '⚡', pavadinimas: 'Pirmi 100 taškų',      aprasas: 'Surink 100 taškų',                    rodiklis: 'visoXp',          tikslas: 100 },
+  { id: 'xp500',     ikona: '💎', pavadinimas: '500 taškų',            aprasas: 'Surink 500 taškų',                    rodiklis: 'visoXp',          tikslas: 500 },
+  { id: 'xp1000',    ikona: '👑', pavadinimas: '1000 taškų',           aprasas: 'Surink 1000 taškų',                   rodiklis: 'visoXp',          tikslas: 1000 },
   { id: 'dienos10',  ikona: '📅', pavadinimas: 'Dešimt pilnų dienų',    aprasas: 'Turėk 10 pilnų dienų',             rodiklis: 'pilnosDienos',    tikslas: 10 },
   { id: 'papildomos', ikona: '🎯', pavadinimas: 'Ekstra mylia',         aprasas: 'Atlik 10 papildomų užduočių',      rodiklis: 'papildomaAtlikta', tikslas: 10 },
 ];
@@ -153,17 +161,64 @@ export const PASIEKIMAI = [
 //  Trenerio pagalbinės šablonų užduotys (pasirenkamos kuriant klientui užduotį)
 // -----------------------------------------------------------------------------
 export const SABLONAI = [
-  { title: 'Padaryk 30 pritūpimų',                         category: 'judejimas',    xp: 10 },
-  { title: 'Nužingsniuok 6 000 žingsnių',                  category: 'judejimas',    xp: 15 },
-  { title: 'Užlipk 50 laiptelių',                          category: 'judejimas',    xp: 10 },
-  { title: '10 minučių pasivaikščiok lauke',               category: 'judejimas',    xp: 10 },
-  { title: 'Atlik 5 minučių lengvą tempimo pratimą',       category: 'judejimas',    xp: 10 },
-  { title: 'Išgerk 2 litrus vandens',                      category: 'vanduo',       xp: 10 },
-  { title: 'Suvalgyk 2 kiaušinius',                        category: 'mityba',       xp: 10 },
-  { title: 'Suvalgyk 5 šaukštus graikiško jogurto',        category: 'mityba',       xp: 10 },
-  { title: 'Sumažink cukraus kiekį kavoje perpus',         category: 'mityba',       xp: 10 },
-  { title: 'Šiandien negerk saldžių gėrimų',               category: 'mityba',       xp: 15 },
-  { title: 'Eik miegoti iki 23:00',                        category: 'miegas',       xp: 15 },
-  { title: 'Prieš miegą 10 minučių be telefono',           category: 'miegas',       xp: 10 },
-  { title: 'Ramiai pakvėpuok 5 minutes',                   category: 'proto_ramybe', xp: 10 },
+  // --- Sportas ---
+  { title: 'Padaryk 30 pritūpimų',                          category: 'judejimas', xp: 10 },
+  { title: 'Padaryk 15 atsispaudimų',                       category: 'judejimas', xp: 10 },
+  { title: 'Išlaikyk lentą 45 sekundes',                    category: 'judejimas', xp: 10 },
+  { title: 'Padaryk 20 iššokimų iš pritūpimo',              category: 'judejimas', xp: 10 },
+  { title: 'Padaryk 20 įpuolimų (kiekviena koja)',          category: 'judejimas', xp: 10 },
+  { title: 'Atlik 3 raumenų stiprinimo serijas namuose',    category: 'judejimas', xp: 15 },
+  { title: 'Atlik šiandienos treniruotę pagal programą',    category: 'judejimas', xp: 25, description: 'Pagrindinė savaitės treniruotė' },
+  { title: 'Nužingsniuok 6 000 žingsnių',                   category: 'judejimas', xp: 15 },
+  { title: 'Nužingsniuok 10 000 žingsnių',                  category: 'judejimas', xp: 20 },
+  { title: '10 minučių pasivaikščiok lauke',                category: 'judejimas', xp: 10 },
+  { title: '30 minučių greitai pasivaikščiok',              category: 'judejimas', xp: 15 },
+  { title: 'Užlipk 50 laiptelių',                           category: 'judejimas', xp: 10 },
+  { title: 'Pabėgiok 20 minučių lengvu tempu',              category: 'judejimas', xp: 20 },
+  { title: 'Atlik 5 minučių lengvą tempimo pratimą',        category: 'judejimas', xp: 10 },
+  { title: 'Atlik 10 minučių mobilumo rutiną',              category: 'judejimas', xp: 10 },
+  { title: 'Kas valandą atsistok ir pasitempk (darbe)',     category: 'judejimas', xp: 10 },
+
+  // --- Proto sveikata ---
+  { title: 'Ramiai pakvėpuok 5 minutes',                    category: 'proto_ramybe', xp: 10 },
+  { title: 'Pamedituok 10 minučių',                         category: 'proto_ramybe', xp: 15 },
+  { title: 'Užsirašyk 3 dalykus, už kuriuos esi dėkingas',  category: 'proto_ramybe', xp: 10 },
+  { title: 'Parašyk dienoraštyje apie savo dieną',          category: 'proto_ramybe', xp: 10 },
+  { title: 'Pabūk 15 minučių be telefono',                  category: 'proto_ramybe', xp: 10 },
+  { title: 'Pabūk lauke saulėje bent 15 minučių',           category: 'proto_ramybe', xp: 10 },
+  { title: 'Paskambink ar parašyk artimam žmogui',          category: 'proto_ramybe', xp: 10 },
+  { title: 'Padaryk vieną dalyką, kuris tau teikia malonumą', category: 'proto_ramybe', xp: 10 },
+  { title: 'Užsirašyk 3 svarbiausius šios dienos darbus',   category: 'proto_ramybe', xp: 10 },
+  { title: 'Vakare pagirk save už vieną dalyką',            category: 'proto_ramybe', xp: 10 },
+  { title: 'Šiandien 1 valandą nežiūrėk socialinių tinklų', category: 'proto_ramybe', xp: 15 },
+  { title: 'Perskaityk 10 puslapių knygos',                 category: 'proto_ramybe', xp: 10 },
+
+  // --- Mityba ---
+  { title: 'Suvalgyk 2 kiaušinius',                         category: 'mityba', xp: 10 },
+  { title: 'Suvalgyk 5 šaukštus graikiško jogurto',         category: 'mityba', xp: 10 },
+  { title: 'Suvalgyk baltymų kiekvieno valgio metu',        category: 'mityba', xp: 15 },
+  { title: 'Suvalgyk bent 2 porcijas daržovių',             category: 'mityba', xp: 10 },
+  { title: 'Suvalgyk bent 2 vaisius',                       category: 'mityba', xp: 10 },
+  { title: 'Pusę lėkštės užpildyk daržovėmis',              category: 'mityba', xp: 10 },
+  { title: 'Pusryčiai su baltymais per valandą nuo atsikėlimo', category: 'mityba', xp: 10 },
+  { title: 'Sumažink cukraus kiekį kavoje perpus',          category: 'mityba', xp: 10 },
+  { title: 'Šiandien negerk saldžių gėrimų',                category: 'mityba', xp: 15 },
+  { title: 'Šiandien nevalgyk saldumynų',                   category: 'mityba', xp: 15 },
+  { title: 'Šiandien negerk alkoholio',                     category: 'mityba', xp: 15 },
+  { title: 'Nevalgyk 2 valandas prieš miegą',               category: 'mityba', xp: 10 },
+  { title: 'Valgyk lėtai, be telefono ir televizoriaus',    category: 'mityba', xp: 10 },
+  { title: 'Pasiruošk sveiką maistą rytdienai',             category: 'mityba', xp: 15 },
+  { title: 'Įsirašyk visą dienos maistą į dienoraštį',      category: 'mityba', xp: 15 },
+  { title: 'Sustok valgyti, kai jautiesi sotus (80%)',      category: 'mityba', xp: 10 },
+
+  // --- Vanduo ---
+  { title: 'Išgerk 2 litrus vandens',                       category: 'vanduo', xp: 10 },
+  { title: 'Išgerk stiklinę vandens iškart atsikėlęs',      category: 'vanduo', xp: 10 },
+  { title: 'Išgerk stiklinę vandens prieš kiekvieną valgį', category: 'vanduo', xp: 10 },
+
+  // --- Miegas ---
+  { title: 'Eik miegoti iki 23:00',                         category: 'miegas', xp: 15 },
+  { title: 'Miegok bent 7 valandas',                        category: 'miegas', xp: 15 },
+  { title: 'Prieš miegą 30 minučių be telefono',            category: 'miegas', xp: 10 },
+  { title: 'Kelkis kiekvieną dieną tuo pačiu laiku',        category: 'miegas', xp: 10 },
 ];

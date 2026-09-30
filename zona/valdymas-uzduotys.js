@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20260930';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261001';
 import {
-  KATEGORIJOS, SABLONAI, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20260930';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20260930';
+  KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
+} from './tekstai.js?v=20261001';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261001';
 
 let pasirinktas = null;   // kliento id
 let uzduotys = [];
@@ -78,7 +78,7 @@ function pieskKliento() {
           ${x.description ? `<div class="muted" style="font-size:.8125rem">${esc(x.description)}</div>` : ''}
         </td>
         <td>${kat.ikona} ${esc(kat.pavadinimas)}</td>
-        <td>${x.xp} XP</td>
+        <td>${esc(taskai(x.xp))}</td>
         <td>${esc(dienuSuvestine(x.weekdays))}</td>
         <td>
           <span class="chip ${x.is_bonus ? 'chip-volt' : 'chip-quiet'}">${x.is_bonus ? 'Papildoma' : 'Privaloma'}</span>
@@ -115,7 +115,7 @@ function pieskKliento() {
     <div class="card">
       <div class="card-head"><h2>Pažanga</h2></div>
       <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
-        <div class="uzd-stat"><strong>${st.visoXp}</strong><span>Iš viso XP</span></div>
+        <div class="uzd-stat"><strong>${st.visoXp}</strong><span>Iš viso taškų</span></div>
         <div class="uzd-stat"><strong>${st.dabartineSerija}</strong><span>Dabartinė serija</span></div>
         <div class="uzd-stat"><strong>${st.ilgiausiaSerija}</strong><span>Ilgiausia serija</span></div>
         <div class="uzd-stat"><strong>${st.pilnosDienos}</strong><span>Pilnos dienos</span></div>
@@ -128,7 +128,7 @@ function pieskKliento() {
       <div class="card-head"><h2>Užduotys</h2><span class="row-end muted">${uzduotys.length}</span></div>
       ${uzduotys.length ? `
         <div class="table-wrap"><table>
-          <thead><tr><th>Užduotis</th><th>Kategorija</th><th>XP</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
+          <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Taškai</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
           <tbody>${eilutes}</tbody>
         </table></div>` : '<p class="muted">Šiam klientui užduočių dar nėra. Pridėk pirmą žemiau.</p>'}
     </div>
@@ -141,7 +141,10 @@ function pieskKliento() {
           <label for="u-sablonas">Greita pradžia <span class="hint">(neprivaloma, užpildo laukus)</span></label>
           <select id="u-sablonas">
             <option value="">Pasirink pavyzdį</option>
-            ${SABLONAI.map((s, i) => `<option value="${i}">${esc(s.title)}</option>`).join('')}
+            ${['judejimas', 'proto_ramybe', 'mityba', 'vanduo', 'miegas'].map((k) => `
+              <optgroup label="${esc(KATEGORIJOS[k].ikona + ' ' + KATEGORIJOS[k].pavadinimas)}">
+                ${SABLONAI.map((s, i) => (s.category === k ? `<option value="${i}">${esc(s.title)}</option>` : '')).join('')}
+              </optgroup>`).join('')}
           </select>
         </div>`}
         <div class="field">
@@ -160,14 +163,14 @@ function pieskKliento() {
             </select>
           </div>
           <div class="field">
-            <label for="u-xp">XP</label>
+            <label for="u-xp">Taškai</label>
             <input id="u-xp" type="number" min="1" max="500" value="${r?.xp ?? 10}">
           </div>
           <div class="field">
             <label for="u-tipas">Tipas</label>
             <select id="u-tipas">
               <option value="0"${r?.is_bonus ? '' : ' selected'}>Privaloma (skaičiuojasi į seriją)</option>
-              <option value="1"${r?.is_bonus ? ' selected' : ''}>Papildoma (tik papildomi XP)</option>
+              <option value="1"${r?.is_bonus ? ' selected' : ''}>Papildoma (tik papildomi taškai)</option>
             </select>
           </div>
         </div>
@@ -188,6 +191,7 @@ function pieskKliento() {
     $('#u-pavadinimas').value = s.title;
     $('#u-kategorija').value = s.category;
     $('#u-xp').value = s.xp;
+    $('#u-aprasas').value = s.description || '';
   });
   $('#u-forma').addEventListener('submit', issaugok);
   $('#u-atsaukti')?.addEventListener('click', () => { redaguojama = null; pieskKliento(); });
@@ -204,7 +208,7 @@ async function issaugok(ev) {
   const xp = Number($('#u-xp').value);
   if (!pavadinimas) { pranesk(zinute, 'Įrašyk užduoties pavadinimą.', 'error'); return; }
   if (!dienos.length) { pranesk(zinute, 'Pasirink bent vieną savaitės dieną.', 'error'); return; }
-  if (!Number.isInteger(xp) || xp < 1 || xp > 500) { pranesk(zinute, 'XP turi būti skaičius nuo 1 iki 500.', 'error'); return; }
+  if (!Number.isInteger(xp) || xp < 1 || xp > 500) { pranesk(zinute, 'Taškai turi būti skaičius nuo 1 iki 500.', 'error'); return; }
 
   const eilute = {
     title: pavadinimas,
@@ -235,7 +239,7 @@ async function perjunkAktyvuma(id) {
 async function trink(id) {
   const x = uzduotys.find((u) => u.id === id);
   if (!x) return;
-  if (!confirm(`Ištrinti užduotį "${x.title}"?\n\nKartu dings jos atlikimų istorija ir su ja surinkti XP. Jei nori tik paslėpti nuo kliento, geriau spausk „Išjungti“.`)) return;
+  if (!confirm(`Ištrinti užduotį "${x.title}"?\n\nKartu dings jos atlikimų istorija ir su ja surinkti taškai. Jei nori tik paslėpti nuo kliento, geriau spausk „Išjungti“.`)) return;
   const { error } = await db.from('client_challenges').delete().eq('id', id);
   if (error) { pranesk($('#pranesimas'), klaidaLT(error), 'error'); return; }
   pranesk($('#pranesimas'), 'Užduotis ištrinta.', 'ok');
