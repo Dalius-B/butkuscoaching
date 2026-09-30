@@ -153,9 +153,9 @@ p { text-wrap: pretty; }
 .nav-user {
   font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
   text-transform: uppercase; letter-spacing: 0.14em; color: var(--soft-paper);
-  max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 20ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.nav-links { display: flex; gap: var(--s-300); }
+.nav-links { display: flex; gap: var(--s-300); white-space: nowrap; }
 .nav-links a {
   font-size: 0.8125rem; font-weight: 600; font-stretch: 88%;
   text-transform: uppercase; letter-spacing: 0.13em; text-decoration: none;
@@ -466,7 +466,13 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
    ----------------------------------------------------------------------------- */
 /* Siaurame ekrane nuorodos nebetelpa vienoje eilutėje ir nebeverčiamos
    slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. */
-@media (max-width: 760px) {
+/* Vidutinio pločio ekranuose nuorodos su vardu nebetelpa vienoje eilutėje. */
+@media (max-width: 1400px) {
+  .nav-user, .wordmark small { display: none; }
+  .nav-links { gap: var(--s-200); }
+}
+
+@media (max-width: 980px) {
   .wordmark small { display: none; }
   .nav-links, .nav-user, .nav-right > #atsijungti { display: none; }
   .nav-meniu-mygtukas { display: inline-flex; }

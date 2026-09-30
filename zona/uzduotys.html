@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20260930">
+<link rel="stylesheet" href="stilius.css?v=20261001">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -52,14 +52,14 @@
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav,
-} from './app.js?v=20260930';
+} from './app.js?v=20261001';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, MENESIAI, PASIEKIMAI,
-  dataSuDiena,
-} from './tekstai.js?v=20260930';
+  dataSuDiena, taskai,
+} from './tekstai.js?v=20261001';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena,
-} from './uzduociu-logika.js?v=20260930';
+} from './uzduociu-logika.js?v=20261001';
 
 const vidus = $('#turinys-vidus');
 const siandien = siandienLT();
@@ -161,7 +161,7 @@ function pieskVisa() {
         <div class="uzd-lygis">
           <div class="uzd-lygis-virsus">
             <strong>${esc(T.lygis(st.lygis))}</strong>
-            <span>${st.visoXp} XP</span>
+            <span>${esc(taskai(st.visoXp))}</span>
           </div>
           <div class="uzd-juosta" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${levelProc}" aria-label="${esc(T.lygis(st.lygis))}">
             <i style="width:${levelProc}%"></i>
@@ -254,7 +254,7 @@ function uzduotiesEilute(u, st) {
           <span class="uzd-zymos">
             <span class="chip chip-quiet">${kat.ikona} ${esc(kat.pavadinimas)}</span>
             ${u.is_bonus ? `<span class="chip chip-volt">${esc(T.papildoma)}</span>` : ''}
-            <span class="chip ${padaryta ? 'chip-ok' : 'chip-quiet'}">${padaryta ? esc(T.atlikta) : `+${u.xp} XP`}</span>
+            <span class="chip ${padaryta ? 'chip-ok' : 'chip-quiet'}">${padaryta ? esc(T.atlikta) : esc('+' + taskai(u.xp))}</span>
           </span>
         </span>
       </button>
