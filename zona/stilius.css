@@ -507,11 +507,12 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
   .auth-card { padding: var(--s-400) var(--s-300); }
   .card { padding: var(--s-300); }
   .page { padding-block: var(--s-500) var(--s-600); }
-  .form-actions .btn { width: 100%; }
-  .btn { white-space: normal; }
-  /* Antraštės mygtukas turi likti vienoje eilutėje -- kitaip lūžta į dvi
-     eilutes ir peraugą fiksuoto aukščio juostą. */
-  .nav-inner .btn { white-space: nowrap; }
+  /* white-space:normal priklauso tik čia -- pilno pločio formos mygtukams,
+     kur ilgas tekstas gali lūžti per dvi eilutes. Anksčiau ši taisyklė
+     galiojo VISIEMS .btn, todėl bet kur kitur (navigacijos juostoje,
+     lentelių veiksmų mygtukuose) ilgesnis tekstas netikėtai lūždavo per
+     dvi eilutes ir ištempdavo mygtuką. */
+  .form-actions .btn { width: 100%; white-space: normal; }
 }
 
 /* Labai siauruose telefonuose žodžio ženklas + antraštės mygtukas
