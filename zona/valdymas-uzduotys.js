@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261001';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261002';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261001';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261001';
+} from './tekstai.js?v=20261002';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261002';
 
 let pasirinktas = null;   // kliento id
 let uzduotys = [];
@@ -76,6 +76,7 @@ function pieskKliento() {
         <td>
           <strong>${esc(x.title)}</strong>
           ${x.description ? `<div class="muted" style="font-size:.8125rem">${esc(x.description)}</div>` : ''}
+          ${x.target > 1 ? `<div class="muted" style="font-size:.8125rem">Per dieną: ${esc(Number(x.target).toLocaleString('lt-LT'))}${x.unit ? ' ' + esc(x.unit) : ''}, vienas paspaudimas +${esc(Number(x.step).toLocaleString('lt-LT'))}</div>` : ''}
         </td>
         <td>${kat.ikona} ${esc(kat.pavadinimas)}</td>
         <td>${esc(taskai(x.xp))}</td>
@@ -116,8 +117,6 @@ function pieskKliento() {
       <div class="card-head"><h2>Pažanga</h2></div>
       <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
         <div class="uzd-stat"><strong>${st.visoXp}</strong><span>Iš viso taškų</span></div>
-        <div class="uzd-stat"><strong>${st.dabartineSerija}</strong><span>Dabartinė serija</span></div>
-        <div class="uzd-stat"><strong>${st.ilgiausiaSerija}</strong><span>Ilgiausia serija</span></div>
         <div class="uzd-stat"><strong>${st.pilnosDienos}</strong><span>Pilnos dienos</span></div>
       </div>
       <p class="muted" style="margin:var(--s-300) 0 var(--s-100);font-size:.8125rem">Paskutinės 14 dienų (geltona: visos užduotys atliktos, rėmelis: atlikta dalis)</p>
@@ -169,11 +168,28 @@ function pieskKliento() {
           <div class="field">
             <label for="u-tipas">Tipas</label>
             <select id="u-tipas">
-              <option value="0"${r?.is_bonus ? '' : ' selected'}>Privaloma (skaičiuojasi į seriją)</option>
+              <option value="0"${r?.is_bonus ? '' : ' selected'}>Privaloma (reikia, kad diena būtų pilna)</option>
               <option value="1"${r?.is_bonus ? ' selected' : ''}>Papildoma (tik papildomi taškai)</option>
             </select>
           </div>
         </div>
+        <div class="field-row" style="margin-top:var(--s-300)">
+          <div class="field">
+            <label for="u-kiekis">Kiek per dieną <span class="hint">(1 = paprasta užduotis)</span></label>
+            <input id="u-kiekis" type="number" min="1" max="100000" value="${r?.target ?? 1}">
+          </div>
+          <div class="field">
+            <label for="u-vienetas">Kas skaičiuojama <span class="hint">(neprivaloma)</span></label>
+            <input id="u-vienetas" type="text" maxlength="30" placeholder="stiklinių, žingsnių..." value="${esc(r?.unit || '')}">
+          </div>
+          <div class="field">
+            <label for="u-zingsnis">Vienas paspaudimas prideda</label>
+            <input id="u-zingsnis" type="number" min="1" max="100000" value="${r?.step ?? 1}">
+          </div>
+        </div>
+        <p class="muted" style="font-size:.8125rem;margin-top:var(--s-100)">
+          Pavyzdžiui, 10 stiklinių vandens: kiekis 10, vienetas „stiklinių“, žingsnis 1. Klientas gali pažymėti 2 stiklines iš ryto, o likusias vėliau. Taškai gaunami proporcingai.
+        </p>
         <div class="field">
           <span class="legend-inline">Kuriomis dienomis</span>
           <div class="chips" role="group" aria-label="Savaitės dienos">${dienuPasirinkimas}</div>
@@ -191,6 +207,9 @@ function pieskKliento() {
     $('#u-pavadinimas').value = s.title;
     $('#u-kategorija').value = s.category;
     $('#u-xp').value = s.xp;
+    $('#u-kiekis').value = s.target || 1;
+    $('#u-vienetas').value = s.unit || '';
+    $('#u-zingsnis').value = s.step || 1;
     $('#u-aprasas').value = s.description || '';
   });
   $('#u-forma').addEventListener('submit', issaugok);
@@ -206,11 +225,19 @@ async function issaugok(ev) {
   const pavadinimas = $('#u-pavadinimas').value.trim();
   const dienos = $$('input[name="u-diena"]:checked').map((i) => Number(i.value));
   const xp = Number($('#u-xp').value);
+  const kiekis = Number($('#u-kiekis').value);
+  const zingsnis = Number($('#u-zingsnis').value);
   if (!pavadinimas) { pranesk(zinute, 'Įrašyk užduoties pavadinimą.', 'error'); return; }
   if (!dienos.length) { pranesk(zinute, 'Pasirink bent vieną savaitės dieną.', 'error'); return; }
   if (!Number.isInteger(xp) || xp < 1 || xp > 500) { pranesk(zinute, 'Taškai turi būti skaičius nuo 1 iki 500.', 'error'); return; }
 
+  if (!Number.isInteger(kiekis) || kiekis < 1 || kiekis > 100000) { pranesk(zinute, 'Kiekis per dieną turi būti skaičius nuo 1 iki 100 000.', 'error'); return; }
+  if (!Number.isInteger(zingsnis) || zingsnis < 1 || zingsnis > kiekis) { pranesk(zinute, 'Žingsnis turi būti skaičius nuo 1 iki dienos kiekio.', 'error'); return; }
+
   const eilute = {
+    target: kiekis,
+    unit: $('#u-vienetas').value.trim(),
+    step: zingsnis,
     title: pavadinimas,
     description: $('#u-aprasas').value.trim(),
     category: $('#u-kategorija').value,

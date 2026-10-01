@@ -13,7 +13,7 @@ export const T = {
   siandien: 'Šiandien',
   siandienosUzduotys: 'Šiandienos užduotys',
   papildomosUzduotys: 'Papildomos užduotys',
-  papildomosPaaiskinimas: 'Neprivalomos, bet duoda papildomų taškų. Serijai jų atlikti nereikia.',
+  papildomosPaaiskinimas: 'Neprivalomos, bet duoda papildomų taškų. Dienai baigti jų atlikti nereikia.',
   papildoma: 'Papildoma',
   atlikta: 'Atlikta ✓',
   pazymeti: 'Pažymėti kaip atliktą',
@@ -30,13 +30,12 @@ export const T = {
   dienaBaigta: 'Diena baigta!',
   uzduotisAtlikta: (xp) => `Užduotis atlikta! +${taskai(xp)}`,
   zymejimasAtsauktas: 'Žymėjimas atšauktas',
+  pazymeta: 'Pažymėta',
+  prideti: 'Pridėti',
+  sumazinti: 'Sumažinti',
   surinkai: (xp) => `Tu surinkai ${taskai(xp)}`,
   siandienNieko: 'Šiandien dar nieko nesurinkai. Pradėk nuo pirmos užduoties.',
 
-  serija: (n) => (n > 0 ? `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'dienos' : 'dienų'} serija 🔥` : 'Serija dar nepradėta'),
-  serijosPasiulymas: 'Atlik visas šiandienos užduotis ir pradėk naują seriją.',
-  dabartineSerija: 'Dabartinė serija',
-  ilgiausiaSerija: 'Ilgiausia serija',
   visoXp: 'Iš viso taškų',
   pilnosDienos: 'Pilnos dienos',
   atliktosUzduotys: 'Atliktos užduotys',
@@ -44,7 +43,6 @@ export const T = {
   iki: (kiek, lygis) => `Dar ${taskai(kiek)} iki ${lygis} lygio`,
   dienos: (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'diena' : (n % 10 === 0 || (n % 100 >= 11 && n % 100 <= 19)) ? 'dienų' : 'dienos'}`,
 
-  aiskinimasSerija: 'Diena skaičiuojama į seriją, kai atlieki visas tos dienos privalomas užduotis. Poilsio dienos serijos nenutraukia.',
 
   tuscia: 'Kol kas užduočių nėra',
   tusciaTekstas: 'Dalius netrukus paruoš tau užduotis. Kai tik jos atsiras, matysi jas čia.',
@@ -144,17 +142,16 @@ export function dienuSuvestine(dienos) {
 //  Pasiekimai. "rodiklis" nurodo, kurį skaičių lyginti su "tikslas".
 // -----------------------------------------------------------------------------
 export const PASIEKIMAI = [
-  { id: 'pirmas',    ikona: '🌱', pavadinimas: 'Pirmas žingsnis',       aprasas: 'Atlik pirmą užduotį',              rodiklis: 'atliktaViso',     tikslas: 1 },
-  { id: 'diena',     ikona: '⭐', pavadinimas: 'Pirma pilna diena',     aprasas: 'Atlik visas vienos dienos užduotis', rodiklis: 'pilnosDienos',    tikslas: 1 },
-  { id: 'serija3',   ikona: '🔥', pavadinimas: 'Trijų dienų serija',    aprasas: 'Atlik visas užduotis 3 dienas iš eilės', rodiklis: 'ilgiausiaSerija', tikslas: 3 },
-  { id: 'serija7',   ikona: '🚀', pavadinimas: 'Savaitės serija',       aprasas: '7 dienų serija',                   rodiklis: 'ilgiausiaSerija', tikslas: 7 },
-  { id: 'serija14',  ikona: '💪', pavadinimas: 'Dviejų savaičių serija', aprasas: '14 dienų serija',                  rodiklis: 'ilgiausiaSerija', tikslas: 14 },
-  { id: 'serija30',  ikona: '🏆', pavadinimas: 'Mėnesio serija',        aprasas: '30 dienų serija',                  rodiklis: 'ilgiausiaSerija', tikslas: 30 },
-  { id: 'xp100',     ikona: '⚡', pavadinimas: 'Pirmi 100 taškų',      aprasas: 'Surink 100 taškų',                    rodiklis: 'visoXp',          tikslas: 100 },
-  { id: 'xp500',     ikona: '💎', pavadinimas: '500 taškų',            aprasas: 'Surink 500 taškų',                    rodiklis: 'visoXp',          tikslas: 500 },
-  { id: 'xp1000',    ikona: '👑', pavadinimas: '1000 taškų',           aprasas: 'Surink 1000 taškų',                   rodiklis: 'visoXp',          tikslas: 1000 },
-  { id: 'dienos10',  ikona: '📅', pavadinimas: 'Dešimt pilnų dienų',    aprasas: 'Turėk 10 pilnų dienų',             rodiklis: 'pilnosDienos',    tikslas: 10 },
-  { id: 'papildomos', ikona: '🎯', pavadinimas: 'Ekstra mylia',         aprasas: 'Atlik 10 papildomų užduočių',      rodiklis: 'papildomaAtlikta', tikslas: 10 },
+  { id: 'pirmas',     ikona: '🌱', pavadinimas: 'Pirmas žingsnis',        aprasas: 'Atlik pirmą užduotį',                rodiklis: 'atliktaViso',      tikslas: 1 },
+  { id: 'diena',      ikona: '⭐', pavadinimas: 'Pirma pilna diena',      aprasas: 'Atlik visas vienos dienos užduotis', rodiklis: 'pilnosDienos',     tikslas: 1 },
+  { id: 'dienos3',    ikona: '🔥', pavadinimas: 'Trys pilnos dienos',     aprasas: 'Turėk 3 pilnas dienas',              rodiklis: 'pilnosDienos',     tikslas: 3 },
+  { id: 'dienos7',    ikona: '🚀', pavadinimas: 'Savaitė pilnų dienų',    aprasas: 'Turėk 7 pilnas dienas',              rodiklis: 'pilnosDienos',     tikslas: 7 },
+  { id: 'dienos14',   ikona: '💪', pavadinimas: 'Dvi savaitės',           aprasas: 'Turėk 14 pilnų dienų',               rodiklis: 'pilnosDienos',     tikslas: 14 },
+  { id: 'dienos30',   ikona: '🏆', pavadinimas: 'Mėnuo pilnų dienų',      aprasas: 'Turėk 30 pilnų dienų',               rodiklis: 'pilnosDienos',     tikslas: 30 },
+  { id: 'xp100',      ikona: '⚡', pavadinimas: 'Pirmi 100 taškų',        aprasas: 'Surink 100 taškų',                   rodiklis: 'visoXp',           tikslas: 100 },
+  { id: 'xp500',      ikona: '💎', pavadinimas: '500 taškų',              aprasas: 'Surink 500 taškų',                   rodiklis: 'visoXp',           tikslas: 500 },
+  { id: 'xp1000',     ikona: '👑', pavadinimas: '1000 taškų',             aprasas: 'Surink 1000 taškų',                  rodiklis: 'visoXp',           tikslas: 1000 },
+  { id: 'papildomos', ikona: '🎯', pavadinimas: 'Ekstra mylia',           aprasas: 'Atlik 10 papildomų užduočių',        rodiklis: 'papildomaAtlikta', tikslas: 10 },
 ];
 
 // -----------------------------------------------------------------------------
@@ -162,18 +159,18 @@ export const PASIEKIMAI = [
 // -----------------------------------------------------------------------------
 export const SABLONAI = [
   // --- Sportas ---
-  { title: 'Padaryk 30 pritūpimų',                          category: 'judejimas', xp: 10 },
-  { title: 'Padaryk 15 atsispaudimų',                       category: 'judejimas', xp: 10 },
+  { title: 'Padaryk 30 pritūpimų',                          category: 'judejimas', xp: 10, target: 30, unit: 'pritūpimų', step: 10 },
+  { title: 'Padaryk 15 atsispaudimų',                       category: 'judejimas', xp: 10, target: 15, unit: 'atsispaudimų', step: 5 },
   { title: 'Išlaikyk lentą 45 sekundes',                    category: 'judejimas', xp: 10 },
   { title: 'Padaryk 20 iššokimų iš pritūpimo',              category: 'judejimas', xp: 10 },
   { title: 'Padaryk 20 įpuolimų (kiekviena koja)',          category: 'judejimas', xp: 10 },
   { title: 'Atlik 3 raumenų stiprinimo serijas namuose',    category: 'judejimas', xp: 15 },
   { title: 'Atlik šiandienos treniruotę pagal programą',    category: 'judejimas', xp: 25, description: 'Pagrindinė savaitės treniruotė' },
-  { title: 'Nužingsniuok 6 000 žingsnių',                   category: 'judejimas', xp: 15 },
-  { title: 'Nužingsniuok 10 000 žingsnių',                  category: 'judejimas', xp: 20 },
+  { title: 'Nužingsniuok 6 000 žingsnių',                   category: 'judejimas', xp: 15, target: 6000, unit: 'žingsnių', step: 1000 },
+  { title: 'Nužingsniuok 10 000 žingsnių',                  category: 'judejimas', xp: 20, target: 10000, unit: 'žingsnių', step: 1000 },
   { title: '10 minučių pasivaikščiok lauke',                category: 'judejimas', xp: 10 },
   { title: '30 minučių greitai pasivaikščiok',              category: 'judejimas', xp: 15 },
-  { title: 'Užlipk 50 laiptelių',                           category: 'judejimas', xp: 10 },
+  { title: 'Užlipk 50 laiptelių',                           category: 'judejimas', xp: 10, target: 50, unit: 'laiptelių', step: 10 },
   { title: 'Pabėgiok 20 minučių lengvu tempu',              category: 'judejimas', xp: 20 },
   { title: 'Atlik 5 minučių lengvą tempimo pratimą',        category: 'judejimas', xp: 10 },
   { title: 'Atlik 10 minučių mobilumo rutiną',              category: 'judejimas', xp: 10 },
@@ -194,11 +191,11 @@ export const SABLONAI = [
   { title: 'Perskaityk 10 puslapių knygos',                 category: 'proto_ramybe', xp: 10 },
 
   // --- Mityba ---
-  { title: 'Suvalgyk 2 kiaušinius',                         category: 'mityba', xp: 10 },
+  { title: 'Suvalgyk 2 kiaušinius',                         category: 'mityba', xp: 10, target: 2, unit: 'kiaušiniai', step: 1 },
   { title: 'Suvalgyk 5 šaukštus graikiško jogurto',         category: 'mityba', xp: 10 },
   { title: 'Suvalgyk baltymų kiekvieno valgio metu',        category: 'mityba', xp: 15 },
-  { title: 'Suvalgyk bent 2 porcijas daržovių',             category: 'mityba', xp: 10 },
-  { title: 'Suvalgyk bent 2 vaisius',                       category: 'mityba', xp: 10 },
+  { title: 'Suvalgyk bent 2 porcijas daržovių',             category: 'mityba', xp: 10, target: 2, unit: 'porcijos', step: 1 },
+  { title: 'Suvalgyk bent 2 vaisius',                       category: 'mityba', xp: 10, target: 2, unit: 'vaisiai', step: 1 },
   { title: 'Pusę lėkštės užpildyk daržovėmis',              category: 'mityba', xp: 10 },
   { title: 'Pusryčiai su baltymais per valandą nuo atsikėlimo', category: 'mityba', xp: 10 },
   { title: 'Sumažink cukraus kiekį kavoje perpus',          category: 'mityba', xp: 10 },
@@ -212,7 +209,8 @@ export const SABLONAI = [
   { title: 'Sustok valgyti, kai jautiesi sotus (80%)',      category: 'mityba', xp: 10 },
 
   // --- Vanduo ---
-  { title: 'Išgerk 2 litrus vandens',                       category: 'vanduo', xp: 10 },
+  { title: 'Išgerk 10 stiklinių vandens',                 category: 'vanduo', xp: 15, target: 10, unit: 'stiklinių', step: 1 },
+  { title: 'Išgerk 2 litrus vandens',                       category: 'vanduo', xp: 10, target: 8, unit: 'stiklinių', step: 1, description: '1 stiklinė yra 250 ml' },
   { title: 'Išgerk stiklinę vandens iškart atsikėlęs',      category: 'vanduo', xp: 10 },
   { title: 'Išgerk stiklinę vandens prieš kiekvieną valgį', category: 'vanduo', xp: 10 },
 
