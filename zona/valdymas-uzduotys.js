@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261005';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261006';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261005';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261005';
+} from './tekstai.js?v=20261006';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261006';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.

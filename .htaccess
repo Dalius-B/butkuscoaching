@@ -1,0 +1,8 @@
+# Naršyklė ir tarpinė talpykla visada pasitikrina, ar failas nepasikeitė
+# (greitas 304 atsakymas, jei nepasikeitė). Be šito telefonas gali dienų dienas
+# rodyti seną puslapį ar seną programos kodą po atnaujinimo.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|htm|js|css)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>

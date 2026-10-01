@@ -33,6 +33,11 @@ export const KONFIGURUOTA =
   SUPABASE_PUBLISHABLE_KEY.startsWith('sb_publishable_');
 
 export const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  // Duomenys visada imami iš serverio, o ne iš naršyklės talpyklos: telefonas
+  // kitaip kartais rodydavo senas užduotis, kai trenerius jau pakeisdavo.
+  global: {
+    fetch: (url, options) => fetch(url, { ...options, cache: 'no-store' }),
+  },
   auth: {
     persistSession: true,
     autoRefreshToken: true,
