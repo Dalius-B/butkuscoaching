@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261008';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261009';
 import {
   KATEGORIJOS, SABLONAI, taskai, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261008';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261008';
+} from './tekstai.js?v=20261009';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261009';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-let laikotarpis = 14;     // kiek dienų atgal rodyti atlikimų istoriją
+let savaitesPradzia = null; // rodomos savaitės pirmadienis (YYYY-MM-DD)
 
 export async function piesUzduotis(profiliai, savasId) {
   const vieta = $('#kortele-uzduotys');
@@ -61,6 +61,7 @@ export async function piesUzduotis(profiliai, savasId) {
   $('#u-klientas').addEventListener('change', (e) => {
     pasirinktas = e.target.value;
     redaguojama = null;
+    savaitesPradzia = null;
     ikelkKliento();
   });
   await ikelkKliento();
@@ -245,18 +246,41 @@ function dienosEilutes(diena, atlikimaiPagalDiena) {
   return eilutes;
 }
 
+const savaitesPirmadienis = (d) => pridek(d, -(savaitesDiena(d) - 1));
+
+/** Pirma diena, nuo kurios apskritai yra ką rodyti: pirma užduotis arba pirmas atlikimas. */
+function istorijosPradzia() {
+  let p = siandienLT();
+  for (const u of uzduotys) { const d = dataLT(u.created_at); if (d < p) p = d; }
+  for (const a of atlikimai) if (a.day < p) p = a.day;
+  return p;
+}
+
 function pieskIstorija() {
   const vieta = $('#u-istorija');
   if (!vieta) return;
   const dabar = siandienLT();
+  const pradzia = istorijosPradzia();
+  const siosSavaites = savaitesPirmadienis(dabar);
+  const pirmaSavaite = savaitesPirmadienis(pradzia);
+  if (!savaitesPradzia || savaitesPradzia > siosSavaites) savaitesPradzia = siosSavaites;
+  if (savaitesPradzia < pirmaSavaite) savaitesPradzia = pirmaSavaite;
+  const savaitesPabaiga = pridek(savaitesPradzia, 6);
+  $('#sav-etikete').textContent = `${dataTrumpa(savaitesPradzia)} – ${dataTrumpa(savaitesPabaiga)}${savaitesPradzia === siosSavaites ? ' (ši savaitė)' : ''}`;
+  $('#sav-atgal').disabled = savaitesPradzia <= pirmaSavaite;
+  $('#sav-pirmyn').disabled = savaitesPradzia >= siosSavaites;
   const pagalDiena = new Map();
   for (const a of atlikimai) {
     if (!pagalDiena.has(a.day)) pagalDiena.set(a.day, []);
     pagalDiena.get(a.day).push(a);
   }
 
+  // Tik šios savaitės dienos nuo pirmos dienos iki šiandien, naujausios viršuje.
   const dienos = [];
-  for (let i = 0; i < laikotarpis; i += 1) dienos.push(pridek(dabar, -i));
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = pridek(savaitesPradzia, i);
+    if (d >= pradzia && d <= dabar) dienos.push(d);
+  }
   const duomenys = dienos.map((d) => ({ d, eilutes: dienosEilutes(d, pagalDiena) }));
 
   // Suvestinė pagal užduotį: kelias dienas iš numatytų ji buvo atlikta.
@@ -309,7 +333,7 @@ function pieskIstorija() {
         }).join('')}
       </ul>`;
     return `
-      <details class="u-ist-diena"${i < 3 && !nieko ? ' open' : ''}>
+      <details class="u-ist-diena"${!nieko ? ' open' : ''}>
         <summary>
           <span class="u-ist-data">${esc(dataSuDiena(d))}${jau ? ' <span class="muted">(šiandien)</span>' : ''}</span>
           <span class="u-ist-santrauka">${santrauka}${taskuDiena ? `<span class="muted">${esc(taskai(taskuDiena))}</span>` : ''}</span>
@@ -364,11 +388,10 @@ function pieskKliento() {
     <div class="card" style="margin-top:var(--s-300)">
       <div class="card-head">
         <h2>Ką klientas atliko</h2>
-        <div class="field row-end" style="min-width:160px">
-          <label for="u-laikotarpis" class="sr-only">Laikotarpis</label>
-          <select id="u-laikotarpis">
-            ${[7, 14, 30, 60].map((n) => `<option value="${n}"${n === laikotarpis ? ' selected' : ''}>Paskutinės ${n} d.</option>`).join('')}
-          </select>
+        <div class="u-savaite row-end">
+          <button class="kal-rodykle" type="button" id="sav-atgal" aria-label="Ankstesnė savaitė">‹</button>
+          <span id="sav-etikete" aria-live="polite"></span>
+          <button class="kal-rodykle" type="button" id="sav-pirmyn" aria-label="Kita savaitė">›</button>
         </div>
       </div>
       <div id="u-istorija"></div>
@@ -469,7 +492,8 @@ function pieskKliento() {
   $('#u-atsaukti')?.addEventListener('click', () => { redaguojama = null; pieskKliento(); });
   prijunkFiltrus();
   pieskRezultatus();
-  $('#u-laikotarpis').addEventListener('change', (e) => { laikotarpis = Number(e.target.value); pieskIstorija(); });
+  $('#sav-atgal').addEventListener('click', () => { savaitesPradzia = pridek(savaitesPradzia, -7); pieskIstorija(); });
+  $('#sav-pirmyn').addEventListener('click', () => { savaitesPradzia = pridek(savaitesPradzia, 7); pieskIstorija(); });
   pieskIstorija();
 }
 
