@@ -3,11 +3,28 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261004';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261005';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261004';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261004';
+} from './tekstai.js?v=20261005';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261005';
+
+// Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
+// pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
+function zinok(tekstas, tipas) {
+  const el = $('#pranesimas');
+  pranesk(el, tekstas, tipas);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// Naujas stulpelis duomenų bazėje dar nesukurtas (nepaleistas SQL failas).
+function dbKlaida(error) {
+  const tekstas = String(error?.message || '').toLowerCase();
+  if (error?.code === 'PGRST204' || (tekstas.includes('column') && tekstas.includes('schema cache'))) {
+    return 'Duomenų bazėje trūksta naujų laukų. Supabase skiltyje SQL Editor paleisk failus uzduotys-progresas.sql ir uzduotys-video.sql, tada bandyk dar kartą.';
+  }
+  return klaidaLT(error);
+}
 
 let pasirinktas = null;   // kliento id
 let uzduotys = [];
@@ -49,7 +66,6 @@ export async function piesUzduotis(profiliai, savasId) {
 }
 
 async function ikelkKliento() {
-  const zinute = $('#pranesimas');
   const [u, a] = await Promise.all([
     db.from('client_challenges').select('*').eq('client_id', pasirinktas)
       .order('position', { ascending: true }).order('created_at', { ascending: true }),
@@ -57,7 +73,7 @@ async function ikelkKliento() {
       .order('day', { ascending: true }),
   ]);
   if (u.error || a.error) {
-    pranesk(zinute, klaidaLT(u.error || a.error), 'error');
+    zinok(dbKlaida(u.error || a.error), 'error');
     $('#u-turinys').innerHTML = '';
     return;
   }
@@ -227,22 +243,21 @@ function pieskKliento() {
 
 async function issaugok(ev) {
   ev.preventDefault();
-  const zinute = $('#pranesimas');
   const pavadinimas = $('#u-pavadinimas').value.trim();
   const dienos = $$('input[name="u-diena"]:checked').map((i) => Number(i.value));
   const xp = Number($('#u-xp').value);
   const kiekis = Number($('#u-kiekis').value);
   const zingsnis = Number($('#u-zingsnis').value);
-  if (!pavadinimas) { pranesk(zinute, 'Įrašyk užduoties pavadinimą.', 'error'); return; }
-  if (!dienos.length) { pranesk(zinute, 'Pasirink bent vieną savaitės dieną.', 'error'); return; }
-  if (!Number.isInteger(xp) || xp < 1 || xp > 500) { pranesk(zinute, 'Taškai turi būti skaičius nuo 1 iki 500.', 'error'); return; }
+  if (!pavadinimas) { zinok('Įrašyk užduoties pavadinimą.', 'error'); return; }
+  if (!dienos.length) { zinok('Pasirink bent vieną savaitės dieną.', 'error'); return; }
+  if (!Number.isInteger(xp) || xp < 1 || xp > 500) { zinok('Taškai turi būti skaičius nuo 1 iki 500.', 'error'); return; }
 
-  if (!Number.isInteger(kiekis) || kiekis < 1 || kiekis > 100000) { pranesk(zinute, 'Kiekis per dieną turi būti skaičius nuo 1 iki 100 000.', 'error'); return; }
-  if (!Number.isInteger(zingsnis) || zingsnis < 1 || zingsnis > kiekis) { pranesk(zinute, 'Žingsnis turi būti skaičius nuo 1 iki dienos kiekio.', 'error'); return; }
+  if (!Number.isInteger(kiekis) || kiekis < 1 || kiekis > 100000) { zinok('Kiekis per dieną turi būti skaičius nuo 1 iki 100 000.', 'error'); return; }
+  if (!Number.isInteger(zingsnis) || zingsnis < 1 || zingsnis > kiekis) { zinok('Žingsnis turi būti skaičius nuo 1 iki dienos kiekio.', 'error'); return; }
 
   const video = $('#u-video').value.trim();
   if (video && !videoIterpimas(video)) {
-    pranesk(zinute, 'Video nuoroda netinka. Įklijuok pilną YouTube arba Vimeo nuorodą, prasidedančią https://.', 'error');
+    zinok('Video nuoroda netinka. Įklijuok pilną YouTube arba Vimeo nuorodą, prasidedančią https://.', 'error');
     return;
   }
 
@@ -261,8 +276,8 @@ async function issaugok(ev) {
   const { error } = redaguojama
     ? await db.from('client_challenges').update(eilute).eq('id', redaguojama)
     : await db.from('client_challenges').insert({ ...eilute, client_id: pasirinktas, position: uzduotys.length });
-  if (error) { pranesk(zinute, klaidaLT(error), 'error'); return; }
-  pranesk(zinute, redaguojama ? 'Užduotis išsaugota.' : 'Užduotis pridėta.', 'ok');
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  zinok(redaguojama ? 'Užduotis išsaugota.' : 'Užduotis pridėta.', 'ok');
   redaguojama = null;
   await ikelkKliento();
 }
@@ -271,8 +286,8 @@ async function perjunkAktyvuma(id) {
   const x = uzduotys.find((u) => u.id === id);
   if (!x) return;
   const { error } = await db.from('client_challenges').update({ active: !x.active }).eq('id', id);
-  if (error) { pranesk($('#pranesimas'), klaidaLT(error), 'error'); return; }
-  pranesk($('#pranesimas'), x.active ? 'Užduotis išjungta, klientas jos nebemato.' : 'Užduotis įjungta.', 'ok');
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  zinok(x.active ? 'Užduotis išjungta, klientas jos nebemato.' : 'Užduotis įjungta.', 'ok');
   await ikelkKliento();
 }
 
@@ -281,7 +296,7 @@ async function trink(id) {
   if (!x) return;
   if (!confirm(`Ištrinti užduotį "${x.title}"?\n\nKartu dings jos atlikimų istorija ir su ja surinkti taškai. Jei nori tik paslėpti nuo kliento, geriau spausk „Išjungti“.`)) return;
   const { error } = await db.from('client_challenges').delete().eq('id', id);
-  if (error) { pranesk($('#pranesimas'), klaidaLT(error), 'error'); return; }
-  pranesk($('#pranesimas'), 'Užduotis ištrinta.', 'ok');
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  zinok('Užduotis ištrinta.', 'ok');
   await ikelkKliento();
 }
