@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261005">
+<link rel="stylesheet" href="stilius.css?v=20261006">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -60,20 +60,36 @@
   </div>
 </footer>
 
+<script>
+// Apsauga nuo "amžino" kraunasi: jei po kelių sekundžių puslapis vis dar
+// rodo tik įkrovimo ratuką (pvz. telefono naršyklė pasiėmė pusiau senus
+// failus), parodome paaiškinimą ir mygtuką, kuris įkelia naujausią versiją.
+setTimeout(function () {
+  var v = document.getElementById('turinys-vidus');
+  if (!v || !v.querySelector('.loading')) return;
+  v.innerHTML = '<div class="note note-error">Puslapis neįsikėlė iki galo. Dažniausiai taip nutinka, kai telefonas rodo seną versiją.'
+    + ' Paspausk mygtuką. Jei nepadeda, atidaryk nuorodą naršyklėje (Chrome ar Safari), o ne Messenger ar kitoje programėlėje.</div>'
+    + '<div class="form-actions"><button class="btn btn-primary" type="button" id="perkrauti">Įkelti iš naujo</button></div>';
+  document.getElementById('perkrauti').addEventListener('click', function () {
+    location.replace(location.pathname + '?naujas=' + Date.now());
+  });
+}, 10000);
+</script>
 <script type="module">
 import {
-  db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav,
-} from './app.js?v=20261005';
+  db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
+} from './app.js?v=20261006';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, MENESIAI, PASIEKIMAI,
   dataSuDiena, taskai,
-} from './tekstai.js?v=20261005';
+} from './tekstai.js?v=20261006';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena, tikslas, videoIterpimas,
-} from './uzduociu-logika.js?v=20261005';
+} from './uzduociu-logika.js?v=20261006';
 
 const vidus = $('#turinys-vidus');
-const siandien = siandienLT();
+let siandien = siandienLT();
+let paskutinisKrovimas = 0;
 
 let profilis = null;
 let uzduotys = [];
@@ -89,6 +105,13 @@ async function paleisk() {
   const s = await reikiaSesijos();
   if (!s) return;
   profilis = s.profilis;
+  // Naujas klientas, kurio kvietimas dar nepanaudotas, aktyvuojamas čia.
+  if (await panaudokLaukiantiKvietima(profilis)) {
+    const { data: naujas } = await db.from('profiles')
+      .select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at')
+      .eq('id', s.vartotojas.id).maybeSingle();
+    if (naujas) profilis = naujas;
+  }
   sesijosId = s.vartotojas.id;
   rodykNav(profilis, 'uzduotys.html', s.arTreneris);
 
@@ -109,10 +132,34 @@ async function paleisk() {
     return;
   }
 
+  if (profilis.status === 'pending') {
+    vidus.innerHTML = `
+      <div class="empty">
+        <h2>Paskyra dar nepatvirtinta</h2>
+        <p>Kai tik Dalius patvirtins tavo paskyrą, čia atsiras užduotys. Jei tai užtrunka, parašyk jam.</p>
+      </div>`;
+    return;
+  }
+
   await ikelk();
+  // Telefone puslapis dažnai lieka atidarytas ištisas dienas. Sugrįžus prie jo
+  // užduotys perkraunamos, kad matytųsi nauja diena ir naujos užduotys.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') atnaujink();
+  });
+  window.addEventListener('pageshow', (ev) => { if (ev.persisted) atnaujink(true); });
 }
 
-async function ikelk() {
+function atnaujink(butinai = false) {
+  const kita = siandienLT();
+  if (!butinai && kita === siandien && Date.now() - paskutinisKrovimas < 60000) return;
+  if (bukle) return;
+  siandien = kita;
+  if (kita.slice(0, 7) > rodomasMenuo) rodomasMenuo = kita.slice(0, 7);
+  ikelk(true);
+}
+
+async function ikelk(tyliai = false) {
   const [u, a] = await Promise.all([
     db.from('client_challenges')
       .select('id, title, description, category, xp, is_bonus, weekdays, active, position, created_at, target, unit, step, video_url')
@@ -124,6 +171,7 @@ async function ikelk() {
       .order('day', { ascending: true }),
   ]);
   const klaida = u.error || a.error;
+  if (klaida && tyliai) return; // fone nepavykęs atnaujinimas nieko neišvalo
   if (klaida) {
     vidus.innerHTML = `
       <div class="note note-error">${esc(klaidaLT(klaida))}</div>
@@ -133,6 +181,7 @@ async function ikelk() {
   }
   uzduotys = u.data || [];
   atlikimai = a.data || [];
+  paskutinisKrovimas = Date.now();
   pieskVisa();
 }
 
