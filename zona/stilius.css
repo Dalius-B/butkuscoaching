@@ -153,9 +153,9 @@ p { text-wrap: pretty; }
 .nav-user {
   font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
   text-transform: uppercase; letter-spacing: 0.14em; color: var(--soft-paper);
-  max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 20ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.nav-links { display: flex; gap: var(--s-300); }
+.nav-links { display: flex; gap: var(--s-300); white-space: nowrap; }
 .nav-links a {
   font-size: 0.8125rem; font-weight: 600; font-stretch: 88%;
   text-transform: uppercase; letter-spacing: 0.13em; text-decoration: none;
@@ -466,7 +466,13 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
    ----------------------------------------------------------------------------- */
 /* Siaurame ekrane nuorodos nebetelpa vienoje eilutėje ir nebeverčiamos
    slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. */
-@media (max-width: 760px) {
+/* Vidutinio pločio ekranuose nuorodos su vardu nebetelpa vienoje eilutėje. */
+@media (max-width: 1400px) {
+  .nav-user, .wordmark small { display: none; }
+  .nav-links { gap: var(--s-200); }
+}
+
+@media (max-width: 980px) {
   .wordmark small { display: none; }
   .nav-links, .nav-user, .nav-right > #atsijungti { display: none; }
   .nav-meniu-mygtukas { display: inline-flex; }
@@ -524,4 +530,127 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
     transition-duration: 0.001ms !important;
   }
   .spinner { animation: none; }
+}
+
+/* =============================================================================
+   UŽDUOTYS (uzduotys.html)
+   ============================================================================= */
+.uzd-hero {
+  background: var(--ink); color: var(--paper); border-radius: var(--r-lg);
+  padding: var(--s-400); display: flex; flex-direction: column; gap: var(--s-200);
+}
+.uzd-hero h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); }
+.uzd-lygis { display: flex; flex-direction: column; gap: var(--s-75); }
+.uzd-lygis-virsus { display: flex; justify-content: space-between; gap: var(--s-100); font-size: 0.9375rem; }
+.uzd-lygis-virsus strong { font-weight: 800; font-stretch: 108%; text-transform: uppercase; letter-spacing: 0.02em; }
+.uzd-lygis-virsus span { color: var(--volt); font-weight: 700; }
+
+.uzd-juosta { height: 8px; background: rgba(232,232,227,0.18); border-radius: var(--r-pill); overflow: hidden; }
+.uzd-juosta i { display: block; height: 100%; background: var(--volt); border-radius: var(--r-pill); transition: width 400ms var(--ease-out); }
+.uzd-juosta-didele { height: 12px; background: rgba(16,16,16,0.12); }
+.uzd-juosta-didele i { background: var(--ink); }
+
+.uzd-baneris {
+  display: flex; align-items: center; gap: var(--s-200); margin-top: var(--s-300);
+  background: var(--volt); color: var(--ink); border-radius: var(--r-lg); padding: var(--s-200) var(--s-300);
+  animation: uzd-issokimas 420ms var(--ease-out);
+}
+.uzd-baneris strong { display: block; font-weight: 800; font-stretch: 108%; text-transform: uppercase; }
+.uzd-baneris span:not(.uzd-baneris-ikona) { font-size: 0.9375rem; }
+.uzd-baneris-ikona { font-size: 2rem; line-height: 1; }
+@keyframes uzd-issokimas { from { scale: 0.96; opacity: 0; } to { scale: 1; opacity: 1; } }
+
+.uzd-stulpeliai { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--s-300); margin-top: var(--s-300); align-items: start; }
+.uzd-pagrindas, .uzd-salis { display: flex; flex-direction: column; gap: var(--s-300); min-width: 0; }
+.uzd-santrauka { margin: var(--s-100) 0 var(--s-200); font-size: 0.9375rem; }
+
+.uzd-sarasas { display: flex; flex-direction: column; gap: var(--s-100); }
+.uzd-eilute { border-radius: var(--r-md); background: var(--white); box-shadow: inset 0 0 0 1px var(--hair-ink); transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+.uzd-eilute.padaryta { background: rgba(30,107,58,0.07); box-shadow: inset 0 0 0 1px rgba(30,107,58,0.3); }
+.uzd-mygtukas { display: flex; gap: var(--s-200); align-items: flex-start; width: 100%; text-align: left; padding: var(--s-200); min-height: 64px; border-radius: var(--r-md); }
+.uzd-mygtukas:active { scale: 0.99; }
+.uzd-zenklas {
+  flex: none; width: 32px; height: 32px; border-radius: 50%; margin-top: 2px;
+  box-shadow: inset 0 0 0 2px rgba(16,16,16,0.3); display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.0625rem; color: var(--white);
+  transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), scale 200ms var(--ease-out);
+}
+.uzd-eilute.padaryta .uzd-zenklas { background: var(--ok); box-shadow: none; scale: 1.05; }
+.uzd-tekstas { display: flex; flex-direction: column; gap: var(--s-50); min-width: 0; }
+.uzd-tekstas strong { font-weight: 600; font-size: 1.0625rem; line-height: 1.35; overflow-wrap: anywhere; }
+.uzd-eilute.padaryta .uzd-tekstas strong { color: var(--ink-soft); }
+.uzd-aprasas { font-size: 0.875rem; color: var(--ink-soft); line-height: 1.45; }
+.uzd-zymos { display: flex; flex-wrap: wrap; gap: var(--s-50); margin-top: var(--s-50); }
+
+.uzd-statai { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--s-100); }
+.uzd-stat { background: var(--surface); border-radius: var(--r-md); padding: var(--s-200); box-shadow: 0 1px 2px rgba(16,16,16,0.06); }
+.uzd-stat strong { display: block; font-weight: 800; font-stretch: 108%; font-size: 1.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.uzd-stat span { font-size: 0.75rem; font-weight: 600; font-stretch: 84%; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
+
+.kal-virsus { display: flex; align-items: center; justify-content: space-between; gap: var(--s-100); margin-bottom: var(--s-200); }
+.kal-virsus h2 { font-size: 1.0625rem; }
+.kal-rodykle { width: 44px; height: 44px; border-radius: 50%; font-size: 1.5rem; line-height: 1; box-shadow: inset 0 0 0 1px var(--hair-ink); }
+.kal-rodykle:hover:not([disabled]) { background: rgba(16,16,16,0.06); }
+.kal-rodykle[disabled] { opacity: 0.3; cursor: not-allowed; }
+.kal-tinklelis { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.kal-antraste { text-align: center; font-size: 0.6875rem; font-weight: 700; font-stretch: 84%; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); padding-bottom: 4px; }
+.kal-diena { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.kal-diena.ateitis { color: rgba(16,16,16,0.35); }
+.kal-diena.dalinai { box-shadow: inset 0 0 0 2px var(--volt); font-weight: 600; }
+.kal-diena.pilna { background: var(--volt); font-weight: 800; }
+.kal-diena.siandien { outline: 2px solid var(--ink); outline-offset: 1px; font-weight: 800; }
+.kal-legenda { display: flex; flex-wrap: wrap; gap: var(--s-100) var(--s-200); margin-top: var(--s-200); font-size: 0.75rem; color: var(--ink-soft); }
+.kal-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.kal-taskas { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.kal-taskas.pilna { background: var(--volt); }
+.kal-taskas.dalinai { box-shadow: inset 0 0 0 2px var(--volt); }
+
+.pas-sarasas { display: flex; flex-direction: column; gap: var(--s-75); }
+.pas { display: flex; gap: var(--s-100); align-items: center; padding: var(--s-100); border-radius: var(--r-md); opacity: 0.6; }
+.pas.turi { opacity: 1; background: var(--white); box-shadow: inset 0 0 0 1px var(--hair-ink); }
+.pas-ikona { font-size: 1.5rem; width: 40px; text-align: center; flex: none; }
+.pas-tekstas { display: flex; flex-direction: column; font-size: 0.875rem; line-height: 1.35; }
+.pas-tekstas strong { font-weight: 600; font-size: 0.9375rem; }
+.pas-tekstas span { color: var(--ink-soft); }
+.pas-tekstas em { font-style: normal; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.pas.turi .pas-tekstas em { color: var(--ok); }
+
+.toast {
+  position: fixed; left: 50%; bottom: var(--s-300); translate: -50% 0; z-index: 200;
+  max-width: calc(100vw - 32px); background: var(--ink); color: var(--paper);
+  padding: var(--s-100) var(--s-300); border-radius: var(--r-pill); font-weight: 600; font-size: 0.9375rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35); text-align: center;
+  animation: uzd-issokimas 240ms var(--ease-out);
+}
+.toast-klaida { background: var(--danger); color: var(--white); }
+
+@media (max-width: 860px) {
+  .uzd-stulpeliai { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .uzd-hero { padding: var(--s-300); }
+  .uzd-mygtukas { padding: var(--s-100) var(--s-200); }
+}
+
+/* Užduotys su kiekiu (pvz. 10 stiklinių vandens) */
+.uzd-mygtukas-kiekis { cursor: default; }
+.uzd-juosta-maza { height: 8px; margin-top: var(--s-75); display: block; }
+.uzd-kiekis-eilute { display: flex; align-items: center; gap: var(--s-100); margin: var(--s-75) 0 var(--s-50); }
+.uzd-kiekis { flex: 1; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.0625rem; }
+.uzd-kiekio-mygtukas {
+  min-width: 56px; min-height: 48px; padding: 0 var(--s-200); border-radius: var(--r-pill);
+  font-weight: 800; font-size: 1.0625rem; font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1.5px var(--hair-ink); background: var(--white);
+  transition: background-color 160ms var(--ease-out), scale 160ms var(--ease-out);
+}
+.uzd-kiekio-mygtukas:hover:not([disabled]) { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.uzd-kiekio-mygtukas:active:not([disabled]) { scale: 0.96; }
+.uzd-kiekio-mygtukas[disabled] { opacity: 0.35; cursor: not-allowed; }
+.uzd-prideti { background: var(--volt); box-shadow: none; }
+.uzd-prideti:hover:not([disabled]) { background: #FFE873; box-shadow: none; }
+
+@media (max-width: 620px) {
+  .uzd-kiekis-eilute { flex-wrap: wrap; }
+  .uzd-kiekis { flex: 1 1 100%; order: -1; text-align: left; }
+  .uzd-kiekio-mygtukas { flex: 1 1 0; min-width: 0; }
 }

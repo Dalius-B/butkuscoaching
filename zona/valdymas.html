@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261001">
+<link rel="stylesheet" href="stilius.css?v=20261003">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -56,6 +56,7 @@
         <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="false">Klientai</button>
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
+        <button class="tab" role="tab" type="button" data-kortele="uzduotys" aria-selected="false">Užduotys</button>
       </div>
 
       <p class="note" id="pranesimas" hidden></p>
@@ -64,6 +65,7 @@
       <section id="kortele-klientai"  hidden></section>
       <section id="kortele-kvietimai" hidden></section>
       <section id="kortele-patikrinimai" hidden></section>
+      <section id="kortele-uzduotys" hidden></section>
     </div>
   </div>
 </main>
@@ -79,7 +81,8 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos,
-} from './app.js?v=20261001';
+} from './app.js?v=20261003';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261003';
 
 let profiliai = [];
 let savasId = null;
@@ -108,7 +111,7 @@ async function paleisk() {
 
 async function perkrauk() {
   const [p1, p2, p3, p4, p5] = await Promise.all([
-    db.from('profiles').select('id, email, full_name, phone, status, plan_type, created_at').order('created_at', { ascending: false }),
+    db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, plan_type, created_at').order('created_at', { ascending: false }),
     db.from('client_programs').select('id, program_id, client_id, title, status, starts_on, assigned_at'),
@@ -130,13 +133,14 @@ async function perkrauk() {
   piesKlientus();
   piesKvietimus();
   piesPatikrinimus();
+  piesUzduotis(profiliai, savasId);
 }
 
 function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -255,10 +259,12 @@ function piesKlientus() {
         </td>
         <td><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
         <td><span class="chip chip-quiet">${k.plan_type === 'tik_programa' ? 'Tik programa' : 'Pilnas'}</span></td>
+        <td>${k.uzduotys_ijungtos ? '<span class="chip chip-ok">Įjungtos</span>' : '<span class="chip chip-quiet">Išjungtos</span>'}</td>
         <td>${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
         <td>${esc(data(k.created_at))}</td>
         <td>
           <div class="row">
+            <button class="btn btn-ghost btn-sm uzd-jungiklis" type="button" data-id="${esc(k.id)}" data-ijungta="${k.uzduotys_ijungtos ? '0' : '1'}">${k.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
             <button class="btn btn-ghost btn-sm zr-programos" type="button" data-id="${esc(k.id)}"${priskyrimai.some((a) => a.client_id === k.id) ? '' : ' disabled'}>Programos</button>
             ${k.status === 'blocked'
               ? `<button class="btn btn-ghost btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="active">Grąžinti prieigą</button>`
@@ -280,7 +286,7 @@ function piesKlientus() {
       ${klientai.length ? `
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
+            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Užduotys</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
           </table>
         </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
@@ -298,6 +304,9 @@ function piesKlientus() {
   for (const b of $$('.busena')) {
     b.addEventListener('click', () => keiskBusena(b.dataset.id, b.dataset.busena));
   }
+  for (const b of $$('.uzd-jungiklis')) {
+    b.addEventListener('click', () => keiskUzduotis(b.dataset.id, b.dataset.ijungta === '1'));
+  }
   for (const b of $$('.zr-programos')) {
     b.addEventListener('click', () => rodykKlientoProgramas(b.dataset.id));
   }
@@ -312,6 +321,16 @@ async function keiskBusena(id, busena) {
     return;
   }
   pranesk($('#pranesimas'), busena === 'blocked' ? 'Prieiga sustabdyta.' : 'Prieiga grąžinta.', 'ok');
+  await perkrauk();
+}
+
+async function keiskUzduotis(id, ijungta) {
+  const { error } = await db.rpc('admin_set_uzduotys', { p_client: id, p_ijungta: ijungta });
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), ijungta ? 'Užduotys klientui įjungtos.' : 'Užduotys klientui išjungtos.', 'ok');
   await perkrauk();
 }
 
