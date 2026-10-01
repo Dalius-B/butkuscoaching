@@ -79,7 +79,7 @@
 
 <script type="module">
 import {
-  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos,
 } from './app.js?v=20261003';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261003';
@@ -293,6 +293,7 @@ function piesKlientus() {
     </div>
 
     <div id="klientu-programu-detale"></div>
+    <div id="klientu-pratimu-detale"></div>
 
     <div class="card" style="margin-top:var(--s-300)">
       <p class="muted" style="font-size:.875rem;margin:0">
@@ -349,7 +350,12 @@ function rodykKlientoProgramas(clientId) {
       <td>${esc(a.title)}</td>
       <td><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
       <td>${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
-      <td><button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button></td>
+      <td>
+        <div class="row">
+          <button class="btn btn-ghost btn-sm redaguoti-kliento-pratimus" type="button" data-id="${esc(a.id)}">Pratimai</button>
+          <button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button>
+        </div>
+      </td>
     </tr>`).join('');
 
   $('#klientu-programu-detale').innerHTML = `
@@ -370,7 +376,110 @@ function rodykKlientoProgramas(clientId) {
   for (const b of $$('.trinti-kliento-programa')) {
     b.addEventListener('click', () => trinkKlientoPrograma(b.dataset.id, b.dataset.vardas, clientId));
   }
+  for (const b of $$('.redaguoti-kliento-pratimus')) {
+    b.addEventListener('click', () => redaguokKlientoPratimus(b.dataset.id));
+  }
   $('#klientu-programu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =============================================================================
+//  KLIENTO PRISKIRTOS PROGRAMOS KOPIJOS PRATIMŲ TAISYMAS
+//  Priskyrimo metu kliento kopija "sušąla" -- vėlesni šablono pakeitimai jos
+//  nebepasiekia. Čia leidžiama taisyti tik tai, kas realiai prireikia po
+//  priskyrimo (įrašymo tipą ir video nuorodą), be viso priskyrimo kartojimo,
+//  kuris sukurtų naują kopiją ir nutrauktų ryšį su jau įrašyta istorija.
+// =============================================================================
+async function redaguokKlientoPratimus(clientProgramId) {
+  const vieta = $('#klientu-pratimu-detale');
+  vieta.innerHTML = '<div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>';
+  vieta.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const { data: dienos, error: dKlaida } = await db
+    .from('client_days').select('id, title, position').eq('client_program_id', clientProgramId).order('position', { ascending: true });
+  if (dKlaida) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(dKlaida))}</div>`;
+    return;
+  }
+
+  const dienuId = (dienos || []).map((d) => d.id);
+  const { data: pratimai, error: pKlaida } = dienuId.length
+    ? await db.from('client_exercises').select('*').in('client_day_id', dienuId).order('position', { ascending: true })
+    : { data: [] };
+  if (pKlaida) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(pKlaida))}</div>`;
+    return;
+  }
+
+  vieta.innerHTML = `
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head">
+        <h2>Pratimų taisymas</h2>
+        <button class="btn btn-ghost btn-sm row-end" type="button" id="uzdaryti-kliento-pratimus">Uždaryti</button>
+      </div>
+      <p class="muted" style="font-size:.875rem">
+        Čia taisomas tik šio kliento jau priskirtas egzempliorius -- šablonas ir kiti klientai nepasikeičia.
+      </p>
+      ${(dienos || []).map((d) => {
+        const savi = (pratimai || []).filter((p) => p.client_day_id === d.id);
+        return `
+          <div style="margin-top:var(--s-300)">
+            <h3 style="font-size:1.0625rem">${esc(d.title)}</h3>
+            ${savi.length ? savi.map((p) => klientoPratimoRedagavimas(p)).join('') : '<p class="muted" style="font-size:.875rem">Pratimų nėra.</p>'}
+          </div>`;
+      }).join('')}
+    </div>`;
+
+  $('#uzdaryti-kliento-pratimus').addEventListener('click', () => { vieta.innerHTML = ''; });
+  for (const f of $$('.forma-kliento-pratimas')) f.addEventListener('submit', issaugokKlientoPratima);
+}
+
+function klientoPratimoRedagavimas(p) {
+  return `
+    <form class="forma-kliento-pratimas" data-id="${esc(p.id)}" novalidate
+      style="margin-top:var(--s-200);padding-top:var(--s-200);border-top:1px solid var(--hair-ink)">
+      <div class="field-row">
+        <div class="field" style="flex:0 0 auto">
+          <label style="font-weight:700">${esc(p.title)}</label>
+        </div>
+        <div class="field">
+          <label for="kp-tipas-${esc(p.id)}">Įrašymo tipas</label>
+          <select id="kp-tipas-${esc(p.id)}" name="log_type">
+            <option value="svoris"${p.log_type === 'svoris' || !p.log_type ? ' selected' : ''}>Svoris ir kartai</option>
+            <option value="kartai"${p.log_type === 'kartai' ? ' selected' : ''}>Tik kartai (be svorio)</option>
+            <option value="laikas"${p.log_type === 'laikas' ? ' selected' : ''}>Laikas (sekundėmis)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="kp-video-${esc(p.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="kp-video-${esc(p.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda" value="${esc(p.video_url || '')}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti</button>
+        <p class="note" id="kp-statusas-${esc(p.id)}" hidden></p>
+      </div>
+    </form>`;
+}
+
+async function issaugokKlientoPratima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const busena = $('#kp-statusas-' + id);
+
+  const { error } = await db.from('client_exercises').update({
+    log_type: String(fd.get('log_type') || 'svoris'),
+    video_url: String(fd.get('video') || '').trim() || null,
+  }).eq('id', id);
+
+  if (error) {
+    pranesk(busena, klaidaLT(error), 'error');
+    return;
+  }
+  pranesk(busena, 'Išsaugota ✓', 'ok');
+  clearTimeout(forma._laikmatis);
+  forma._laikmatis = setTimeout(() => valyk(busena), 4000);
 }
 
 async function trinkKlientoPrograma(id, vardas, clientId) {
