@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261001">
+<link rel="stylesheet" href="stilius.css?v=20261002">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -52,14 +52,14 @@
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav,
-} from './app.js?v=20261001';
+} from './app.js?v=20261002';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, MENESIAI, PASIEKIMAI,
   dataSuDiena, taskai,
-} from './tekstai.js?v=20261001';
+} from './tekstai.js?v=20261002';
 import {
-  siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena,
-} from './uzduociu-logika.js?v=20261001';
+  siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena, tikslas,
+} from './uzduociu-logika.js?v=20261002';
 
 const vidus = $('#turinys-vidus');
 const siandien = siandienLT();
@@ -104,12 +104,12 @@ async function paleisk() {
 async function ikelk() {
   const [u, a] = await Promise.all([
     db.from('client_challenges')
-      .select('id, title, description, category, xp, is_bonus, weekdays, active, position, created_at')
+      .select('id, title, description, category, xp, is_bonus, weekdays, active, position, created_at, target, unit, step')
       .eq('active', true)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true }),
     db.from('challenge_completions')
-      .select('id, challenge_id, day, xp')
+      .select('id, challenge_id, day, xp, amount')
       .order('day', { ascending: true }),
   ]);
   const klaida = u.error || a.error;
@@ -134,12 +134,14 @@ function pieskVisa() {
   const papildomos = papildomosDienai(uzduotys, siandien);
   const siandienAtlikimai = atlikimai.filter((x) => x.day === siandien);
   const siandienXp = siandienAtlikimai.reduce((n, x) => n + (x.xp || 0), 0);
-  const padaryta = reikia.filter((u) => st.atlikta.has(`${u.id}|${siandien}`)).length;
+  const padaryta = reikia.filter((u) => st.padaryta(u, siandien)).length;
   const liko = reikia.length - padaryta;
   const diena = reikia.length > 0 && liko === 0;
   const vardas = profilis?.full_name?.trim().split(' ')[0] || '';
 
-  const procentas = reikia.length ? Math.round((padaryta / reikia.length) * 100) : 0;
+  // Juosta pildosi ir dalinai atliktomis užduotimis (pvz. 3 iš 10 stiklinių).
+  const dalis = reikia.reduce((n, u) => n + Math.min(1, (st.kiekis.get(`${u.id}|${siandien}`) || 0) / tikslas(u)), 0);
+  const procentas = reikia.length ? Math.round((dalis / reikia.length) * 100) : 0;
   const levelProc = Math.max(0, Math.min(100,
     Math.round(((st.visoXp - st.lygioPradzia) / (st.kitasLygis - st.lygioPradzia)) * 100)));
 
@@ -153,21 +155,15 @@ function pieskVisa() {
     <section class="uzd-hero on-ink" aria-labelledby="uzd-antraste">
       <p class="label">${esc(dataSuDiena(siandien))}</p>
       <h1 id="uzd-antraste">${esc(T.labas(vardas))}</h1>
-      <div class="uzd-hero-eilute">
-        <div class="uzd-serija" aria-label="${esc(T.dabartineSerija)}">
-          <span class="uzd-serija-skaicius">${esc(T.serija(st.dabartineSerija))}</span>
-          ${st.dabartineSerija === 0 ? `<span class="uzd-mazas">${esc(T.serijosPasiulymas)}</span>` : ''}
+      <div class="uzd-lygis">
+        <div class="uzd-lygis-virsus">
+          <strong>${esc(T.lygis(st.lygis))}</strong>
+          <span>${esc(taskai(st.visoXp))}</span>
         </div>
-        <div class="uzd-lygis">
-          <div class="uzd-lygis-virsus">
-            <strong>${esc(T.lygis(st.lygis))}</strong>
-            <span>${esc(taskai(st.visoXp))}</span>
-          </div>
-          <div class="uzd-juosta" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${levelProc}" aria-label="${esc(T.lygis(st.lygis))}">
-            <i style="width:${levelProc}%"></i>
-          </div>
-          <span class="uzd-mazas">${esc(T.iki(st.kitasLygis - st.visoXp, st.lygis + 1))}</span>
+        <div class="uzd-juosta" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${levelProc}" aria-label="${esc(T.lygis(st.lygis))}">
+          <i style="width:${levelProc}%"></i>
         </div>
+        <span class="uzd-mazas">${esc(T.iki(st.kitasLygis - st.visoXp, st.lygis + 1))}</span>
       </div>
     </section>`;
 
@@ -211,7 +207,6 @@ function pieskVisa() {
   const statistika = `
     <section class="uzd-statai" aria-label="${esc(T.pazanga)}">
       ${statas(st.visoXp, T.visoXp)}
-      ${statas(st.ilgiausiaSerija, T.ilgiausiaSerija)}
       ${statas(st.pilnosDienos, T.pilnosDienos)}
       ${statas(st.atliktaViso, T.atliktosUzduotys)}
     </section>`;
@@ -225,12 +220,14 @@ function pieskVisa() {
         ${uzduotys.length ? statistika : ''}
         ${kalendoriusHtml(st)}
         ${uzduotys.length ? pasiekimaiHtml(st) : ''}
-        <p class="muted uzd-mazas-tamsus">${esc(T.aiskinimasSerija)}</p>
       </div>
     </div>`;
 
   for (const b of $$('.uzd-mygtukas')) {
-    b.addEventListener('click', () => perjunk(b.dataset.id));
+    b.addEventListener('click', () => keisk(b.dataset.id, 1));
+  }
+  for (const b of $$('.uzd-kiekio-mygtukas')) {
+    b.addEventListener('click', () => keisk(b.dataset.id, Number(b.dataset.kryptis)));
   }
   $('#men-atgal')?.addEventListener('click', () => keiskMenesi(-1));
   $('#men-pirmyn')?.addEventListener('click', () => keiskMenesi(1));
@@ -240,10 +237,26 @@ function statas(reiksme, pavadinimas) {
   return `<div class="uzd-stat"><strong>${esc(reiksme)}</strong><span>${esc(pavadinimas)}</span></div>`;
 }
 
+const sk = (n) => Number(n).toLocaleString('lt-LT');
+
+function kiekioTekstas(u, kiek) {
+  return `${sk(kiek)} / ${sk(tikslas(u))}${u.unit ? ' ' + u.unit : ''}`;
+}
+
 function uzduotiesEilute(u, st) {
-  const padaryta = st.atlikta.has(`${u.id}|${siandien}`);
+  const kiek = st.kiekis.get(`${u.id}|${siandien}`) || 0;
+  const padaryta = kiek >= tikslas(u);
   const kat = KATEGORIJOS[u.category] || KATEGORIJOS.iprociai;
-  return `
+  const zymos = `
+    <span class="uzd-zymos">
+      <span class="chip chip-quiet">${kat.ikona} ${esc(kat.pavadinimas)}</span>
+      ${u.is_bonus ? `<span class="chip chip-volt">${esc(T.papildoma)}</span>` : ''}
+      <span class="chip ${padaryta ? 'chip-ok' : 'chip-quiet'}">${padaryta ? esc(T.atlikta) : esc('+' + taskai(u.xp))}</span>
+    </span>`;
+
+  // Paprasta užduotis: vienas paspaudimas.
+  if (tikslas(u) === 1) {
+    return `
     <li class="uzd-eilute${padaryta ? ' padaryta' : ''}">
       <button class="uzd-mygtukas" type="button" data-id="${esc(u.id)}"
         aria-pressed="${padaryta}" aria-label="${esc(u.title + '. ' + (padaryta ? T.atsaukti : T.pazymeti))}">
@@ -251,13 +264,35 @@ function uzduotiesEilute(u, st) {
         <span class="uzd-tekstas">
           <strong>${esc(u.title)}</strong>
           ${u.description ? `<span class="uzd-aprasas">${esc(u.description)}</span>` : ''}
-          <span class="uzd-zymos">
-            <span class="chip chip-quiet">${kat.ikona} ${esc(kat.pavadinimas)}</span>
-            ${u.is_bonus ? `<span class="chip chip-volt">${esc(T.papildoma)}</span>` : ''}
-            <span class="chip ${padaryta ? 'chip-ok' : 'chip-quiet'}">${padaryta ? esc(T.atlikta) : esc('+' + taskai(u.xp))}</span>
-          </span>
+          ${zymos}
         </span>
       </button>
+    </li>`;
+  }
+
+  // Užduotis su kiekiu: pridedama dalimis per dieną.
+  const proc = Math.min(100, Math.round((kiek / tikslas(u)) * 100));
+  const zingsnis = Math.min(u.step || 1, tikslas(u));
+  return `
+    <li class="uzd-eilute uzd-su-kiekiu${padaryta ? ' padaryta' : ''}">
+      <div class="uzd-mygtukas uzd-mygtukas-kiekis">
+        <span class="uzd-zenklas" aria-hidden="true">${padaryta ? '✓' : ''}</span>
+        <span class="uzd-tekstas">
+          <strong>${esc(u.title)}</strong>
+          ${u.description ? `<span class="uzd-aprasas">${esc(u.description)}</span>` : ''}
+          <span class="uzd-juosta uzd-juosta-didele uzd-juosta-maza" role="progressbar" aria-valuemin="0" aria-valuemax="${tikslas(u)}" aria-valuenow="${Math.min(kiek, tikslas(u))}" aria-label="${esc(u.title)}">
+            <i style="width:${proc}%"></i>
+          </span>
+          <span class="uzd-kiekis-eilute">
+            <button class="uzd-kiekio-mygtukas" type="button" data-id="${esc(u.id)}" data-kryptis="-1"
+              aria-label="${esc(T.sumazinti + ': ' + u.title)}"${kiek <= 0 ? ' disabled' : ''}>−${zingsnis > 1 ? esc(sk(zingsnis)) : ''}</button>
+            <span class="uzd-kiekis" aria-live="polite">${esc(kiekioTekstas(u, kiek))}</span>
+            <button class="uzd-kiekio-mygtukas uzd-prideti" type="button" data-id="${esc(u.id)}" data-kryptis="1"
+              aria-label="${esc(T.prideti + ': ' + u.title)}"${padaryta ? ' disabled' : ''}>+${esc(sk(zingsnis))}</button>
+          </span>
+          ${zymos}
+        </span>
+      </div>
     </li>`;
 }
 
@@ -336,35 +371,53 @@ function pasiekimaiHtml(st) {
 // -----------------------------------------------------------------------------
 //  Žymėjimas
 // -----------------------------------------------------------------------------
-async function perjunk(id) {
+async function keisk(id, kryptis) {
   if (bukle) return;
   const u = uzduotys.find((x) => x.id === id);
   if (!u) return;
   bukle = true;
 
-  const buvo = apskaiciuok(uzduotys, atlikimai, siandien);
-  const buvoPilna = buvo.pilnos.has(siandien);
   const esamas = atlikimai.find((x) => x.challenge_id === id && x.day === siandien);
+  const buvo = esamas?.amount || 0;
+  const tiksl = tikslas(u);
+  // Paprasta užduotis tik įsijungia ir išsijungia, kitos keičiasi po žingsnį.
+  const nauja = tiksl === 1
+    ? (buvo >= 1 ? 0 : 1)
+    : Math.max(0, Math.min(tiksl, buvo + kryptis * (u.step || 1)));
+  if (nauja === buvo) { bukle = false; return; }
+
+  const buvoPilna = apskaiciuok(uzduotys, atlikimai, siandien).pilnos.has(siandien);
+  const stulpeliai = 'id, challenge_id, day, xp, amount';
 
   try {
-    if (esamas) {
+    let irasas = null;
+    if (nauja === 0) {
       const { error } = await db.from('challenge_completions').delete().eq('id', esamas.id);
       if (error) throw error;
       atlikimai = atlikimai.filter((x) => x.id !== esamas.id);
-      rodykToast(T.zymejimasAtsauktas);
-    } else {
-      const { data: naujas, error } = await db
-        .from('challenge_completions')
-        .insert({ client_id: sesijosId, challenge_id: id, day: siandien })
-        .select('id, challenge_id, day, xp')
-        .single();
+    } else if (esamas) {
+      const { data: atnaujinta, error } = await db.from('challenge_completions')
+        .update({ amount: nauja }).eq('id', esamas.id).select(stulpeliai).single();
       if (error) throw error;
+      irasas = atnaujinta;
+      atlikimai = atlikimai.map((x) => (x.id === esamas.id ? atnaujinta : x));
+    } else {
+      const { data: naujas, error } = await db.from('challenge_completions')
+        .insert({ client_id: sesijosId, challenge_id: id, day: siandien, amount: nauja })
+        .select(stulpeliai).single();
+      if (error) throw error;
+      irasas = naujas;
       atlikimai = [...atlikimai, naujas];
-      const dabar = apskaiciuok(uzduotys, atlikimai, siandien);
-      rodykToast(dabar.pilnos.has(siandien) && !buvoPilna
-        ? `${T.dienaBaigta} 🎉 ${T.uzduotisAtlikta(naujas.xp)}`
-        : T.uzduotisAtlikta(naujas.xp));
     }
+
+    const dabar = apskaiciuok(uzduotys, atlikimai, siandien);
+    const gauta = (irasas?.xp || 0) - (esamas?.xp || 0);
+    if (nauja === 0) rodykToast(T.zymejimasAtsauktas);
+    else if (nauja >= tiksl && buvo < tiksl) {
+      rodykToast(dabar.pilnos.has(siandien) && !buvoPilna
+        ? `${T.dienaBaigta} 🎉 ${T.uzduotisAtlikta(gauta)}`
+        : T.uzduotisAtlikta(gauta));
+    } else rodykToast(`${T.pazymeta}: ${kiekioTekstas(u, nauja)}`);
     pieskVisa();
   } catch (klaida) {
     rodykToast(klaidaLT(klaida) || T.klaidaIsaugoti, true);
