@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20260928">
+<link rel="stylesheet" href="stilius.css?v=20261001">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -123,7 +123,7 @@
 </footer>
 
 <script type="module">
-import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav } from './app.js?v=20260928';
+import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, formatuokTrukme } from './app.js?v=20261001';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -347,6 +347,7 @@ function piesPratimoProgresa(pagalPavadinima, raktas) {
 function pbSantrauka(irasai) {
   let pbSvoris = null;
   let pbKartai = null;
+  let pbTrukme = null;
   for (const i of irasai) {
     if (i.weight_kg != null && (!pbSvoris || i.weight_kg > pbSvoris.weight_kg
       || (i.weight_kg === pbSvoris.weight_kg && (i.reps ?? 0) > (pbSvoris.reps ?? 0)))) {
@@ -356,13 +357,16 @@ function pbSantrauka(irasai) {
       || (i.reps === pbKartai.reps && (i.weight_kg ?? 0) > (pbKartai.weight_kg ?? 0)))) {
       pbKartai = i;
     }
+    if (i.duration_seconds != null && (!pbTrukme || i.duration_seconds > pbTrukme.duration_seconds)) {
+      pbTrukme = i;
+    }
   }
-  return { pbSvoris, pbKartai };
+  return { pbSvoris, pbKartai, pbTrukme };
 }
 
 function pbBlokas(irasai) {
-  const { pbSvoris, pbKartai } = pbSantrauka(irasai);
-  if (!pbSvoris && !pbKartai) return '';
+  const { pbSvoris, pbKartai, pbTrukme } = pbSantrauka(irasai);
+  if (!pbSvoris && !pbKartai && !pbTrukme) return '';
 
   const kortos = [];
   if (pbSvoris) {
@@ -381,12 +385,29 @@ function pbBlokas(irasai) {
         <span class="pb-data">${esc(data(pbKartai.logged_at))}</span>
       </div>`);
   }
+  if (pbTrukme) {
+    kortos.push(`
+      <div class="pb-korta">
+        <span class="pb-etikete">PB trukmė</span>
+        <strong class="pb-reiksme">${esc(formatuokTrukme(pbTrukme.duration_seconds))}</strong>
+        <span class="pb-data">${esc(data(pbTrukme.logged_at))}</span>
+      </div>`);
+  }
   return `<div class="pb-tinklelis">${kortos.join('')}</div>`;
 }
 
 function setuTekstas(setai) {
   return setai.slice().sort((a, b) => (a.set_index ?? 0) - (b.set_index ?? 0))
-    .map((s) => `${s.weight_kg ?? '–'}kg × ${s.reps ?? '–'}`).join(' | ');
+    .map((s) => vienoSetoTekstas(s)).join(' | ');
+}
+
+/** Vieno seto tekstas priklauso nuo to, kas jame įrašyta -- svoris+kartai,
+ * vien kartai (be svorio pratimai), ar trukmė (laikas, pvz. planka). */
+function vienoSetoTekstas(s) {
+  if (s.duration_seconds != null) return formatuokTrukme(s.duration_seconds);
+  if (s.weight_kg != null) return `${s.weight_kg}kg × ${s.reps ?? '–'}`;
+  if (s.reps != null) return `${s.reps} k.`;
+  return '–';
 }
 
 function pastabosTekstas(setai) {

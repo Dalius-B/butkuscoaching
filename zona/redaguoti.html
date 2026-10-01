@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20260928">
+<link rel="stylesheet" href="stilius.css?v=20261001">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -108,7 +108,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   apskaiciuokSupersetuZenklus,
-} from './app.js?v=20260928';
+} from './app.js?v=20261001';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -301,6 +301,7 @@ function piesDienuSarasa() {
               <div class="pratimo-eilute-info">
                 <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
                 <div class="pratimo-meta muted" style="font-size:.8125rem">
+                  ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
                   ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
                   ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
                   ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
@@ -361,6 +362,14 @@ function piesDienuSarasa() {
             <div class="field">
               <label for="p-poilsis-${esc(d.id)}">Poilsis, sek</label>
               <input id="p-poilsis-${esc(d.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
+            </div>
+            <div class="field">
+              <label for="p-tipas-${esc(d.id)}">Įrašymo tipas</label>
+              <select id="p-tipas-${esc(d.id)}" name="log_type">
+                <option value="svoris">Svoris ir kartai</option>
+                <option value="kartai">Tik kartai (be svorio)</option>
+                <option value="laikas">Laikas (sekundėmis)</option>
+              </select>
             </div>
           </div>
           <div class="field-row">
@@ -434,6 +443,7 @@ async function kopijuokPratima(targetSectionId, sourceExerciseId) {
     notes: originalas.notes,
     video_url: originalas.video_url,
     superset_with_previous: false,
+    log_type: originalas.log_type || 'svoris',
     position: kiekSioje,
   });
 
@@ -583,6 +593,14 @@ function pratimoRedagavimoForma(p) {
           <label for="rp-poilsis-${esc(p.id)}">Poilsis, sek</label>
           <input id="rp-poilsis-${esc(p.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric" value="${p.rest_seconds ?? ''}">
         </div>
+        <div class="field">
+          <label for="rp-tipas-${esc(p.id)}">Įrašymo tipas</label>
+          <select id="rp-tipas-${esc(p.id)}" name="log_type">
+            <option value="svoris"${p.log_type === 'svoris' || !p.log_type ? ' selected' : ''}>Svoris ir kartai</option>
+            <option value="kartai"${p.log_type === 'kartai' ? ' selected' : ''}>Tik kartai (be svorio)</option>
+            <option value="laikas"${p.log_type === 'laikas' ? ' selected' : ''}>Laikas (sekundėmis)</option>
+          </select>
+        </div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -663,6 +681,7 @@ async function pridePratima(ev) {
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
     superset_with_previous: fd.get('superset') === 'on',
+    log_type: String(fd.get('log_type') || 'svoris'),
     position: kiekSioje,
   });
 
@@ -694,6 +713,7 @@ async function issaugokPratimoRedagavima(ev) {
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
     superset_with_previous: fd.get('superset') === 'on',
+    log_type: String(fd.get('log_type') || 'svoris'),
   }).eq('id', id);
 
   if (error) {

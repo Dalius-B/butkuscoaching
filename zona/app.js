@@ -120,6 +120,17 @@ export function programosSavaite(programa) {
   return Math.floor(dienuSkirtumas / 7) + 1;
 }
 
+/** Sekundės į skaitomą trukmę, pvz. "45s" arba "1 min 30 s". Naudojama ir
+ * programos setų lauko placeholder tekste, ir istorijos lentelėse -- viena
+ * vieta, kad abi visada rodytų tą patį formatą. */
+export function formatuokTrukme(sek) {
+  if (sek == null) return '';
+  if (sek < 60) return `${sek}s`;
+  const min = Math.floor(sek / 60);
+  const liks = sek % 60;
+  return liks ? `${min} min ${liks} s` : `${min} min`;
+}
+
 /**
  * Supersetų grupės -- ne atskiras stulpelis grupei, o vien tik gretimų
  * pratimų (pagal position) grandinė, kur kiekvienas paženklintas
