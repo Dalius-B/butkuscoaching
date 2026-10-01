@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261007';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261008';
 import {
-  KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261007';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261007';
+  KATEGORIJOS, SABLONAI, taskai, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
+} from './tekstai.js?v=20261008';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261008';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,6 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
+let laikotarpis = 14;     // kiek dienų atgal rodyti atlikimų istoriją
 
 export async function piesUzduotis(profiliai, savasId) {
   const vieta = $('#kortele-uzduotys');
@@ -69,7 +70,7 @@ async function ikelkKliento() {
   const [u, a] = await Promise.all([
     db.from('client_challenges').select('*').eq('client_id', pasirinktas)
       .order('position', { ascending: true }).order('created_at', { ascending: true }),
-    db.from('challenge_completions').select('id, challenge_id, day, xp').eq('client_id', pasirinktas)
+    db.from('challenge_completions').select('id, challenge_id, day, xp, amount').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
   ]);
   if (u.error || a.error) {
@@ -219,6 +220,115 @@ function prijunkFiltrus() {
   });
 }
 
+
+// -----------------------------------------------------------------------------
+//  Atlikimų istorija: ką klientas padarė kiekvieną dieną
+// -----------------------------------------------------------------------------
+const kiekisTekstas = (u, kiek) =>
+  `${Number(kiek).toLocaleString('lt-LT')} / ${Number(tikslas(u)).toLocaleString('lt-LT')}${u.unit ? ' ' + u.unit : ''}`;
+
+// "iš 1 užduoties", "iš 5 užduočių"
+const uzduociu = (n) => (n % 10 === 1 && n % 100 !== 11 ? 'užduoties' : 'užduočių');
+
+/** Užduotys, kurios turėjo būti tą dieną, ir ką klientas jose padarė. */
+function dienosEilutes(diena, atlikimaiPagalDiena) {
+  const wd = savaitesDiena(diena);
+  const padaryta = new Map((atlikimaiPagalDiena.get(diena) || []).map((a) => [a.challenge_id, a]));
+  const eilutes = [];
+  for (const u of uzduotys) {
+    const numatyta = u.active && u.weekdays.includes(wd) && dataLT(u.created_at) <= diena;
+    const irasas = padaryta.get(u.id);
+    if (!numatyta && !irasas) continue;
+    const kiek = irasas?.amount || 0;
+    eilutes.push({ u, kiek, irasas, atlikta: kiek >= tikslas(u), numatyta });
+  }
+  return eilutes;
+}
+
+function pieskIstorija() {
+  const vieta = $('#u-istorija');
+  if (!vieta) return;
+  const dabar = siandienLT();
+  const pagalDiena = new Map();
+  for (const a of atlikimai) {
+    if (!pagalDiena.has(a.day)) pagalDiena.set(a.day, []);
+    pagalDiena.get(a.day).push(a);
+  }
+
+  const dienos = [];
+  for (let i = 0; i < laikotarpis; i += 1) dienos.push(pridek(dabar, -i));
+  const duomenys = dienos.map((d) => ({ d, eilutes: dienosEilutes(d, pagalDiena) }));
+
+  // Suvestinė pagal užduotį: kelias dienas iš numatytų ji buvo atlikta.
+  const suvestine = new Map();
+  for (const { eilutes } of duomenys) {
+    for (const e of eilutes) {
+      const z = suvestine.get(e.u.id) || { u: e.u, numatyta: 0, atlikta: 0 };
+      if (e.numatyta) z.numatyta += 1;
+      if (e.atlikta) z.atlikta += 1;
+      suvestine.set(e.u.id, z);
+    }
+  }
+  const suvestinesEilutes = [...suvestine.values()].map((z) => {
+    const proc = z.numatyta ? Math.round((z.atlikta / z.numatyta) * 100) : 0;
+    const kat = KATEGORIJOS[z.u.category] || KATEGORIJOS.iprociai;
+    return `
+      <tr>
+        <td><strong>${esc(z.u.title)}</strong>${z.u.is_bonus ? ' <span class="chip chip-volt">Papildoma</span>' : ''}${z.u.active ? '' : ' <span class="chip chip-danger">Išjungta</span>'}</td>
+        <td>${kat.ikona} ${esc(kat.pavadinimas)}</td>
+        <td>${z.atlikta} iš ${z.numatyta} d.</td>
+        <td style="min-width:120px"><span class="uzd-juosta uzd-juosta-didele uzd-juosta-maza" style="display:block"><i style="width:${proc}%"></i></span></td>
+      </tr>`;
+  }).join('');
+
+  const dienuBlokai = duomenys.map(({ d, eilutes }, i) => {
+    const reikia = eilutes.filter((e) => e.numatyta && !e.u.is_bonus);
+    const reikiaPadaryta = reikia.filter((e) => e.atlikta).length;
+    const pilna = reikia.length > 0 && reikiaPadaryta === reikia.length;
+    const taskuDiena = eilutes.reduce((n, e) => n + (e.irasas?.xp || 0), 0);
+    const nieko = !eilutes.length;
+    let santrauka;
+    if (nieko) santrauka = '<span class="chip chip-quiet">Poilsio diena</span>';
+    else if (pilna) santrauka = '<span class="chip chip-ok">Pilna diena</span>';
+    else if (reikia.length) santrauka = `<span class="chip chip-quiet">Atlikta ${reikiaPadaryta} iš ${reikia.length} ${uzduociu(reikia.length)}</span>`;
+    else santrauka = '<span class="chip chip-quiet">Tik papildomos</span>';
+    const jau = d === dabar;
+    const turinys = nieko ? '' : `
+      <ul class="u-ist-sarasas">
+        ${eilutes.map((e) => {
+          const dalinai = !e.atlikta && e.kiek > 0;
+          let busena;
+          if (e.atlikta) busena = '<span class="chip chip-ok">Atlikta ✓</span>';
+          else if (dalinai) busena = `<span class="chip chip-volt">${esc(kiekisTekstas(e.u, e.kiek))}</span>`;
+          else busena = `<span class="chip chip-quiet">${jau ? 'Dar neatlikta' : 'Neatlikta'}</span>`;
+          const detale = e.u.target > 1 && e.atlikta ? ` <span class="muted">(${esc(kiekisTekstas(e.u, e.kiek))})</span>` : '';
+          return `<li class="${e.atlikta ? 'padaryta' : ''}">
+            <span class="u-ist-pavadinimas">${esc(e.u.title)}${detale}${e.u.is_bonus ? ' <span class="chip chip-volt">Papildoma</span>' : ''}${e.numatyta ? '' : ' <span class="chip chip-quiet">Ne pagal planą</span>'}</span>
+            ${busena}
+          </li>`;
+        }).join('')}
+      </ul>`;
+    return `
+      <details class="u-ist-diena"${i < 3 && !nieko ? ' open' : ''}>
+        <summary>
+          <span class="u-ist-data">${esc(dataSuDiena(d))}${jau ? ' <span class="muted">(šiandien)</span>' : ''}</span>
+          <span class="u-ist-santrauka">${santrauka}${taskuDiena ? `<span class="muted">${esc(taskai(taskuDiena))}</span>` : ''}</span>
+        </summary>
+        ${turinys}
+      </details>`;
+  }).join('');
+
+  vieta.innerHTML = `
+    ${suvestinesEilutes ? `
+      <h3 style="margin:var(--s-200) 0 var(--s-100)">Pagal užduotį</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Atlikta dienų</th><th></th></tr></thead>
+        <tbody>${suvestinesEilutes}</tbody>
+      </table></div>` : ''}
+    <h3 style="margin:var(--s-300) 0 var(--s-100)">Diena po dienos</h3>
+    <div class="u-ist-dienos">${dienuBlokai}</div>`;
+}
+
 function pieskKliento() {
   const dabar = siandienLT();
   const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, dabar);
@@ -245,9 +355,23 @@ function pieskKliento() {
       <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
         <div class="uzd-stat"><strong>${st.visoXp}</strong><span>Iš viso taškų</span></div>
         <div class="uzd-stat"><strong>${st.pilnosDienos}</strong><span>Pilnos dienos</span></div>
+        <div class="uzd-stat"><strong>${st.atliktaViso}</strong><span>Atliktos užduotys</span></div>
       </div>
       <p class="muted" style="margin:var(--s-300) 0 var(--s-100);font-size:.8125rem">Paskutinės 14 dienų (geltona: visos užduotys atliktos, rėmelis: atlikta dalis)</p>
       <div style="display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px">${juosta}</div>
+    </div>
+
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head">
+        <h2>Ką klientas atliko</h2>
+        <div class="field row-end" style="min-width:160px">
+          <label for="u-laikotarpis" class="sr-only">Laikotarpis</label>
+          <select id="u-laikotarpis">
+            ${[7, 14, 30, 60].map((n) => `<option value="${n}"${n === laikotarpis ? ' selected' : ''}>Paskutinės ${n} d.</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div id="u-istorija"></div>
     </div>
 
     <div class="card" style="margin-top:var(--s-300)">
@@ -345,6 +469,8 @@ function pieskKliento() {
   $('#u-atsaukti')?.addEventListener('click', () => { redaguojama = null; pieskKliento(); });
   prijunkFiltrus();
   pieskRezultatus();
+  $('#u-laikotarpis').addEventListener('change', (e) => { laikotarpis = Number(e.target.value); pieskIstorija(); });
+  pieskIstorija();
 }
 
 async function issaugok(ev) {
