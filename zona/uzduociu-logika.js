@@ -48,6 +48,37 @@ export function lygisPagalXp(xp) {
   return Math.floor(Math.sqrt(xp / 50)) + 1;
 }
 
+/**
+ * YouTube / Vimeo nuoroda -> įterpiamo grotuvo adresas, arba null, jei nuoroda
+ * nepažįstama. Priimamos tik šios dvi svetainės, tad kitų adresų į puslapį
+ * neįdedame.
+ */
+export function videoIterpimas(nuoroda) {
+  let u;
+  try { u = new URL(String(nuoroda || '').trim()); } catch { return null; }
+  if (u.protocol !== 'https:') return null;
+  const host = u.hostname.replace(/^(www|m)\./, '');
+  const id = /^[A-Za-z0-9_-]{6,20}$/;
+  if (host === 'youtu.be') {
+    const v = u.pathname.slice(1).split('/')[0];
+    return id.test(v) ? `https://www.youtube-nocookie.com/embed/${v}` : null;
+  }
+  if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+    const dalys = u.pathname.split('/').filter(Boolean);
+    const v = u.searchParams.get('v')
+      || (['shorts', 'embed', 'live'].includes(dalys[0]) ? dalys[1] : '');
+    return id.test(v || '') ? `https://www.youtube-nocookie.com/embed/${v}` : null;
+  }
+  if (host === 'vimeo.com' || host === 'player.vimeo.com') {
+    const dalys = u.pathname.split('/').filter(Boolean).filter((x) => x !== 'video');
+    const vid = dalys.find((x) => /^\d+$/.test(x));
+    if (!vid) return null;
+    const h = u.searchParams.get('h') || dalys.find((x) => /^[a-f0-9]{8,}$/i.test(x) && x !== vid);
+    return `https://player.vimeo.com/video/${vid}${h ? `?h=${h}` : ''}`;
+  }
+  return null;
+}
+
 /** Kiek užduoties žingsnių (stiklinių, žingsnių...) reikia dienai. */
 export const tikslas = (u) => Math.max(1, u.target || 1);
 
