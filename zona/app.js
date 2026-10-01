@@ -484,12 +484,16 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   const treneris = arTreneris === true;
   const vardas = profilis?.full_name?.trim() || profilis?.email || '';
 
-  const nuorodos = [{ href: 'mano.html', tekstas: 'Mano programa' }];
+  const nuorodos = [];
+  // "Tik užduotys" tipo klientas neturi nei programos, nei istorijos -- jam
+  // "Mano programa" nuorodos nerodome (treneriui, žinoma, visada rodoma).
+  if (treneris || profilis?.plan_type !== 'tik_uzduotys') {
+    nuorodos.push({ href: 'mano.html', tekstas: 'Mano programa' });
+  }
   // Savaitinė ataskaita yra kliento savaitinis pildomas dalykas -- treneriui
-  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. "Tik
-  // programa" tipo klientui ataskaitos taip pat nerodome -- jo paketas
-  // apima tik programą ir istoriją, be savaitinio patikrinimo.
-  if (!treneris && profilis?.plan_type !== 'tik_programa') {
+  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. Tik
+  // "pilnas" paketas apima savaitinį patikrinimą.
+  if (!treneris && profilis?.plan_type === 'pilnas') {
     nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
   }
   // Užduotys -- privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.

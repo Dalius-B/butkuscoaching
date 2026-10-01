@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261003">
+<link rel="stylesheet" href="stilius.css?v=20261004">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -72,7 +72,7 @@ import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   panaudokLaukiantiKvietima, programosSavaite,
   ikelkNuotraukas, nuotraukuNuorodos, NUOTRAUKU_LIMITAS, NUOTRAUKOS_MAX_MB,
-} from './app.js?v=20261003';
+} from './app.js?v=20261004';
 
 const vieta      = $('#turinio-vieta');
 const paantraste = $('#paantraste');
@@ -116,6 +116,13 @@ async function paleisk() {
         <p>Kvietimas dar nepatvirtintas. Kai Dalius patvirtins tavo prieigą, čia galėsi
            pildyti savaitinę ataskaitą.</p>
       </div>`;
+    return;
+  }
+
+  // "Tik užduotys" paketo klientas neturi nei programos, nei ataskaitos --
+  // jam čia nėra ko veikti, tiesiog grąžiname į jo vienintelę skiltį.
+  if (!s.arTreneris && profilis?.plan_type === 'tik_uzduotys') {
+    location.replace('uzduotys.html');
     return;
   }
 

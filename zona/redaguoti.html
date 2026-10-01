@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261003">
+<link rel="stylesheet" href="stilius.css?v=20261004">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -108,7 +108,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   apskaiciuokSupersetuZenklus,
-} from './app.js?v=20261003';
+} from './app.js?v=20261004';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -150,7 +150,7 @@ async function perkrauk() {
   const [p1, p2, p3] = await Promise.all([
     db.from('programs').select('id, title, summary, status').eq('id', programId).maybeSingle(),
     db.from('program_sections').select('id, title, notes, position').eq('program_id', programId).order('position', { ascending: true }),
-    db.from('profiles').select('id, email, full_name, status').order('full_name', { ascending: true }),
+    db.from('profiles').select('id, email, full_name, status, plan_type').order('full_name', { ascending: true }),
   ]);
 
   if (p1.error || !p1.data) {
@@ -746,6 +746,20 @@ async function trinkPratima(id, vardas) {
 // =============================================================================
 function piesPriskyrimus() {
   const eilutes = klientai.map((k) => {
+    // "Tik užduotys" paketo klientui programos neprisiskiriamos -- tą pačią
+    // taisyklę saugo ir assign_program() duomenų bazėje, čia tik nerodomas
+    // mygtukas, kurio paspaudus vis tiek gautum klaidą.
+    if (k.plan_type === 'tik_uzduotys') {
+      return `
+        <tr>
+          <td>
+            <strong>${esc(k.full_name || 'Be vardo')}</strong>
+            <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
+          </td>
+          <td><span class="chip chip-quiet">Tik užduotys</span></td>
+          <td><span class="muted" style="font-size:.8125rem">Programos nepriskiriamos</span></td>
+        </tr>`;
+    }
     const esamas = priskyrimai.find((a) => a.client_id === k.id && a.status !== 'finished');
     const priskirtas = Boolean(esamas);
     return `

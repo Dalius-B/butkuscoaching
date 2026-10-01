@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261003">
+<link rel="stylesheet" href="stilius.css?v=20261004">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -81,8 +81,8 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos,
-} from './app.js?v=20261003';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261003';
+} from './app.js?v=20261004';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261004';
 
 let profiliai = [];
 let savasId = null;
@@ -240,6 +240,13 @@ async function trinkPrograma(id, vardas) {
   await perkrauk();
 }
 
+/** Paketo žyma klientų ir kvietimų lentelėse -- viena vieta trims tipams. */
+function paketoText(planType) {
+  if (planType === 'tik_programa') return 'Tik programa';
+  if (planType === 'tik_uzduotys') return 'Tik užduotys';
+  return 'Pilnas';
+}
+
 // =============================================================================
 //  KLIENTAI
 // =============================================================================
@@ -258,7 +265,7 @@ function piesKlientus() {
           ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
         </td>
         <td><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
-        <td><span class="chip chip-quiet">${k.plan_type === 'tik_programa' ? 'Tik programa' : 'Pilnas'}</span></td>
+        <td><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
         <td>${k.uzduotys_ijungtos ? '<span class="chip chip-ok">Įjungtos</span>' : '<span class="chip chip-quiet">Išjungtos</span>'}</td>
         <td>${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
         <td>${esc(data(k.created_at))}</td>
@@ -516,7 +523,7 @@ function piesKvietimus() {
           ${k.note ? `<div class="muted" style="font-size:.8125rem">${esc(k.note)}</div>` : ''}
         </td>
         <td>${zyma}</td>
-        <td><span class="chip chip-quiet">${k.plan_type === 'tik_programa' ? 'Tik programa' : 'Pilnas'}</span></td>
+        <td><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
         <td>${k.expires_at ? esc(data(k.expires_at)) : '<span class="muted">neribotas</span>'}</td>
         <td>${esc(data(k.created_at))}</td>
         <td>
@@ -559,6 +566,7 @@ function piesKvietimus() {
             <select id="k-paketas">
               <option value="pilnas">Pilnas koučingas -- programa, istorija ir savaitinė ataskaita</option>
               <option value="tik_programa">Tik programa -- programa ir istorija, be savaitinės ataskaitos</option>
+              <option value="tik_uzduotys">Tik užduotys -- be programos, be istorijos</option>
             </select>
           </div>
           <div class="field">
