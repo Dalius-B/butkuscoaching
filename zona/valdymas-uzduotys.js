@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261002';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261003';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261002';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261002';
+} from './tekstai.js?v=20261003';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261003';
 
 let pasirinktas = null;   // kliento id
 let uzduotys = [];
