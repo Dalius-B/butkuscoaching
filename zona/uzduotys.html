@@ -40,6 +40,17 @@
   </div>
 </main>
 
+<dialog id="video-dialogas" aria-labelledby="video-antraste">
+  <div class="dialog-in">
+    <h2 id="video-antraste"></h2>
+    <div class="video-wrap" id="video-vieta"></div>
+    <div class="form-actions">
+      <a class="btn btn-ghost btn-sm" id="video-nuoroda" href="#" target="_blank" rel="noopener"></a>
+      <button class="btn btn-primary btn-sm" type="button" id="video-uzdaryti"></button>
+    </div>
+  </div>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <footer class="foot">
@@ -58,7 +69,7 @@ import {
   dataSuDiena, taskai,
 } from './tekstai.js?v=20261004';
 import {
-  siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena, tikslas,
+  siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, savaitesDiena, tikslas, videoIterpimas,
 } from './uzduociu-logika.js?v=20261004';
 
 const vidus = $('#turinys-vidus');
@@ -104,7 +115,7 @@ async function paleisk() {
 async function ikelk() {
   const [u, a] = await Promise.all([
     db.from('client_challenges')
-      .select('id, title, description, category, xp, is_bonus, weekdays, active, position, created_at, target, unit, step')
+      .select('id, title, description, category, xp, is_bonus, weekdays, active, position, created_at, target, unit, step, video_url')
       .eq('active', true)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true }),
@@ -226,6 +237,9 @@ function pieskVisa() {
   for (const b of $$('.uzd-mygtukas')) {
     b.addEventListener('click', () => keisk(b.dataset.id, 1));
   }
+  for (const b of $$('.uzd-video')) {
+    b.addEventListener('click', () => atidarykVideo(b.dataset.id));
+  }
   for (const b of $$('.uzd-kiekio-mygtukas')) {
     b.addEventListener('click', () => keisk(b.dataset.id, Number(b.dataset.kryptis)));
   }
@@ -242,6 +256,33 @@ const sk = (n) => Number(n).toLocaleString('lt-LT');
 function kiekioTekstas(u, kiek) {
   return `${sk(kiek)} / ${sk(tikslas(u))}${u.unit ? ' ' + u.unit : ''}`;
 }
+
+function videoMygtukas(u) {
+  if (!videoIterpimas(u.video_url)) return '';
+  return `
+      <div class="uzd-video-eilute">
+        <button class="btn btn-ghost btn-sm uzd-video" type="button" data-id="${esc(u.id)}">&#9654; ${esc(T.zidetiVideo)}</button>
+      </div>`;
+}
+
+function atidarykVideo(id) {
+  const u = uzduotys.find((x) => x.id === id);
+  const adresas = videoIterpimas(u?.video_url);
+  if (!adresas) return;
+  $('#video-antraste').textContent = u.title;
+  $('#video-vieta').innerHTML = `<iframe src="${esc(adresas)}" title="${esc(u.title)}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>`;
+  const nuoroda = $('#video-nuoroda');
+  nuoroda.href = u.video_url;
+  nuoroda.textContent = T.videoNaujameLange;
+  $('#video-uzdaryti').textContent = T.uzdaryti;
+  $('#video-dialogas').showModal();
+}
+
+const videoDialogas = $('#video-dialogas');
+// Uždarius langą grotuvas pašalinamas, kad video nustotų groti.
+videoDialogas.addEventListener('close', () => { $('#video-vieta').innerHTML = ''; });
+$('#video-uzdaryti').addEventListener('click', () => videoDialogas.close());
+videoDialogas.addEventListener('click', (ev) => { if (ev.target === videoDialogas) videoDialogas.close(); });
 
 function uzduotiesEilute(u, st) {
   const kiek = st.kiekis.get(`${u.id}|${siandien}`) || 0;
@@ -267,6 +308,7 @@ function uzduotiesEilute(u, st) {
           ${zymos}
         </span>
       </button>
+      ${videoMygtukas(u)}
     </li>`;
   }
 
@@ -293,6 +335,7 @@ function uzduotiesEilute(u, st) {
           ${zymos}
         </span>
       </div>
+      ${videoMygtukas(u)}
     </li>`;
 }
 

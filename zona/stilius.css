@@ -655,3 +655,11 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
   .uzd-kiekis { flex: 1 1 100%; order: -1; text-align: left; }
   .uzd-kiekio-mygtukas { flex: 1 1 0; min-width: 0; }
 }
+
+/* Užduoties video */
+.uzd-video-eilute { padding: 0 var(--s-200) var(--s-200) calc(var(--s-200) + 32px + var(--s-200)); }
+dialog .video-wrap { margin-top: 0; }
+@media (max-width: 620px) {
+  .uzd-video-eilute { padding-left: var(--s-200); }
+}
+#video-dialogas { margin: auto; }

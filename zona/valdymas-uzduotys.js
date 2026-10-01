@@ -7,7 +7,7 @@ import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261004';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
 } from './tekstai.js?v=20261004';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai } from './uzduociu-logika.js?v=20261004';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261004';
 
 let pasirinktas = null;   // kliento id
 let uzduotys = [];
@@ -76,6 +76,7 @@ function pieskKliento() {
         <td>
           <strong>${esc(x.title)}</strong>
           ${x.description ? `<div class="muted" style="font-size:.8125rem">${esc(x.description)}</div>` : ''}
+          ${x.video_url ? '<div class="muted" style="font-size:.8125rem">&#9654; Su video</div>' : ''}
           ${x.target > 1 ? `<div class="muted" style="font-size:.8125rem">Per dieną: ${esc(Number(x.target).toLocaleString('lt-LT'))}${x.unit ? ' ' + esc(x.unit) : ''}, vienas paspaudimas +${esc(Number(x.step).toLocaleString('lt-LT'))}</div>` : ''}
         </td>
         <td>${kat.ikona} ${esc(kat.pavadinimas)}</td>
@@ -173,6 +174,11 @@ function pieskKliento() {
             </select>
           </div>
         </div>
+        <div class="field">
+          <label for="u-video">Video nuoroda <span class="hint">(neprivaloma, YouTube arba Vimeo)</span></label>
+          <input id="u-video" type="url" maxlength="500" placeholder="https://www.youtube.com/watch?v=..." value="${esc(r?.video_url || '')}">
+          <span class="hint">Klientas prie užduoties matys mygtuką „Žiūrėti video“. Filmuok telefonu, įkelk į YouTube kaip „Unlisted“ (nematomas paieškoje) ir įklijuok nuorodą čia.</span>
+        </div>
         <div class="field-row" style="margin-top:var(--s-300)">
           <div class="field">
             <label for="u-kiekis">Kiek per dieną <span class="hint">(1 = paprasta užduotis)</span></label>
@@ -234,7 +240,14 @@ async function issaugok(ev) {
   if (!Number.isInteger(kiekis) || kiekis < 1 || kiekis > 100000) { pranesk(zinute, 'Kiekis per dieną turi būti skaičius nuo 1 iki 100 000.', 'error'); return; }
   if (!Number.isInteger(zingsnis) || zingsnis < 1 || zingsnis > kiekis) { pranesk(zinute, 'Žingsnis turi būti skaičius nuo 1 iki dienos kiekio.', 'error'); return; }
 
+  const video = $('#u-video').value.trim();
+  if (video && !videoIterpimas(video)) {
+    pranesk(zinute, 'Video nuoroda netinka. Įklijuok pilną YouTube arba Vimeo nuorodą, prasidedančią https://.', 'error');
+    return;
+  }
+
   const eilute = {
+    video_url: video,
     target: kiekis,
     unit: $('#u-vienetas').value.trim(),
     step: zingsnis,
