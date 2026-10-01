@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261006';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261007';
 import {
   KATEGORIJOS, SABLONAI, taskai, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261006';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261006';
+} from './tekstai.js?v=20261007';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas } from './uzduociu-logika.js?v=20261007';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -82,10 +82,8 @@ async function ikelkKliento() {
   pieskKliento();
 }
 
-function pieskKliento() {
-  const dabar = siandienLT();
-  const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, dabar);
-  const eilutes = uzduotys.map((x) => {
+function eilutesHtml(sarasas) {
+  return sarasas.map((x) => {
     const kat = KATEGORIJOS[x.category] || KATEGORIJOS.iprociai;
     return `
       <tr>
@@ -111,7 +109,119 @@ function pieskKliento() {
         </td>
       </tr>`;
   }).join('');
+}
 
+// -----------------------------------------------------------------------------
+//  Filtrai (veikia tik jau užkrautame sąraše, duomenų bazės neliečia)
+// -----------------------------------------------------------------------------
+const TUSCI_FILTRAI = { q: '', kategorija: '', diena: '', tipas: '', busena: '' };
+let filtrai = { ...TUSCI_FILTRAI };
+
+function filtruotos() {
+  const q = filtrai.q.trim().toLowerCase();
+  return uzduotys.filter((x) => {
+    if (q && !`${x.title} ${x.description || ''}`.toLowerCase().includes(q)) return false;
+    if (filtrai.kategorija && x.category !== filtrai.kategorija) return false;
+    if (filtrai.diena && !x.weekdays.includes(Number(filtrai.diena))) return false;
+    if (filtrai.tipas === 'privaloma' && x.is_bonus) return false;
+    if (filtrai.tipas === 'papildoma' && !x.is_bonus) return false;
+    if (filtrai.tipas === 'su_video' && !x.video_url) return false;
+    if (filtrai.tipas === 'su_kiekiu' && !(x.target > 1)) return false;
+    if (filtrai.busena === 'aktyvi' && !x.active) return false;
+    if (filtrai.busena === 'isjungta' && x.active) return false;
+    return true;
+  });
+}
+
+function filtruBlokas() {
+  const pasirinkimas = (reiksme, tekstas, dabartine) =>
+    `<option value="${esc(reiksme)}"${dabartine === reiksme ? ' selected' : ''}>${esc(tekstas)}</option>`;
+  return `
+    <div class="u-filtrai">
+      <div class="field">
+        <label for="f-q">Paieška</label>
+        <input id="f-q" type="search" placeholder="Ieškoti pagal pavadinimą" value="${esc(filtrai.q)}">
+      </div>
+      <div class="field">
+        <label for="f-kategorija">Kategorija</label>
+        <select id="f-kategorija">
+          ${pasirinkimas('', 'Visos', filtrai.kategorija)}
+          ${Object.entries(KATEGORIJOS).map(([k, v]) => pasirinkimas(k, `${v.ikona} ${v.pavadinimas}`, filtrai.kategorija)).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-diena">Diena</label>
+        <select id="f-diena">
+          ${pasirinkimas('', 'Visos dienos', filtrai.diena)}
+          ${[1, 2, 3, 4, 5, 6, 7].map((d) => pasirinkimas(String(d), SAVAITES_DIENOS[d], filtrai.diena)).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-tipas">Tipas</label>
+        <select id="f-tipas">
+          ${pasirinkimas('', 'Visi', filtrai.tipas)}
+          ${pasirinkimas('privaloma', 'Privalomos', filtrai.tipas)}
+          ${pasirinkimas('papildoma', 'Papildomos', filtrai.tipas)}
+          ${pasirinkimas('su_kiekiu', 'Su kiekiu per dieną', filtrai.tipas)}
+          ${pasirinkimas('su_video', 'Su video', filtrai.tipas)}
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-busena">Būsena</label>
+        <select id="f-busena">
+          ${pasirinkimas('', 'Visos', filtrai.busena)}
+          ${pasirinkimas('aktyvi', 'Aktyvios', filtrai.busena)}
+          ${pasirinkimas('isjungta', 'Išjungtos', filtrai.busena)}
+        </select>
+      </div>
+      <div class="field u-filtrai-valyti">
+        <button class="btn btn-ghost btn-sm" type="button" id="f-valyti">Išvalyti filtrus</button>
+      </div>
+    </div>`;
+}
+
+function pieskRezultatus() {
+  const rodomos = filtruotos();
+  const filtruojama = Object.values(filtrai).some(Boolean);
+  $('#u-skaicius').textContent = filtruojama ? `Rodoma ${rodomos.length} iš ${uzduotys.length}` : String(uzduotys.length);
+  const vieta = $('#u-rezultatai');
+  if (!uzduotys.length) {
+    vieta.innerHTML = '<p class="muted">Šiam klientui užduočių dar nėra. Pridėk pirmą žemiau.</p>';
+    return;
+  }
+  if (!rodomos.length) {
+    vieta.innerHTML = '<p class="muted">Pagal pasirinktus filtrus užduočių nerasta.</p>';
+    return;
+  }
+  vieta.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Taškai</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
+      <tbody>${eilutesHtml(rodomos)}</tbody>
+    </table></div>`;
+  for (const b of $$('.u-red')) b.addEventListener('click', () => { redaguojama = b.dataset.id; pieskKliento(); $('#u-forma').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+  for (const b of $$('.u-jungti')) b.addEventListener('click', () => perjunkAktyvuma(b.dataset.id));
+  for (const b of $$('.u-trinti')) b.addEventListener('click', () => trink(b.dataset.id));
+}
+
+function prijunkFiltrus() {
+  const rysys = (id, raktas, ivykis) => {
+    $(id)?.addEventListener(ivykis, (e) => { filtrai[raktas] = e.target.value; pieskRezultatus(); });
+  };
+  rysys('#f-q', 'q', 'input');
+  rysys('#f-kategorija', 'kategorija', 'change');
+  rysys('#f-diena', 'diena', 'change');
+  rysys('#f-tipas', 'tipas', 'change');
+  rysys('#f-busena', 'busena', 'change');
+  $('#f-valyti')?.addEventListener('click', () => {
+    filtrai = { ...TUSCI_FILTRAI };
+    for (const [id, v] of [['#f-q', ''], ['#f-kategorija', ''], ['#f-diena', ''], ['#f-tipas', ''], ['#f-busena', '']]) $(id).value = v;
+    pieskRezultatus();
+  });
+}
+
+function pieskKliento() {
+  const dabar = siandienLT();
+  const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, dabar);
   // Paskutinių 14 dienų juosta: pilna / dalinė / praleista.
   const dienos = [];
   for (let i = 13; i >= 0; i -= 1) dienos.push(pridek(dabar, -i));
@@ -141,12 +251,9 @@ function pieskKliento() {
     </div>
 
     <div class="card" style="margin-top:var(--s-300)">
-      <div class="card-head"><h2>Užduotys</h2><span class="row-end muted">${uzduotys.length}</span></div>
-      ${uzduotys.length ? `
-        <div class="table-wrap"><table>
-          <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Taškai</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
-          <tbody>${eilutes}</tbody>
-        </table></div>` : '<p class="muted">Šiam klientui užduočių dar nėra. Pridėk pirmą žemiau.</p>'}
+      <div class="card-head"><h2>Užduotys</h2><span class="row-end muted" id="u-skaicius"></span></div>
+      ${uzduotys.length ? filtruBlokas() : ''}
+      <div id="u-rezultatai"></div>
     </div>
 
     <div class="card" style="margin-top:var(--s-300)">
@@ -236,9 +343,8 @@ function pieskKliento() {
   });
   $('#u-forma').addEventListener('submit', issaugok);
   $('#u-atsaukti')?.addEventListener('click', () => { redaguojama = null; pieskKliento(); });
-  for (const b of $$('.u-red')) b.addEventListener('click', () => { redaguojama = b.dataset.id; pieskKliento(); $('#u-forma').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
-  for (const b of $$('.u-jungti')) b.addEventListener('click', () => perjunkAktyvuma(b.dataset.id));
-  for (const b of $$('.u-trinti')) b.addEventListener('click', () => trink(b.dataset.id));
+  prijunkFiltrus();
+  pieskRezultatus();
 }
 
 async function issaugok(ev) {

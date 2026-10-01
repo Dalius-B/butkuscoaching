@@ -663,3 +663,8 @@ dialog .video-wrap { margin-top: 0; }
   .uzd-video-eilute { padding-left: var(--s-200); }
 }
 #video-dialogas { margin: auto; }
+
+/* Trenerio užduočių filtrai */
+.u-filtrai { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-200); margin-bottom: var(--s-200); align-items: end; }
+.u-filtrai .field + .field { margin-top: 0; }
+.u-filtrai-valyti { justify-content: flex-end; }
