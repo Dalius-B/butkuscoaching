@@ -668,3 +668,21 @@ dialog .video-wrap { margin-top: 0; }
 .u-filtrai { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-200); margin-bottom: var(--s-200); align-items: end; }
 .u-filtrai .field + .field { margin-top: 0; }
 .u-filtrai-valyti { justify-content: flex-end; }
+
+/* Kliento atlikimų istorija trenerio skydelyje */
+.u-ist-dienos { display: flex; flex-direction: column; gap: var(--s-75); }
+.u-ist-diena { background: var(--white); border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--hair-ink); }
+.u-ist-diena summary {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s-75) var(--s-200);
+  padding: var(--s-100) var(--s-200); min-height: 48px; cursor: pointer; list-style: none;
+}
+.u-ist-diena summary::-webkit-details-marker { display: none; }
+.u-ist-diena summary::before { content: '▸'; margin-right: var(--s-75); color: var(--ink-soft); }
+.u-ist-diena[open] summary::before { content: '▾'; }
+.u-ist-data { font-weight: 600; flex: 1 1 200px; }
+.u-ist-santrauka { display: flex; align-items: center; gap: var(--s-100); font-size: 0.875rem; }
+.u-ist-sarasas { border-top: 1px solid var(--hair-ink); }
+.u-ist-sarasas li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--s-75) var(--s-200); padding: var(--s-100) var(--s-200); }
+.u-ist-sarasas li + li { border-top: 1px solid var(--hair-ink); }
+.u-ist-sarasas li.padaryta .u-ist-pavadinimas { color: var(--ink-soft); }
+.u-ist-pavadinimas { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
