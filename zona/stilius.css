@@ -686,3 +686,6 @@ dialog .video-wrap { margin-top: 0; }
 .u-ist-sarasas li + li { border-top: 1px solid var(--hair-ink); }
 .u-ist-sarasas li.padaryta .u-ist-pavadinimas { color: var(--ink-soft); }
 .u-ist-pavadinimas { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+
+.u-savaite { display: flex; align-items: center; gap: var(--s-100); font-weight: 600; font-size: 0.9375rem; }
+.u-savaite span { min-width: 12ch; text-align: center; }
