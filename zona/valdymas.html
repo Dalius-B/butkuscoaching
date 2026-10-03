@@ -359,6 +359,7 @@ function rodykKlientoProgramas(clientId) {
       <td>${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
       <td>
         <div class="row">
+          <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
           <button class="btn btn-ghost btn-sm redaguoti-kliento-pratimus" type="button" data-id="${esc(a.id)}">Pratimai</button>
           <button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button>
         </div>

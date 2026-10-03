@@ -139,14 +139,19 @@ async function paleisk() {
     pranesk($('#pranesimas'), 'Trūksta programos adreso. Grįžk į savo programų sąrašą.', 'error');
     return;
   }
-  $('#atgal-nuoroda').href = 'programa.html?id=' + encodeURIComponent(programId);
+  if (s.arTreneris) {
+    $('#atgal-nuoroda').href = 'valdymas.html';
+    $('#atgal-nuoroda').textContent = '← Valdymas';
+  } else {
+    $('#atgal-nuoroda').href = 'programa.html?id=' + encodeURIComponent(programId);
+  }
 
-  await ikelk(s.vartotojas.id);
+  await ikelk(s.arTreneris);
 }
 
-async function ikelk(vartotojoId) {
+async function ikelk(arTreneris) {
   const { data: programa, error: pKlaida } = await db
-    .from('client_programs').select('id, title, status').eq('id', programId).maybeSingle();
+    .from('client_programs').select('id, title, status, client_id').eq('id', programId).maybeSingle();
 
   if (pKlaida || !programa) {
     $('#kraunasi').hidden = true;
@@ -154,13 +159,24 @@ async function ikelk(vartotojoId) {
     return;
   }
 
-  $('#paantraste').textContent = programa.title;
+  // Treneriui rodomas kliento vardas -- jis gali žiūrėti bet kurio
+  // kliento istoriją, tad be vardo neaišku, kieno duomenis mato.
+  let antrastesTekstas = programa.title;
+  if (arTreneris) {
+    const { data: klientas } = await db
+      .from('profiles').select('full_name, email').eq('id', programa.client_id).maybeSingle();
+    const vardas = klientas?.full_name?.trim() || klientas?.email || 'Klientas';
+    antrastesTekstas = `${programa.title} — ${vardas}`;
+  }
+  $('#paantraste').textContent = antrastesTekstas;
   document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';
 
   if (programa.status === 'finished') {
     $('#ankstesnes-zyma').hidden = false;
-    $('#atgal-nuoroda').href = 'mano.html';
-    $('#atgal-nuoroda').textContent = '← Mano programos';
+    if (!arTreneris) {
+      $('#atgal-nuoroda').href = 'mano.html';
+      $('#atgal-nuoroda').textContent = '← Mano programos';
+    }
   }
 
   const { data: dienos, error: dKlaida } = await db
@@ -183,7 +199,7 @@ async function ikelk(vartotojoId) {
 
   const pratimuId = (pratimai || []).map((p) => p.id);
   const { data: irasai, error: iKlaida } = pratimuId.length
-    ? await db.from('exercise_logs').select('*').eq('client_id', vartotojoId).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
+    ? await db.from('exercise_logs').select('*').eq('client_id', programa.client_id).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
     : { data: [] };
   if (iKlaida) {
     $('#kraunasi').hidden = true;
