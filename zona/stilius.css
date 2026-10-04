@@ -47,6 +47,13 @@ ul, ol { list-style: none; }
 html {
   scroll-padding-top: calc(var(--nav-h) + 24px);
   -webkit-text-size-adjust: 100%;
+  /* Apsaugos tinklelis: jei kažkur (ypač telefone, kur šriftų matavimai ir
+     subpikselių apvalinimas skiriasi nuo darbalaukio) koks nors elementas
+     per klaidą tampa truputį platesnis už ekraną, visas puslapis tampa
+     slenkamas į šoną ir antraštė su turiniu pasislenka vienas nuo kito.
+     Tyčia slenkamiems blokams (pvz. .table-wrap lentelėms) tai netrukdo --
+     jie turi savo vidinį slinkimą, nepriklausomą nuo šios taisyklės. */
+  overflow-x: hidden;
 }
 
 body {
