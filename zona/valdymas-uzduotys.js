@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261009';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261010';
 import {
   KATEGORIJOS, SABLONAI, taskai, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261009';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261009';
+} from './tekstai.js?v=20261010';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261010';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -333,7 +333,7 @@ function pieskIstorija() {
         }).join('')}
       </ul>`;
     return `
-      <details class="u-ist-diena"${!nieko ? ' open' : ''}>
+      <details class="u-ist-diena">
         <summary>
           <span class="u-ist-data">${esc(dataSuDiena(d))}${jau ? ' <span class="muted">(šiandien)</span>' : ''}</span>
           <span class="u-ist-santrauka">${santrauka}${taskuDiena ? `<span class="muted">${esc(taskai(taskuDiena))}</span>` : ''}</span>
@@ -352,6 +352,37 @@ function pieskIstorija() {
     <h3 style="margin:var(--s-300) 0 var(--s-100)">Diena po dienos</h3>
     <div class="u-ist-dienos">${dienuBlokai}</div>`;
 }
+
+
+// -----------------------------------------------------------------------------
+//  Savaitės planas: kokios užduotys priskirtos kiekvienai savaitės dienai
+// -----------------------------------------------------------------------------
+function savaitesPlanas() {
+  const siandienWd = savaitesDiena(siandienLT());
+  const aktyvios = uzduotys.filter((x) => x.active);
+  const stulpeliai = [1, 2, 3, 4, 5, 6, 7].map((d) => {
+    const dienos = aktyvios.filter((x) => x.weekdays.includes(d));
+    const privalomos = dienos.filter((x) => !x.is_bonus);
+    const papildomos = dienos.filter((x) => x.is_bonus);
+    const eilute = (x) => {
+      const kat = KATEGORIJOS[x.category] || KATEGORIJOS.iprociai;
+      return `<li><span aria-hidden="true">${kat.ikona}</span><span>${esc(x.title)}</span></li>`;
+    };
+    return `
+      <div class="u-plano-diena${d === siandienWd ? ' siandien' : ''}">
+        <div class="u-plano-virsus">
+          <strong>${esc(SAVAITES_DIENOS[d])}</strong>
+          <span class="muted">${dienos.length ? `${dienos.length} ${uzduociuVard(dienos.length)}` : 'poilsio diena'}</span>
+        </div>
+        ${dienos.length ? `<ul>${privalomos.map(eilute).join('')}</ul>` : ''}
+        ${papildomos.length ? `<div class="u-plano-papildomos"><span class="chip chip-volt">Papildomos</span><ul>${papildomos.map(eilute).join('')}</ul></div>` : ''}
+      </div>`;
+  }).join('');
+  return `<div class="u-planas">${stulpeliai}</div>`;
+}
+
+// 1 užduotis, 2 užduotys, 10 užduočių
+const uzduociuVard = (n) => (n % 10 === 1 && n % 100 !== 11 ? 'užduotis' : (n % 10 === 0 || (n % 100 >= 11 && n % 100 <= 19)) ? 'užduočių' : 'užduotys');
 
 function pieskKliento() {
   const dabar = siandienLT();
@@ -383,6 +414,12 @@ function pieskKliento() {
       </div>
       <p class="muted" style="margin:var(--s-300) 0 var(--s-100);font-size:.8125rem">Paskutinės 14 dienų (geltona: visos užduotys atliktos, rėmelis: atlikta dalis)</p>
       <div style="display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px">${juosta}</div>
+    </div>
+
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head"><h2>Savaitės planas</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-200);font-size:.875rem">Kokios užduotys priskirtos kiekvienai savaitės dienai. Rodomos tik įjungtos užduotys.</p>
+      ${savaitesPlanas()}
     </div>
 
     <div class="card" style="margin-top:var(--s-300)">
