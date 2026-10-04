@@ -696,3 +696,15 @@ dialog .video-wrap { margin-top: 0; }
 
 .u-savaite { display: flex; align-items: center; gap: var(--s-100); font-weight: 600; font-size: 0.9375rem; }
 .u-savaite span { min-width: 12ch; text-align: center; }
+
+/* Savaitės planas (trenerio skydelis) */
+.u-planas { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap: var(--s-100); }
+.u-plano-diena { background: var(--white); border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--hair-ink); padding: var(--s-200); display: flex; flex-direction: column; gap: var(--s-100); }
+.u-plano-diena.siandien { box-shadow: inset 0 0 0 2px var(--ink); }
+.u-plano-virsus { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-100); flex-wrap: wrap; }
+.u-plano-virsus strong { font-weight: 700; }
+.u-plano-virsus .muted { font-size: 0.8125rem; }
+.u-plano-diena ul { display: flex; flex-direction: column; gap: var(--s-75); }
+.u-plano-diena li { display: flex; gap: var(--s-75); font-size: 0.875rem; line-height: 1.35; }
+.u-plano-papildomos { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-50); }
+.u-plano-papildomos .chip { align-self: flex-start; }
