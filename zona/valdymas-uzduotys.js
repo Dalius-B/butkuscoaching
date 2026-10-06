@@ -30,6 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
+let suvestineAtverta = false; // ar išskleista suvestinė "Pagal užduotį"
 let savaitesPradzia = null; // rodomos savaitės pirmadienis (YYYY-MM-DD)
 
 export async function piesUzduotis(profiliai, savasId) {
@@ -344,13 +345,19 @@ function pieskIstorija() {
 
   vieta.innerHTML = `
     ${suvestinesEilutes ? `
-      <h3 style="margin:var(--s-200) 0 var(--s-100)">Pagal užduotį</h3>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Atlikta dienų</th><th></th></tr></thead>
-        <tbody>${suvestinesEilutes}</tbody>
-      </table></div>` : ''}
+      <details class="u-ist-diena u-ist-suvestine"${suvestineAtverta ? ' open' : ''}>
+        <summary>
+          <span class="u-ist-data">Pagal užduotį</span>
+          <span class="u-ist-santrauka muted">${suvestine.size} ${uzduociuVard(suvestine.size)}</span>
+        </summary>
+        <div class="table-wrap" style="margin:0;padding:0 var(--s-100) var(--s-100)"><table>
+          <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Atlikta dienų</th><th></th></tr></thead>
+          <tbody>${suvestinesEilutes}</tbody>
+        </table></div>
+      </details>` : ''}
     <h3 style="margin:var(--s-300) 0 var(--s-100)">Diena po dienos</h3>
     <div class="u-ist-dienos">${dienuBlokai}</div>`;
+  $('.u-ist-suvestine')?.addEventListener('toggle', (e) => { suvestineAtverta = e.target.open; });
 }
 
 
