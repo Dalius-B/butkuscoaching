@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261010">
+<link rel="stylesheet" href="stilius.css?v=20261011">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -72,7 +72,7 @@ import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   panaudokLaukiantiKvietima, programosSavaite,
   ikelkNuotraukas, nuotraukuNuorodos, NUOTRAUKU_LIMITAS, NUOTRAUKOS_MAX_MB,
-} from './app.js?v=20261010';
+} from './app.js?v=20261011';
 
 const vieta      = $('#turinio-vieta');
 const paantraste = $('#paantraste');
@@ -181,7 +181,7 @@ function piesTurini(savaite) {
           </div>
           <div class="field">
             <label for="f-weight">Koks tavo svoris šią savaitę (kg)</label>
-            <input id="f-weight" name="weight_kg" type="number" required min="25" max="400" step="0.1" inputmode="decimal">
+            <input id="f-weight" name="weight_kg" type="text" required inputmode="decimal" placeholder="Pvz., 79.5" pattern="[0-9]{1,3}([.,][0-9]{1,2})?">
           </div>
           <div class="field" role="group" aria-labelledby="lbl-sessions">
             <span class="legend-inline" id="lbl-sessions">Kiek treniruočių atlikai šią savaitę</span>
@@ -327,13 +327,8 @@ function skale(vardas, klausimas, kaireEnd, desineEnd) {
   return `
     <div class="field" role="group" aria-labelledby="${idAtt}">
       <span class="legend-inline" id="${idAtt}">${esc(klausimas)}</span>
-      <div class="scale-wrap">
-        <div class="scale" role="radiogroup" aria-labelledby="${idAtt}">${opcijos}</div>
-        <div class="scale-ends" aria-hidden="true">
-          <span class="scale-end">${esc(kaireEnd)}</span>
-          <span class="scale-end">${esc(desineEnd)}</span>
-        </div>
-      </div>
+      <p class="scale-hint">1 = ${esc(kaireEnd)} &middot; 10 = ${esc(desineEnd)}</p>
+      <div class="scale" role="radiogroup" aria-labelledby="${idAtt}">${opcijos}</div>
     </div>`;
 }
 
@@ -372,6 +367,17 @@ async function siųskAtaskaita(ev) {
   }
 
   const fd = new FormData(forma);
+
+  // Lietuviška klaviatūra kablelį laiko kableliu, ne tašku -- "79,5" turi
+  // reikšti tą patį, ką ir "79.5", ne būti atmesta kaip neteisingas skaičius.
+  const svoris = Number(String(fd.get('weight_kg') || '').trim().replace(',', '.'));
+  if (!svoris || Number.isNaN(svoris) || svoris < 25 || svoris > 400) {
+    btn.disabled = false;
+    btn.textContent = 'Siųsti ataskaitą';
+    pranesk($('#formosPranesimas'), 'Įrašyk savo svorį kilogramais, tarp 25 ir 400 (pvz., 79.5).', 'error');
+    return;
+  }
+
   const eilute = {
     user_id: vartotojas.id,
     email: vartotojas.email,
@@ -382,7 +388,7 @@ async function siųskAtaskaita(ev) {
     pain_status: fd.get('pain_status'),
     pain_detail: fd.get('pain_detail') || null,
     avg_daily_steps: fd.get('avg_daily_steps') ? Number(fd.get('avg_daily_steps')) : null,
-    weight_kg: Number(fd.get('weight_kg')),
+    weight_kg: svoris,
     sleep_hours: fd.get('sleep_hours'),
     sleep_quality: Number(fd.get('sleep_quality')),
     sleep_disruptions: fd.get('sleep_disruptions') || null,
@@ -394,8 +400,10 @@ async function siųskAtaskaita(ev) {
     biggest_challenge: fd.get('biggest_challenge'),
     additional_notes: fd.get('additional_notes') || null,
     program_adjustment: fd.get('program_adjustment') || null,
-    photo_paths: nuotraukuKeliai.length ? nuotraukuKeliai : null,
   };
+  // Siunčiama tik kai iš tiesų yra nuotraukų -- jei kažkas nenaudoja šios
+  // funkcijos, ataskaita nepriklauso nuo photo_paths stulpelio egzistavimo.
+  if (nuotraukuKeliai.length) eilute.photo_paths = nuotraukuKeliai;
 
   btn.textContent = 'Siunčiama';
 

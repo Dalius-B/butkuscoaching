@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261010">
+<link rel="stylesheet" href="stilius.css?v=20261011">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -168,7 +168,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav, programosSavaite,
   apskaiciuokSupersetuZenklus, formatuokTrukme,
-} from './app.js?v=20261010';
+} from './app.js?v=20261011';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -430,7 +430,7 @@ function pratimoKortele(p, supersetoZenklas) {
     setuEilutes = numeriai.map((n) => `
       <div class="setu-eilute">
         <span>${n}.</span>
-        <input type="number" step="0.5" min="0" inputmode="decimal" aria-label="${n} seto svoris, kg" name="svoris-${n}"${s?.weight_kg != null ? ` placeholder="${s.weight_kg}"` : ''}${draftas[`svoris-${n}`] ? ` value="${esc(draftas[`svoris-${n}`])}"` : ''}>
+        <input type="text" inputmode="decimal" pattern="[0-9]{1,3}([.,][0-9]{1,2})?" aria-label="${n} seto svoris, kg" name="svoris-${n}"${s?.weight_kg != null ? ` placeholder="${s.weight_kg}"` : ''}${draftas[`svoris-${n}`] ? ` value="${esc(draftas[`svoris-${n}`])}"` : ''}>
         <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${s?.reps != null ? ` placeholder="${s.reps}"` : ''}${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
       </div>`).join('');
   }
@@ -485,15 +485,18 @@ async function issaugokDiena(dienaId) {
       const trukmeEl = kont.querySelector(`input[name="trukme-${n}"]`);
       if (!svorisEl && !kartaiEl && !trukmeEl) break;
 
-      const svoris = svorisEl?.value;
+      const svorisRaw = svorisEl?.value?.trim();
       const kartai = kartaiEl?.value;
       const trukme = trukmeEl?.value;
-      if (svoris || kartai || trukme) {
+      // Lietuviška klaviatūra kablelį laiko kableliu, ne tašku -- "82,5"
+      // turi reikšti tą patį, ką ir "82.5", o ne likti neatpažintas.
+      const svoris = svorisRaw ? Number(svorisRaw.replace(',', '.')) : null;
+      if (svorisRaw || kartai || trukme) {
         savieIrasai.push({
           client_exercise_id: pratimoId,
           client_id: vartotojas.id,
           set_index: n,
-          weight_kg: svoris ? Number(svoris) : null,
+          weight_kg: svoris != null && !Number.isNaN(svoris) ? svoris : null,
           reps: kartai ? Number(kartai) : null,
           duration_seconds: trukme ? Number(trukme) : null,
           notes: pastaba,
