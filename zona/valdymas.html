@@ -30,6 +30,31 @@
   .nuotrauku-galerija a { display: block; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; }
   .nuotrauku-galerija img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
   .nuotrauku-galerija img:hover { opacity: .85; }
+
+  /* Kliento priskirtos programos kopijos pratimų eilutė -- tas pats
+     vaizdas kaip redaguoti.html šablono sąraše, bet be tempimo (čia
+     tvarką keisti pakanka mygtukais, programa paprastai trumpa). */
+  .pratimo-eilute {
+    display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s-100) var(--s-200);
+    padding: var(--s-100) 0; border-top: 1px solid var(--hair-ink);
+  }
+  .pratimo-eilute:first-child { border-top: 0; }
+  .forma-redaguoti-pratima { flex-wrap: nowrap; }
+  .pratimo-meta { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
+  .pratimo-eilute-info { flex: 1 1 180px; min-width: 0; }
+  .pratimo-eilute-valdymas { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; flex: none; margin-left: auto; }
+  .tvarkos-mygtukai { display: flex; flex-direction: column; gap: 2px; flex: none; }
+  .tvarkos-mygtukai button {
+    width: 26px; height: 22px; padding: 0; line-height: 1; font-size: .75rem;
+    border: 1px solid rgba(16,16,16,0.20); border-radius: var(--r-sm); background: var(--white); cursor: pointer;
+  }
+  .tvarkos-mygtukai button:hover:not(:disabled) { border-color: rgba(16,16,16,0.42); }
+  .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
+  .pratimo-eilute.supersete { border-left: 3px solid var(--volt); padding-left: var(--s-100); margin-left: -1px; }
+  .superseto-zenklas {
+    display: inline-block; font-size: .6875rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--ink); background: var(--volt); border-radius: var(--r-sm); padding: 1px 6px; margin-left: 4px;
+  }
 </style>
 </head>
 <body>
@@ -80,7 +105,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
-  atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos,
+  atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
 } from './app.js?v=20261011';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261011';
 
@@ -90,6 +115,14 @@ let programos = [];
 let kvietimai = [];
 let priskyrimai = [];
 let patikrinimai = [];
+
+// Kliento priskirtos programos kopijos redagavimo būsena.
+let redaguojamosKlientoProgramosId = null;
+let klientoDienos = [];
+let klientoPratimai = [];
+let redaguojamosKlientoDienosId = null;
+let redaguojamoKlientoPratimoId = null;
+let pridedamosKlientoDienosId = null;
 
 paleisk();
 
@@ -391,25 +424,36 @@ function rodykKlientoProgramas(clientId) {
 }
 
 // =============================================================================
-//  KLIENTO PRISKIRTOS PROGRAMOS KOPIJOS PRATIMŲ TAISYMAS
+//  KLIENTO PRISKIRTOS PROGRAMOS KOPIJOS TAISYMAS
 //  Priskyrimo metu kliento kopija "sušąla" -- vėlesni šablono pakeitimai jos
-//  nebepasiekia. Čia leidžiama taisyti tik tai, kas realiai prireikia po
-//  priskyrimo (įrašymo tipą ir video nuorodą), be viso priskyrimo kartojimo,
-//  kuris sukurtų naują kopiją ir nutrauktų ryšį su jau įrašyta istorija.
+//  nebepasiekia. Čia leidžiama taisyti patį kliento egzempliorių (pratimų
+//  laukus, tvarką, dienos pavadinimą, pridėti ar ištrinti pratimą), be viso
+//  priskyrimo kartojimo, kuris sukurtų naują kopiją ir nutrauktų ryšį su jau
+//  įrašyta istorija -- kiti klientai ir šablonas lieka nepaliesti.
 // =============================================================================
 async function redaguokKlientoPratimus(clientProgramId) {
+  redaguojamosKlientoProgramosId = clientProgramId;
+  redaguojamosKlientoDienosId = null;
+  redaguojamoKlientoPratimoId = null;
+  pridedamosKlientoDienosId = null;
+  await ikelkIrPiesKlientoPratimus();
+}
+
+async function ikelkIrPiesKlientoPratimus() {
   const vieta = $('#klientu-pratimu-detale');
   vieta.innerHTML = '<div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>';
   vieta.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  const clientProgramId = redaguojamosKlientoProgramosId;
   const { data: dienos, error: dKlaida } = await db
-    .from('client_days').select('id, title, position').eq('client_program_id', clientProgramId).order('position', { ascending: true });
+    .from('client_days').select('id, title, notes, position').eq('client_program_id', clientProgramId).order('position', { ascending: true });
   if (dKlaida) {
     vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(dKlaida))}</div>`;
     return;
   }
+  klientoDienos = dienos || [];
 
-  const dienuId = (dienos || []).map((d) => d.id);
+  const dienuId = klientoDienos.map((d) => d.id);
   const { data: pratimai, error: pKlaida } = dienuId.length
     ? await db.from('client_exercises').select('*').in('client_day_id', dienuId).order('position', { ascending: true })
     : { data: [] };
@@ -417,37 +461,178 @@ async function redaguokKlientoPratimus(clientProgramId) {
     vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(pKlaida))}</div>`;
     return;
   }
+  klientoPratimai = pratimai || [];
+
+  piesKlientoPratimus();
+}
+
+function piesKlientoPratimus() {
+  const vieta = $('#klientu-pratimu-detale');
 
   vieta.innerHTML = `
     <div class="card" style="margin-top:var(--s-300)">
       <div class="card-head">
-        <h2>Pratimų taisymas</h2>
+        <h2>Programos taisymas</h2>
         <button class="btn btn-ghost btn-sm row-end" type="button" id="uzdaryti-kliento-pratimus">Uždaryti</button>
       </div>
       <p class="muted" style="font-size:.875rem">
-        Čia taisomas tik šio kliento jau priskirtas egzempliorius -- šablonas ir kiti klientai nepasikeičia.
+        Čia taisomas tik šio kliento jau priskirtas egzempliorius -- šablonas ir kiti klientai nepasikeičia,
+        o kliento jau įrašyta treniruočių istorija lieka susieta su tais pačiais pratimais.
       </p>
-      ${(dienos || []).map((d) => {
-        const savi = (pratimai || []).filter((p) => p.client_day_id === d.id);
+      ${klientoDienos.map((d) => {
+        const savi = klientoPratimai.filter((p) => p.client_day_id === d.id);
+        const zenklai = apskaiciuokSupersetuZenklus(savi);
         return `
-          <div style="margin-top:var(--s-300)">
-            <h3 style="font-size:1.0625rem">${esc(d.title)}</h3>
-            ${savi.length ? savi.map((p) => klientoPratimoRedagavimas(p)).join('') : '<p class="muted" style="font-size:.875rem">Pratimų nėra.</p>'}
+          <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+            ${d.id === redaguojamosKlientoDienosId ? klientoDienosRedagavimoForma(d) : `
+              <div class="card-head">
+                <h3 style="margin:0;font-size:1.0625rem">${esc(d.title)}</h3>
+                <button class="btn btn-ghost btn-sm row-end redaguoti-kliento-diena" type="button" data-id="${esc(d.id)}">Redaguoti dieną</button>
+              </div>
+              ${d.notes ? `<p class="muted" style="font-size:.875rem">${esc(d.notes)}</p>` : ''}
+            `}
+            <div data-diena="${esc(d.id)}">
+              ${savi.length ? savi.map((p, i) => p.id === redaguojamoKlientoPratimoId
+                  ? klientoPratimoRedagavimoForma(p)
+                  : klientoPratimoEilute(p, zenklai.get(p.id), i, savi.length)).join('')
+                : '<p class="muted" style="font-size:.875rem;margin-top:var(--s-200)">Pratimų nėra.</p>'}
+            </div>
+            ${pridedamosKlientoDienosId === d.id ? klientoPridejimoForma(d.id) : `
+              <div class="form-actions" style="margin-top:var(--s-200)">
+                <button class="btn btn-ghost btn-sm prideti-kliento-pratima" type="button" data-diena="${esc(d.id)}">+ Pridėti pratimą</button>
+              </div>`}
           </div>`;
       }).join('')}
     </div>`;
 
-  $('#uzdaryti-kliento-pratimus').addEventListener('click', () => { vieta.innerHTML = ''; });
-  for (const f of $$('.forma-kliento-pratimas')) f.addEventListener('submit', issaugokKlientoPratima);
+  $('#uzdaryti-kliento-pratimus').addEventListener('click', () => {
+    vieta.innerHTML = '';
+    redaguojamosKlientoProgramosId = null;
+  });
+  for (const f of $$('.forma-kliento-pratimas')) f.addEventListener('submit', issaugokKlientoPratimoRedagavima);
+  for (const f of $$('.forma-redaguoti-kliento-diena')) f.addEventListener('submit', issaugokKlientoDienosRedagavima);
+  for (const f of $$('.forma-prideti-kliento-pratima')) f.addEventListener('submit', pridekKlientoPratima);
+  for (const b of $$('.redaguoti-kliento-diena')) {
+    b.addEventListener('click', () => { redaguojamosKlientoDienosId = b.dataset.id; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.atsaukti-kliento-dienos-redagavima')) {
+    b.addEventListener('click', () => { redaguojamosKlientoDienosId = null; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.redaguoti-kliento-pratima')) {
+    b.addEventListener('click', () => { redaguojamoKlientoPratimoId = b.dataset.id; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.atsaukti-kliento-pratimo-redagavima')) {
+    b.addEventListener('click', () => { redaguojamoKlientoPratimoId = null; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.trinti-kliento-pratima')) {
+    b.addEventListener('click', () => trinkKlientoPratima(b.dataset.id, b.dataset.vardas));
+  }
+  for (const b of $$('.prideti-kliento-pratima')) {
+    b.addEventListener('click', () => { pridedamosKlientoDienosId = b.dataset.diena; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.atsaukti-kliento-pridejima')) {
+    b.addEventListener('click', () => { pridedamosKlientoDienosId = null; piesKlientoPratimus(); });
+  }
+  for (const b of $$('.kelk-kliento-pratima')) {
+    b.addEventListener('click', () => perkelkKlientoPratima(b.dataset.id, Number(b.dataset.kryptis)));
+  }
 }
 
-function klientoPratimoRedagavimas(p) {
+function klientoDienosRedagavimoForma(d) {
   return `
-    <form class="forma-kliento-pratimas" data-id="${esc(p.id)}" novalidate
-      style="margin-top:var(--s-200);padding-top:var(--s-200);border-top:1px solid var(--hair-ink)">
+    <form class="forma-redaguoti-kliento-diena" data-id="${esc(d.id)}" novalidate>
       <div class="field-row">
-        <div class="field" style="flex:0 0 auto">
-          <label style="font-weight:700">${esc(p.title)}</label>
+        <div class="field">
+          <label for="kd-pavadinimas-${esc(d.id)}">Dienos pavadinimas</label>
+          <input id="kd-pavadinimas-${esc(d.id)}" name="title" type="text" required value="${esc(d.title)}">
+        </div>
+        <div class="field">
+          <label for="kd-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="kd-pastabos-${esc(d.id)}" name="notes" type="text" value="${esc(d.notes || '')}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-kliento-dienos-redagavima" type="button">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function issaugokKlientoDienosRedagavima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk dienos pavadinimą.', 'error');
+    return;
+  }
+
+  const { error } = await db.from('client_days').update({
+    title: pavadinimas,
+    notes: String(fd.get('notes') || '').trim(),
+  }).eq('id', id);
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  redaguojamosKlientoDienosId = null;
+  pranesk($('#pranesimas'), 'Diena atnaujinta.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
+}
+
+function klientoPratimoEilute(p, zenklas, i, kiek) {
+  return `
+    <div class="pratimo-eilute${zenklas ? ' supersete' : ''}" data-id="${esc(p.id)}">
+      <div class="tvarkos-mygtukai">
+        <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+        <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === kiek - 1 ? ' disabled' : ''}>&#9660;</button>
+      </div>
+      <div class="pratimo-eilute-info">
+        <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
+        <div class="pratimo-meta muted" style="font-size:.8125rem">
+          ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
+          ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
+          ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
+          ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
+          ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
+        </div>
+        ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+        ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
+      </div>
+      <div class="pratimo-eilute-valdymas">
+        <button class="btn btn-ghost btn-sm redaguoti-kliento-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
+        <button class="btn btn-ghost btn-sm trinti-kliento-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+      </div>
+    </div>`;
+}
+
+function klientoPratimoRedagavimoForma(p) {
+  return `
+    <form class="pratimo-eilute forma-kliento-pratimas" data-id="${esc(p.id)}" novalidate style="flex-direction:column;align-items:stretch;gap:var(--s-200)">
+      <div class="field-row">
+        <div class="field">
+          <label for="kp-pavadinimas-${esc(p.id)}">Pratimo pavadinimas</label>
+          <input id="kp-pavadinimas-${esc(p.id)}" name="title" type="text" required value="${esc(p.title)}">
+        </div>
+        <div class="field">
+          <label for="kp-setai-${esc(p.id)}">Setai</label>
+          <input id="kp-setai-${esc(p.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric" value="${p.target_sets ?? ''}">
+        </div>
+        <div class="field">
+          <label for="kp-kartai-${esc(p.id)}">Kartai</label>
+          <input id="kp-kartai-${esc(p.id)}" name="reps" type="text" placeholder="Pvz., 8-10" value="${esc(p.target_reps || '')}">
+        </div>
+        <div class="field">
+          <label for="kp-svoris-${esc(p.id)}">Svoris / intensyvumas</label>
+          <input id="kp-svoris-${esc(p.id)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8" value="${esc(p.target_load || '')}">
+        </div>
+        <div class="field">
+          <label for="kp-poilsis-${esc(p.id)}">Poilsis, sek</label>
+          <input id="kp-poilsis-${esc(p.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric" value="${p.rest_seconds ?? ''}">
         </div>
         <div class="field">
           <label for="kp-tipas-${esc(p.id)}">Įrašymo tipas</label>
@@ -457,37 +642,191 @@ function klientoPratimoRedagavimas(p) {
             <option value="laikas"${p.log_type === 'laikas' ? ' selected' : ''}>Laikas (sekundėmis)</option>
           </select>
         </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="kp-pastabos-${esc(p.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="kp-pastabos-${esc(p.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui" value="${esc(p.notes || '')}">
+        </div>
         <div class="field">
           <label for="kp-video-${esc(p.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
           <input id="kp-video-${esc(p.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda" value="${esc(p.video_url || '')}">
         </div>
       </div>
+      <div class="field">
+        <label class="check-opt" for="kp-supersetas-${esc(p.id)}">
+          <input id="kp-supersetas-${esc(p.id)}" name="superset" type="checkbox"${p.superset_with_previous ? ' checked' : ''}>
+          <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+        </label>
+      </div>
       <div class="form-actions">
-        <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti</button>
-        <p class="note" id="kp-statusas-${esc(p.id)}" hidden></p>
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-kliento-pratimo-redagavima" type="button">Atšaukti</button>
       </div>
     </form>`;
 }
 
-async function issaugokKlientoPratima(ev) {
+async function issaugokKlientoPratimoRedagavima(ev) {
   ev.preventDefault();
   const forma = ev.currentTarget;
   const id = forma.dataset.id;
   const fd = new FormData(forma);
-  const busena = $('#kp-statusas-' + id);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pratimo pavadinimą.', 'error');
+    return;
+  }
 
   const { error } = await db.from('client_exercises').update({
-    log_type: String(fd.get('log_type') || 'svoris'),
+    title: pavadinimas,
+    target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    target_reps: String(fd.get('reps') || '').trim() || null,
+    target_load: String(fd.get('load') || '').trim() || null,
+    rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
+    notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
+    superset_with_previous: fd.get('superset') === 'on',
+    log_type: String(fd.get('log_type') || 'svoris'),
   }).eq('id', id);
 
   if (error) {
-    pranesk(busena, klaidaLT(error), 'error');
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
     return;
   }
-  pranesk(busena, 'Išsaugota ✓', 'ok');
-  clearTimeout(forma._laikmatis);
-  forma._laikmatis = setTimeout(() => valyk(busena), 4000);
+  redaguojamoKlientoPratimoId = null;
+  pranesk($('#pranesimas'), 'Pratimas atnaujintas.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
+}
+
+function klientoPridejimoForma(dienaId) {
+  return `
+    <form class="forma-prideti-kliento-pratima" data-diena="${esc(dienaId)}" novalidate style="margin-top:var(--s-200);padding-top:var(--s-200);border-top:1px solid var(--hair-ink)">
+      <div class="field-row">
+        <div class="field">
+          <label for="np-pavadinimas-${esc(dienaId)}">Pratimo pavadinimas</label>
+          <input id="np-pavadinimas-${esc(dienaId)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint">
+        </div>
+        <div class="field">
+          <label for="np-setai-${esc(dienaId)}">Setai</label>
+          <input id="np-setai-${esc(dienaId)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="np-kartai-${esc(dienaId)}">Kartai</label>
+          <input id="np-kartai-${esc(dienaId)}" name="reps" type="text" placeholder="Pvz., 8-10">
+        </div>
+        <div class="field">
+          <label for="np-svoris-${esc(dienaId)}">Svoris / intensyvumas</label>
+          <input id="np-svoris-${esc(dienaId)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
+        </div>
+        <div class="field">
+          <label for="np-poilsis-${esc(dienaId)}">Poilsis, sek</label>
+          <input id="np-poilsis-${esc(dienaId)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="np-tipas-${esc(dienaId)}">Įrašymo tipas</label>
+          <select id="np-tipas-${esc(dienaId)}" name="log_type">
+            <option value="svoris">Svoris ir kartai</option>
+            <option value="kartai">Tik kartai (be svorio)</option>
+            <option value="laikas">Laikas (sekundėmis)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="np-pastabos-${esc(dienaId)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="np-pastabos-${esc(dienaId)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+        </div>
+        <div class="field">
+          <label for="np-video-${esc(dienaId)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="np-video-${esc(dienaId)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
+        </div>
+      </div>
+      <div class="field">
+        <label class="check-opt" for="np-supersetas-${esc(dienaId)}">
+          <input id="np-supersetas-${esc(dienaId)}" name="superset" type="checkbox">
+          <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Pridėti pratimą</button>
+        <button class="btn btn-ghost btn-sm atsaukti-kliento-pridejima" type="button">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function pridekKlientoPratima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const dienaId = forma.dataset.diena;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pratimo pavadinimą.', 'error');
+    return;
+  }
+
+  const kiekSioje = klientoPratimai.filter((p) => p.client_day_id === dienaId).length;
+
+  const { error } = await db.from('client_exercises').insert({
+    client_day_id: dienaId,
+    title: pavadinimas,
+    target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    target_reps: String(fd.get('reps') || '').trim() || null,
+    target_load: String(fd.get('load') || '').trim() || null,
+    rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
+    notes: String(fd.get('notes') || '').trim(),
+    video_url: String(fd.get('video') || '').trim() || null,
+    superset_with_previous: fd.get('superset') === 'on',
+    log_type: String(fd.get('log_type') || 'svoris'),
+    position: kiekSioje,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pridedamosKlientoDienosId = null;
+  pranesk($('#pranesimas'), 'Pratimas pridėtas.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
+}
+
+async function trinkKlientoPratima(id, vardas) {
+  if (!confirm(`Ištrinti pratimą "${vardas}" iš šio kliento programos?\n\nKliento jau įrašyta šio pratimo istorija (setai) dings kartu. To atstatyti nebus galima.`)) return;
+
+  const { error } = await db.from('client_exercises').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Pratimas ištrintas.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
+}
+
+async function perkelkKlientoPratima(pratimoId, kryptis) {
+  const p = klientoPratimai.find((x) => x.id === pratimoId);
+  if (!p) return;
+  const savi = klientoPratimai.filter((x) => x.client_day_id === p.client_day_id).sort((a, b) => a.position - b.position);
+  const i = savi.findIndex((x) => x.id === pratimoId);
+  const j = i + kryptis;
+  if (j < 0 || j >= savi.length) return;
+
+  [savi[i], savi[j]] = [savi[j], savi[i]];
+  const tvarkaId = savi.map((x) => x.id);
+
+  const atnaujinimai = tvarkaId.map((id, idx) => db.from('client_exercises').update({ position: idx }).eq('id', id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return;
+  }
+  tvarkaId.forEach((id, idx) => {
+    const x = klientoPratimai.find((y) => y.id === id);
+    if (x) x.position = idx;
+  });
+  piesKlientoPratimus();
 }
 
 async function trinkKlientoPrograma(id, vardas, clientId) {
