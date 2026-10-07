@@ -121,6 +121,12 @@ let redaguojamoPratimoId = null;
 let redaguojamosDienosId = null;
 let velkamaEilute = null;
 
+// Visi pratimai iš VISŲ programų (ne tik šios) -- leidžia naujam pratimui
+// nukopijuoti pavadinimą, pastabas ir vaizdo nuorodą iš anksčiau jau naudoto,
+// paliekant setus/kartus/svorį/poilsį pildyti ranka. Kraunama vieną kartą
+// atidarant puslapį, nebe kaskart perkrauk().
+let pratimuBiblioteka = [];
+
 /** Nauja eilutė visada gauna position vieneriu didesnį už didžiausią esamą
  * tos pačios grupės (dienos) narį -- ne vien pagal kiekį, nes jei tarp
  * esamų narių jau yra spraga (pvz. vienas ištrintas viduryje), kiekis
@@ -147,10 +153,38 @@ async function paleisk() {
     t.addEventListener('click', () => rodykKortele(t.dataset.kortele));
   }
 
+  await ikelkPratimuBiblioteka();
   await perkrauk();
 
   $('#kraunasi').hidden = true;
   if (programa) $('#skydelis').hidden = false;
+}
+
+/** Visų programų pratimai, sugrupuoti pagal programos pavadinimą -- naudotojui
+ * pasirinkti, iš ko kopijuoti pavadinimą/pastabas/vaizdo nuorodą. Kraunama
+ * vieną kartą, nebe kiekvieną perkrauk() kartą, nes tai nesikeičia redaguojant
+ * šią programą. */
+async function ikelkPratimuBiblioteka() {
+  const [p1, p2, p3] = await Promise.all([
+    db.from('programs').select('id, title'),
+    db.from('program_sections').select('id, program_id'),
+    db.from('exercises').select('id, title, notes, video_url, section_id').order('title', { ascending: true }),
+  ]);
+
+  const programosPavadinimas = new Map((p1.data || []).map((pr) => [pr.id, pr.title]));
+  const sekcijosProgramosId  = new Map((p2.data || []).map((s) => [s.id, s.program_id]));
+
+  pratimuBiblioteka = (p3.data || []).map((p) => {
+    const progId = sekcijosProgramosId.get(p.section_id);
+    return {
+      id: p.id,
+      title: p.title,
+      notes: p.notes,
+      video_url: p.video_url,
+      programId: progId,
+      programTitle: programosPavadinimas.get(progId) || 'Nežinoma programa',
+    };
+  });
 }
 
 async function perkrauk() {
@@ -284,6 +318,15 @@ function piesDienuSarasa() {
     return;
   }
 
+  // Bibliotekos pratimai iš KITŲ programų -- šios programos pratimai
+  // nerodomi čia, jiems jau yra atskiras "Kopijuoti" pasirinkimas aukščiau.
+  const bibliotekaGrupes = new Map();
+  for (const p of pratimuBiblioteka) {
+    if (p.programId === programId) continue;
+    if (!bibliotekaGrupes.has(p.programTitle)) bibliotekaGrupes.set(p.programTitle, []);
+    bibliotekaGrupes.get(p.programTitle).push(p);
+  }
+
   vieta.innerHTML = dienos.map((d) => {
     const savi = pratimai.filter((p) => p.section_id === d.id);
     const supersetuZenklai = apskaiciuokSupersetuZenklus(savi);
@@ -347,6 +390,24 @@ function piesDienuSarasa() {
             </div>
             <div class="form-actions">
               <button class="btn btn-ghost btn-sm kopijuoti-pratima" type="button" data-sekcija="${esc(d.id)}">Kopijuoti</button>
+            </div>
+          </div>` : ''}
+
+        ${bibliotekaGrupes.size ? `
+          <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+            <div class="field">
+              <label for="bib-pasirinkimas-${esc(d.id)}">Arba perkelti iš anksčiau naudoto pratimo (kitoje programoje)</label>
+              <select id="bib-pasirinkimas-${esc(d.id)}">
+                <option value="">-- pasirink pratimą --</option>
+                ${[...bibliotekaGrupes].map(([programTitle, savi]) => `
+                  <optgroup label="${esc(programTitle)}">
+                    ${savi.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}
+                  </optgroup>`).join('')}
+              </select>
+              <p class="hint">Perkelia tik pavadinimą, pastabas ir vaizdo nuorodą -- setus, kartus, svorį ir poilsį įrašysi pats žemiau.</p>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-ghost btn-sm naudoti-is-bibliotekos" type="button" data-sekcija="${esc(d.id)}">Perkelti į formą žemiau</button>
             </div>
           </div>` : ''}
 
@@ -434,6 +495,25 @@ function piesDienuSarasa() {
       if (pasirinkimas?.value) kopijuokPratima(sectionId, pasirinkimas.value);
     });
   }
+  for (const b of $$('.naudoti-is-bibliotekos')) {
+    b.addEventListener('click', () => {
+      const sectionId = b.dataset.sekcija;
+      const pasirinkimas = $('#bib-pasirinkimas-' + sectionId);
+      naudokIsBibliotekos(sectionId, pasirinkimas?.value);
+    });
+  }
+}
+
+/** Pripildo naujo pratimo formą pavadinimu/pastabomis/vaizdo nuoroda iš
+ * bibliotekos -- į duomenų bazę NIEKO neįrašo, trenerias patikrina, prideda
+ * setus/kartus/svorį/poilsį ir pats paspaudžia "Pridėti pratimą". */
+function naudokIsBibliotekos(sectionId, pratimoId) {
+  const pratimas = pratimuBiblioteka.find((p) => p.id === pratimoId);
+  if (!pratimas) return;
+  $('#p-pavadinimas-' + sectionId).value = pratimas.title;
+  $('#p-pastabos-' + sectionId).value = pratimas.notes || '';
+  $('#p-video-' + sectionId).value = pratimas.video_url || '';
+  $('#p-pavadinimas-' + sectionId).focus();
 }
 
 async function kopijuokPratima(targetSectionId, sourceExerciseId) {
