@@ -39,7 +39,7 @@
     padding: var(--s-100) 0; border-top: 1px solid var(--hair-ink);
   }
   .pratimo-eilute:first-child { border-top: 0; }
-  .forma-redaguoti-pratima { flex-wrap: nowrap; }
+  .forma-redaguoti-pratima, .forma-kliento-pratimas { flex-wrap: nowrap; }
   .pratimo-meta { display: flex; flex-wrap: wrap; gap: var(--s-100); margin-top: 4px; }
   .pratimo-eilute-info { flex: 1 1 180px; min-width: 0; }
   .pratimo-eilute-valdymas { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; flex: none; margin-left: auto; }
@@ -767,7 +767,12 @@ async function pridekKlientoPratima(ev) {
     return;
   }
 
-  const kiekSioje = klientoPratimai.filter((p) => p.client_day_id === dienaId).length;
+  // Skaičiuojame pagal didžiausią esamą position, ne pagal kiekį -- jei
+  // tarp esamų pratimų jau yra spraga (pvz. vienas ištrintas viduryje),
+  // vien kiekis duotų tą pačią position reikšmę, kaip jau turi kitas
+  // pratimas.
+  const siejePratimai = klientoPratimai.filter((p) => p.client_day_id === dienaId);
+  const naujaPozicija = siejePratimai.length ? Math.max(...siejePratimai.map((p) => p.position)) + 1 : 0;
 
   const { error } = await db.from('client_exercises').insert({
     client_day_id: dienaId,
@@ -780,7 +785,7 @@ async function pridekKlientoPratima(ev) {
     video_url: String(fd.get('video') || '').trim() || null,
     superset_with_previous: fd.get('superset') === 'on',
     log_type: String(fd.get('log_type') || 'svoris'),
-    position: kiekSioje,
+    position: naujaPozicija,
   });
 
   if (error) {
@@ -826,6 +831,10 @@ async function perkelkKlientoPratima(pratimoId, kryptis) {
     const x = klientoPratimai.find((y) => y.id === id);
     if (x) x.position = idx;
   });
+  // Pačių .position reikšmių pakeitimo neužtenka -- piešimas filtruoja
+  // masyvą jo DABARTINE tvarka, ne pagal position, tad be perrikiavimo
+  // mygtukai atnaujintų duomenų bazę, bet ekranas liktų nepasikeitęs.
+  klientoPratimai.sort((a, b) => a.position - b.position);
   piesKlientoPratimus();
 }
 

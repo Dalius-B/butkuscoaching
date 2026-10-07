@@ -122,6 +122,15 @@ let redaguojamoPratimoId = null;
 let redaguojamosDienosId = null;
 let velkamaEilute = null;
 
+/** Nauja eilutė visada gauna position vieneriu didesnį už didžiausią esamą
+ * tos pačios grupės (dienos) narį -- ne vien pagal kiekį, nes jei tarp
+ * esamų narių jau yra spraga (pvz. vienas ištrintas viduryje), kiekis
+ * duotų tą pačią position reikšmę, kaip jau turi kitas narys. */
+function kitaPozicija(sarasas, raktas, reiksme) {
+  const siejeEilutes = sarasas.filter((x) => x[raktas] === reiksme);
+  return siejeEilutes.length ? Math.max(...siejeEilutes.map((x) => x.position)) + 1 : 0;
+}
+
 paleisk();
 
 async function paleisk() {
@@ -431,8 +440,6 @@ async function kopijuokPratima(targetSectionId, sourceExerciseId) {
   const originalas = pratimai.find((p) => p.id === sourceExerciseId);
   if (!originalas) return;
 
-  const kiekSioje = pratimai.filter((p) => p.section_id === targetSectionId).length;
-
   const { error } = await db.from('exercises').insert({
     section_id: targetSectionId,
     title: originalas.title,
@@ -444,7 +451,7 @@ async function kopijuokPratima(targetSectionId, sourceExerciseId) {
     video_url: originalas.video_url,
     superset_with_previous: false,
     log_type: originalas.log_type || 'svoris',
-    position: kiekSioje,
+    position: kitaPozicija(pratimai, 'section_id', targetSectionId),
   });
 
   if (error) {
@@ -669,8 +676,6 @@ async function pridePratima(ev) {
     return;
   }
 
-  const kiekSioje = pratimai.filter((p) => p.section_id === sectionId).length;
-
   const { error } = await db.from('exercises').insert({
     section_id: sectionId,
     title: pavadinimas,
@@ -682,7 +687,7 @@ async function pridePratima(ev) {
     video_url: String(fd.get('video') || '').trim() || null,
     superset_with_previous: fd.get('superset') === 'on',
     log_type: String(fd.get('log_type') || 'svoris'),
-    position: kiekSioje,
+    position: kitaPozicija(pratimai, 'section_id', sectionId),
   });
 
   if (error) {
