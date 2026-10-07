@@ -297,6 +297,14 @@ async function issaugokAntraste(ev) {
     return;
   }
 
+  // Mygtuką užrakiname kol vyksta užklausa -- kitaip antras paspaudimas, kol
+  // pirmas dar nebaigtas (pvz. lėtas ryšys), paleidžia antrą perkrauk() ir
+  // vėlesnis atsakymas gali ateiti pirmiau, "pamesdamas" tik ką įrašytus
+  // duomenis vaizde (nors DB jie lieka).
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
   const { error } = await db.from('programs').update({
     title: pavadinimas,
     summary: $('#pr-aprasas').value.trim(),
@@ -305,6 +313,7 @@ async function issaugokAntraste(ev) {
 
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
     return;
   }
   pranesk($('#pranesimas'), 'Išsaugota.', 'ok');
@@ -574,6 +583,10 @@ async function issaugokDienosRedagavima(ev) {
     return;
   }
 
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
   const { error } = await db.from('program_sections').update({
     title: pavadinimas,
     notes: String(fd.get('notes') || '').trim(),
@@ -581,6 +594,7 @@ async function issaugokDienosRedagavima(ev) {
 
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
     return;
   }
   redaguojamosDienosId = null;
@@ -720,6 +734,10 @@ async function prideDiena(ev) {
     return;
   }
 
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
   const { error } = await db.from('program_sections').insert({
     program_id: programId,
     title: pavadinimas,
@@ -729,6 +747,7 @@ async function prideDiena(ev) {
 
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
     return;
   }
   await perkrauk();
@@ -756,6 +775,17 @@ async function pridePratima(ev) {
     return;
   }
 
+  // Mygtuką užrakiname kol vyksta užklausa. Be šito, antras paspaudimas per
+  // tą laiką (pvz. kai lėtas ryšys ir atrodo, kad pirmas "neįvyko") paleidžia
+  // antrą lygiagrečią perkrauk() -- jei jos atsakymai sugrįžta ne tokia
+  // tvarka, kaip buvo paleisti, vėlesnis (bet pasenusios imties) perkrauk()
+  // gali "išvalyti" vaizdą be ką tik pridėto pratimo, nors jis iš tikro
+  // sėkmingai įrašytas duomenų bazėje -- iš trenerio pusės atrodo, kad
+  // paspaudus "Pridėti" laukai tiesiog išsitrina ir nieko neatsitinka.
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
   const { error } = await db.from('exercises').insert({
     section_id: sectionId,
     title: pavadinimas,
@@ -772,6 +802,7 @@ async function pridePratima(ev) {
 
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
     return;
   }
   await perkrauk();
@@ -789,6 +820,10 @@ async function issaugokPratimoRedagavima(ev) {
     return;
   }
 
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
   const { error } = await db.from('exercises').update({
     title: pavadinimas,
     target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
@@ -803,6 +838,7 @@ async function issaugokPratimoRedagavima(ev) {
 
   if (error) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
     return;
   }
   redaguojamoPratimoId = null;
