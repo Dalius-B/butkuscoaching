@@ -117,7 +117,6 @@ let dienos = [];
 let pratimai = [];
 let klientai = [];
 let priskyrimai = [];
-let savasId = null;
 let redaguojamoPratimoId = null;
 let redaguojamosDienosId = null;
 let velkamaEilute = null;
@@ -137,7 +136,6 @@ async function paleisk() {
   const s = await reikiaSesijos({ tikTreneriui: true });
   if (!s) return;
   rodykNav(s.profilis, 'valdymas.html', true);
-  savasId = s.vartotojas.id;
 
   if (!programId) {
     $('#kraunasi').hidden = true;
@@ -169,7 +167,9 @@ async function perkrauk() {
 
   programa = p1.data;
   dienos   = p2.data || [];
-  klientai = (p3.data || []).filter((k) => k.status !== 'blocked' && k.id !== savasId);
+  // Treneris pats savęs iš sąrašo NEŠALINAME -- jis gali priskirti programą
+  // ir sau, nes save seka kaip klientą (turi savo profilio įrašą kaip ir kiti).
+  klientai = (p3.data || []).filter((k) => k.status !== 'blocked');
 
   const sekcijuId = dienos.map((d) => d.id);
   const [p4, p5] = await Promise.all([
