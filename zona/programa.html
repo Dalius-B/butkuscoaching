@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261011">
+<link rel="stylesheet" href="stilius.css?v=20261012">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -83,6 +83,8 @@
   .pratimo-tikslas .dalis:not(:first-child)::before { content: '\00b7'; margin: 0 var(--s-75); color: rgba(16,16,16,0.28); }
   .paskutine-sesija { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-200); }
   .paskutine-sesija strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .paskutine-pastaba { font-size: .8125rem; color: var(--ink-soft); margin-top: var(--s-75); }
+  .paskutine-pastaba em { font-style: normal; color: var(--ink); }
 
   /* Setų įvedimas -- kompaktiški, fiksuoto pločio laukai, nes čia visada
      įvedami trumpi skaičiai, o ne laisvas tekstas. Viena stulpelių antraštė,
@@ -168,7 +170,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav, programosSavaite,
   apskaiciuokSupersetuZenklus, formatuokTrukme,
-} from './app.js?v=20261011';
+} from './app.js?v=20261012';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -243,7 +245,7 @@ async function ikelk() {
   // klientas matytų, kokį sunkiausią svorį naudojo praėjusį kartą.
   const pratimuId = pratimai.map((x) => x.id);
   const { data: irasai } = pratimuId.length
-    ? await db.from('exercise_logs').select('client_exercise_id, weight_kg, reps, duration_seconds, logged_at')
+    ? await db.from('exercise_logs').select('client_exercise_id, weight_kg, reps, duration_seconds, notes, logged_at')
         .eq('client_id', vartotojas.id).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
     : { data: [] };
   paskutineSesija = apskaiciuokPaskutinesSesijas(irasai || []);
@@ -279,6 +281,7 @@ function apskaiciuokPaskutinesSesijas(irasai) {
       weight_kg: sunkiausias ? sunkiausias.weight_kg : null,
       reps: sunkiausias ? sunkiausias.reps : (daugiausiai ? daugiausiai.reps : null),
       duration_seconds: ilgiausias ? ilgiausias.duration_seconds : null,
+      notes: grupe.irasai.find((i) => i.notes)?.notes || null,
     });
   }
   return rezultatas;
@@ -389,15 +392,16 @@ function paskutinesSesijosEilute(p) {
   if (!s) return '';
   const tipas = p.log_type || 'svoris';
 
-  if (tipas === 'kartai') {
-    if (s.reps == null) return '';
-    return `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${s.reps} kartai</strong> (${esc(data(s.data))})</p>`;
+  let eilute = '';
+  if (tipas === 'kartai' && s.reps != null) {
+    eilute = `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${s.reps} kartai</strong> (${esc(data(s.data))})</p>`;
+  } else if (tipas === 'laikas' && s.duration_seconds != null) {
+    eilute = `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${esc(formatuokTrukme(s.duration_seconds))}</strong> (${esc(data(s.data))})</p>`;
   }
-  if (tipas === 'laikas') {
-    if (s.duration_seconds == null) return '';
-    return `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${esc(formatuokTrukme(s.duration_seconds))}</strong> (${esc(data(s.data))})</p>`;
+  if (s.notes) {
+    eilute += `<p class="paskutine-pastaba">Praėjusios sesijos pastaba: <em>${esc(s.notes)}</em></p>`;
   }
-  return '';
+  return eilute;
 }
 
 function pratimoKortele(p, supersetoZenklas) {
@@ -556,9 +560,10 @@ async function issaugokDiena(dienaId) {
         weight_kg: gerinusias.weight_kg,
         reps: gerinusias.reps,
         duration_seconds: gerinusias.duration_seconds,
+        notes: gerinusias.notes,
       });
     } else if (!paskutineSesija.has(pratimoId)) {
-      paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null, duration_seconds: null });
+      paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null, duration_seconds: null, notes: null });
     }
 
     // Atnaujiname tik šio pratimo užuominą, o ne visą dienos turinį -- kitaip

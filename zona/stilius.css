@@ -431,6 +431,42 @@ th {
 tbody tr:last-child td { border-bottom: 0; }
 td .row { gap: var(--s-50); }
 
+/* Siaurame ekrane lentelė nebeslenka į šoną -- kiekviena eilutė tampa sava
+   kortelė, o stulpelio pavadinimas (iš data-label) rodomas prieš reikšmę,
+   vietoje antraštės eilutės. Veikia tik lentelėms, kurių <td> turi
+   data-label -- kitos (be jo) lieka prie senojo horizontalaus slinkimo. */
+@media (max-width: 700px) {
+  .table-wrap.table-kortelese table,
+  .table-wrap.table-kortelese thead,
+  .table-wrap.table-kortelese tbody,
+  .table-wrap.table-kortelese tr,
+  .table-wrap.table-kortelese th,
+  .table-wrap.table-kortelese td { display: block; width: auto; }
+  .table-wrap.table-kortelese thead { display: none; }
+  .table-wrap.table-kortelese tbody tr {
+    border: 1px solid var(--hair-ink); border-radius: var(--r-md);
+    padding: var(--s-200); margin-top: var(--s-200);
+  }
+  .table-wrap.table-kortelese tbody tr:first-child { margin-top: 0; }
+  .table-wrap.table-kortelese td {
+    padding: var(--s-75) 0; border-bottom: 1px solid var(--hair-ink);
+    display: flex; justify-content: space-between; align-items: center; gap: var(--s-200);
+  }
+  .table-wrap.table-kortelese td:last-child { border-bottom: 0; }
+  /* Pirmas stulpelis paprastai turi kelių eilučių turinį (vardas, el.
+     paštas, telefonas) -- žyma virš, o ne greta, kad netilptų spraustis. */
+  .table-wrap.table-kortelese td:first-child { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .table-wrap.table-kortelese td[data-label]::before {
+    content: attr(data-label); flex: none;
+    font-size: 0.6875rem; font-weight: 700; font-stretch: 84%;
+    text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft);
+  }
+  /* Tuščia data-label (veiksmų stulpelis) -- mygtukai per visą plotį, be
+     žymos ir be eilutės-eilutės išlygiavimo į dešinę. */
+  .table-wrap.table-kortelese td[data-label=""] { display: block; }
+  .table-wrap.table-kortelese td[data-label=""] .row { justify-content: flex-start; }
+}
+
 /* Skirtukai */
 .tabs { display: flex; flex-wrap: wrap; gap: var(--s-50); margin-bottom: var(--s-400); }
 .tab {

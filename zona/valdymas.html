@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261011">
+<link rel="stylesheet" href="stilius.css?v=20261012">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -106,8 +106,8 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
-} from './app.js?v=20261011';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261011';
+} from './app.js?v=20261012';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261012';
 
 let profiliai = [];
 let savasId = null;
@@ -186,14 +186,14 @@ function piesProgramas() {
     const kiek = priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length;
     return `
       <tr>
-        <td>
+        <td data-label="Programa">
           <strong>${esc(p.title)}</strong>
           ${p.summary ? `<div class="muted" style="font-size:.8125rem">${esc(p.summary.slice(0, 90))}${p.summary.length > 90 ? '…' : ''}</div>` : ''}
         </td>
-        <td><span class="chip ${p.status === 'published' ? 'chip-ok' : 'chip-quiet'}">${esc(p.status === 'published' ? 'Paskelbta' : p.status === 'archived' ? 'Archyve' : 'Juodraštis')}</span></td>
-        <td>${kiek}</td>
-        <td>${esc(data(p.updated_at))}</td>
-        <td>
+        <td data-label="Būsena"><span class="chip ${p.status === 'published' ? 'chip-ok' : 'chip-quiet'}">${esc(p.status === 'published' ? 'Paskelbta' : p.status === 'archived' ? 'Archyve' : 'Juodraštis')}</span></td>
+        <td data-label="Klientų">${kiek}</td>
+        <td data-label="Atnaujinta">${esc(data(p.updated_at))}</td>
+        <td data-label="">
           <div class="row">
             <a class="btn btn-ghost btn-sm" href="redaguoti.html?id=${encodeURIComponent(p.id)}">Redaguoti</a>
             <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
@@ -223,14 +223,24 @@ function piesProgramas() {
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>Visos programos</h2><span class="row-end muted">${programos.length}</span></div>
-      ${programos.length ? `
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Programa</th><th>Būsena</th><th>Klientų</th><th>Atnaujinta</th><th></th></tr></thead>
-            <tbody>${eilutes}</tbody>
-          </table>
-        </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
+      <details>
+        <summary class="card-head" style="cursor:pointer;list-style:none">
+          <h2 style="display:inline">Visos programos</h2>
+          <span class="row-end muted">${programos.length}</span>
+        </summary>
+        <p class="muted" style="font-size:.8125rem;margin:var(--s-200) 0">
+          Būsena nurodo, ar programą gali priskirti NAUJAM klientui -- klientai, kurie programą jau turi
+          priskirtą, mato savo kopiją nepriklausomai nuo šios būsenos (ir jei ją pakeisi į Juodraštis ar
+          Archyve, jau priskirtiems klientams niekas nepasikeičia).
+        </p>
+        ${programos.length ? `
+          <div class="table-wrap table-kortelese">
+            <table>
+              <thead><tr><th>Programa</th><th>Būsena</th><th>Klientų</th><th>Atnaujinta</th><th></th></tr></thead>
+              <tbody>${eilutes}</tbody>
+            </table>
+          </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
+      </details>
     </div>`;
 
   $('#forma-programa').addEventListener('submit', sukurkPrograma);
@@ -292,17 +302,17 @@ function piesKlientus() {
 
     return `
       <tr>
-        <td>
+        <td data-label="Žmogus">
           <strong>${esc(k.full_name || 'Be vardo')}</strong>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
           ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
         </td>
-        <td><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
-        <td><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
-        <td>${k.uzduotys_ijungtos ? '<span class="chip chip-ok">Įjungtos</span>' : '<span class="chip chip-quiet">Išjungtos</span>'}</td>
-        <td>${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
-        <td>${esc(data(k.created_at))}</td>
-        <td>
+        <td data-label="Būsena"><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
+        <td data-label="Paketas"><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
+        <td data-label="Užduotys">${k.uzduotys_ijungtos ? '<span class="chip chip-ok">Įjungtos</span>' : '<span class="chip chip-quiet">Išjungtos</span>'}</td>
+        <td data-label="Programos">${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
+        <td data-label="Užsiregistravo">${esc(data(k.created_at))}</td>
+        <td data-label="">
           <div class="row">
             <button class="btn btn-ghost btn-sm uzd-jungiklis" type="button" data-id="${esc(k.id)}" data-ijungta="${k.uzduotys_ijungtos ? '0' : '1'}">${k.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
             <button class="btn btn-ghost btn-sm zr-programos" type="button" data-id="${esc(k.id)}"${priskyrimai.some((a) => a.client_id === k.id) ? '' : ' disabled'}>Programos</button>
@@ -324,7 +334,7 @@ function piesKlientus() {
         Programos priskiriamos programos redagavimo lange, skiltyje Priskyrimai.
       </p>
       ${klientai.length ? `
-        <div class="table-wrap">
+        <div class="table-wrap table-kortelese">
           <table>
             <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Užduotys</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
@@ -387,13 +397,14 @@ function rodykKlientoProgramas(clientId) {
 
   const eilutes = savos.map((a) => `
     <tr>
-      <td>${esc(a.title)}</td>
-      <td><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
-      <td>${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
-      <td>
+      <td data-label="Programa">${esc(a.title)}</td>
+      <td data-label="Būsena"><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
+      <td data-label="Pradžia">${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
+      <td data-label="">
         <div class="row">
           <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
           <button class="btn btn-ghost btn-sm redaguoti-kliento-pratimus" type="button" data-id="${esc(a.id)}">Pratimai</button>
+          <button class="btn btn-ghost btn-sm pervadinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Pervadinti</button>
           <button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button>
         </div>
       </td>
@@ -406,7 +417,7 @@ function rodykKlientoProgramas(clientId) {
         <span class="row-end muted">${savos.length}</span>
       </div>
       ${savos.length ? `
-        <div class="table-wrap">
+        <div class="table-wrap table-kortelese">
           <table>
             <thead><tr><th>Programa</th><th>Būsena</th><th>Pradžia</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
@@ -420,7 +431,28 @@ function rodykKlientoProgramas(clientId) {
   for (const b of $$('.redaguoti-kliento-pratimus')) {
     b.addEventListener('click', () => redaguokKlientoPratimus(b.dataset.id));
   }
+  for (const b of $$('.pervadinti-kliento-programa')) {
+    b.addEventListener('click', () => pervadinkKlientoPrograma(b.dataset.id, b.dataset.vardas, clientId));
+  }
   $('#klientu-programu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Pervadinimas nepaliečia client_days/client_exercises/exercise_logs --
+ * tik pačios kopijos pavadinimo, tad kliento istorija nenukenčia. */
+async function pervadinkKlientoPrograma(id, senasPavadinimas, clientId) {
+  const naujas = prompt('Naujas programos pavadinimas:', senasPavadinimas);
+  if (naujas === null) return;
+  const apkarpytas = naujas.trim();
+  if (!apkarpytas || apkarpytas === senasPavadinimas) return;
+
+  const { error } = await db.from('client_programs').update({ title: apkarpytas }).eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Pavadinimas atnaujintas.', 'ok');
+  await perkrauk();
+  rodykKlientoProgramas(clientId);
 }
 
 // =============================================================================
@@ -866,16 +898,16 @@ function piesKvietimus() {
 
     return `
       <tr>
-        <td>
+        <td data-label="Kam">
           <strong>${esc(k.full_name || 'Be vardo')}</strong>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || 'be el. pašto')}</div>
           ${k.note ? `<div class="muted" style="font-size:.8125rem">${esc(k.note)}</div>` : ''}
         </td>
-        <td>${zyma}</td>
-        <td><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
-        <td>${k.expires_at ? esc(data(k.expires_at)) : '<span class="muted">neribotas</span>'}</td>
-        <td>${esc(data(k.created_at))}</td>
-        <td>
+        <td data-label="Būsena">${zyma}</td>
+        <td data-label="Paketas"><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
+        <td data-label="Galioja iki">${k.expires_at ? esc(data(k.expires_at)) : '<span class="muted">neribotas</span>'}</td>
+        <td data-label="Sukurta">${esc(data(k.created_at))}</td>
+        <td data-label="">
           <div class="row">
             ${!panaudotas && !pasibaiges
               ? `<button class="btn btn-ghost btn-sm kopijuoti" type="button" data-nuoroda="${esc(nuoroda)}">Kopijuoti nuorodą</button>`
@@ -933,7 +965,7 @@ function piesKvietimus() {
     <div class="card">
       <div class="card-head"><h2>Visi kvietimai</h2><span class="row-end muted">${kvietimai.length}</span></div>
       ${kvietimai.length ? `
-        <div class="table-wrap">
+        <div class="table-wrap table-kortelese">
           <table>
             <thead><tr><th>Kam</th><th>Būsena</th><th>Paketas</th><th>Galioja iki</th><th>Sukurta</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
