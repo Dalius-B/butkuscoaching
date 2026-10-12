@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261013">
+<link rel="stylesheet" href="stilius.css?v=20261014">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -83,6 +83,7 @@
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
         <button class="tab" role="tab" type="button" data-kortele="uzduotys" aria-selected="false">Užduotys</button>
         <button class="tab" role="tab" type="button" data-kortele="biblioteka" aria-selected="false">Biblioteka</button>
+        <button class="tab" role="tab" type="button" data-kortele="atsiliepimai" aria-selected="false">Atsiliepimai</button>
       </div>
 
       <p class="note" id="pranesimas" hidden></p>
@@ -93,6 +94,7 @@
       <section id="kortele-patikrinimai" hidden></section>
       <section id="kortele-uzduotys" hidden></section>
       <section id="kortele-biblioteka" hidden></section>
+      <section id="kortele-atsiliepimai" hidden></section>
     </div>
   </div>
 </main>
@@ -109,8 +111,9 @@ import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
-} from './app.js?v=20261013';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261013';
+  atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
+} from './app.js?v=20261014';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261014';
 
 let profiliai = [];
 let savasId = null;
@@ -120,6 +123,7 @@ let priskyrimai = [];
 let patikrinimai = [];
 let biblioteka = [];
 let redaguojamoBibliotekosIrasoId = null;
+let atsiliepimai = [];
 
 // Kliento priskirtos programos kopijos redagavimo būsena.
 let redaguojamosKlientoProgramosId = null;
@@ -157,16 +161,17 @@ async function paleisk() {
 }
 
 async function perkrauk() {
-  const [p1, p2, p3, p4, p5, p6] = await Promise.all([
+  const [p1, p2, p3, p4, p5, p6, p7] = await Promise.all([
     db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, plan_type, created_at').order('created_at', { ascending: false }),
     db.from('client_programs').select('id, program_id, client_id, title, status, starts_on, assigned_at'),
     db.from('checkins').select('*').order('created_at', { ascending: false }),
     db.from('library_items').select('*').order('position', { ascending: true }),
+    db.from('testimonials').select('*').order('created_at', { ascending: false }),
   ]);
 
-  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error || p6.error;
+  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error || p6.error || p7.error;
   if (pirmaKlaida) {
     pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
   }
@@ -177,6 +182,7 @@ async function perkrauk() {
   priskyrimai  = p4.data || [];
   patikrinimai = p5.data || [];
   biblioteka   = p6.data || [];
+  atsiliepimai = p7.data || [];
 
   piesProgramas();
   piesKlientus();
@@ -184,13 +190,14 @@ async function perkrauk() {
   piesPatikrinimus();
   piesUzduotis(profiliai, savasId);
   piesBiblioteka();
+  piesAtsiliepimus();
 }
 
 function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'biblioteka']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'biblioteka', 'atsiliepimai']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -1448,6 +1455,101 @@ async function perkelkBibliotekosIrasa(id, kryptis) {
   surikiuota.forEach((b, i) => { b.position = i; });
   biblioteka = surikiuota;
   piesBiblioteka();
+}
+
+// =============================================================================
+//  ATSILIEPIMAI -- klientų iš zona/atsiliepimas.html pateikti atsiliepimai,
+//  rodomi viešai pagrindiniame puslapyje tik po trenerio patvirtinimo.
+// =============================================================================
+function piesAtsiliepimus() {
+  if (!atsiliepimai.length) {
+    $('#kortele-atsiliepimai').innerHTML = `
+      <div class="card"><p class="muted">Atsiliepimų dar nėra -- klientai juos rašo skiltyje „Atsiliepimas“ savo zonoje.</p></div>`;
+    return;
+  }
+
+  const laukiantys = atsiliepimai.filter((a) => a.status === 'pending');
+  const paskelbti   = atsiliepimai.filter((a) => a.status === 'published');
+  const atmesti     = atsiliepimai.filter((a) => a.status === 'rejected');
+
+  const grupe = (pavadinimas, sarasas) => sarasas.length ? `
+    <div class="card-head" style="margin-top:var(--s-400)"><h2>${esc(pavadinimas)}</h2><span class="row-end muted">${sarasas.length}</span></div>
+    <div style="display:flex;flex-direction:column;gap:var(--s-200)">
+      ${sarasas.map(atsiliepimoKortele).join('')}
+    </div>` : '';
+
+  $('#kortele-atsiliepimai').innerHTML = `
+    ${grupe('Laukia patvirtinimo', laukiantys)}
+    ${grupe('Paskelbti', paskelbti)}
+    ${grupe('Atmesti', atmesti)}`;
+
+  for (const b of $$('.patvirtinti-atsiliepima')) {
+    b.addEventListener('click', () => keiskAtsiliepimoBusena(b.dataset.id, 'published'));
+  }
+  for (const b of $$('.atmesti-atsiliepima')) {
+    b.addEventListener('click', () => keiskAtsiliepimoBusena(b.dataset.id, 'rejected'));
+  }
+  for (const b of $$('.atsaukti-paskelbima')) {
+    b.addEventListener('click', () => keiskAtsiliepimoBusena(b.dataset.id, 'pending'));
+  }
+  for (const b of $$('.trinti-atsiliepima')) {
+    b.addEventListener('click', () => trinkAtsiliepima(b.dataset.id));
+  }
+}
+
+function atsiliepimoKortele(a) {
+  const klientas = profiliai.find((p) => p.id === a.client_id);
+  const vardas = klientas?.full_name?.trim() || klientas?.email || 'Buvęs klientas';
+  const zvaigzdutes = '★'.repeat(a.rating) + '☆'.repeat(5 - a.rating);
+  const nuorodos = atsiliepimoNuotraukuUrl(a.photo_paths || []);
+
+  const veiksmai = a.status === 'pending'
+    ? `<button class="btn btn-primary btn-sm patvirtinti-atsiliepima" type="button" data-id="${esc(a.id)}">Patvirtinti</button>
+       <button class="btn btn-ghost btn-sm atmesti-atsiliepima" type="button" data-id="${esc(a.id)}">Atmesti</button>`
+    : a.status === 'published'
+      ? `<button class="btn btn-ghost btn-sm atsaukti-paskelbima" type="button" data-id="${esc(a.id)}">Atšaukti paskelbimą</button>`
+      : `<button class="btn btn-ghost btn-sm patvirtinti-atsiliepima" type="button" data-id="${esc(a.id)}">Paskelbti vis tiek</button>`;
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <h3 style="margin:0">${esc(vardas)}</h3>
+        <span class="row-end muted">${esc(data(a.created_at))}</span>
+      </div>
+      <p aria-label="${a.rating} iš 5 žvaigždučių" style="font-size:1.25rem;letter-spacing:2px;color:var(--volt);margin-top:4px">${zvaigzdutes}</p>
+      <p style="margin-top:var(--s-100);white-space:pre-wrap">${esc(a.body)}</p>
+      ${nuorodos.length ? `
+        <div class="nuotrauku-galerija">
+          ${nuorodos.map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="Atsiliepimo nuotrauka" loading="lazy"></a>`).join('')}
+        </div>` : ''}
+      <div class="form-actions">
+        ${veiksmai}
+        <button class="btn btn-danger btn-sm trinti-atsiliepima" type="button" data-id="${esc(a.id)}">Trinti</button>
+      </div>
+    </div>`;
+}
+
+async function keiskAtsiliepimoBusena(id, busena) {
+  const laukai = { status: busena };
+  if (busena === 'published') laukai.published_at = new Date().toISOString();
+  const { error } = await db.from('testimonials').update(laukai).eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  await perkrauk();
+}
+
+async function trinkAtsiliepima(id) {
+  if (!confirm('Ištrinti šį atsiliepimą?')) return;
+  const irasas = atsiliepimai.find((a) => a.id === id);
+  const { error } = await db.from('testimonials').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  for (const kelias of irasas?.photo_paths || []) await trinkAtsiliepimoNuotrauka(kelias);
+  await perkrauk();
 }
 </script>
 </body>

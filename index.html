@@ -8,6 +8,15 @@
 -->
 <html lang="lt">
 <head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-3XFT00N8ET"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-3XFT00N8ET');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Butkus Coaching | Nuotolinis asmeninis treniravimas su Daliumi Butkumi</title>
@@ -319,6 +328,19 @@ p { text-wrap: pretty; }
   margin-bottom: var(--s-100);
 }
 .card p { font-size: 1rem; color: var(--ink-soft); }
+
+/* ============================================================
+   8b. ATSILIEPIMAI — kliento testimonials, rodomi tik kai yra bent vienas
+   patvirtintas. Pačios sekcijos žymėjimas lieka DOM visada, JS ją tiesiog
+   palieka hidden, jei įrašų kol kas nėra.
+   ============================================================ */
+.atsiliepimu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--s-300); margin-top: var(--s-600); }
+.atsiliepimo-kortele { display: flex; flex-direction: column; }
+.atsiliepimo-zvaigzdutes { color: var(--volt); font-size: 1.125rem; letter-spacing: 2px; }
+.atsiliepimo-tekstas { margin-top: var(--s-200); flex: 1; }
+.atsiliepimo-apacia { display: flex; align-items: center; gap: var(--s-100); margin-top: var(--s-300); }
+.atsiliepimo-nuotrauka { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
+.atsiliepimo-vardas { font-weight: 700; font-size: 0.9375rem; }
 
 /* ============================================================
    9. MISSION — word-by-word reveal
@@ -1165,6 +1187,17 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
     </div>
   </section>
 
+  <!-- ===================== ATSILIEPIMAI ===================== -->
+  <!-- Paslėpta pagal nutylėjimą -- script.js pabaigoje ją parodo tik jei
+       randa bent vieną PASKELBTĄ (patvirtintą) klientų atsiliepimą. -->
+  <section class="section section--surface" id="atsiliepimai" aria-labelledby="atsiliepimai-h" hidden>
+    <div class="shell">
+      <p class="label reveal">Atsiliepimai</p>
+      <h2 class="h2 section-head reveal" id="atsiliepimai-h" style="--i:1">Ką sako žmonės, su kuriais dirbu.</h2>
+      <div class="atsiliepimu-grid" id="atsiliepimuGrid"></div>
+    </div>
+  </section>
+
   <!-- ===================== APPLY ===================== -->
   <section class="finale on-ink" id="apply" aria-labelledby="apply-h">
     <img class="finale-bg" src="img/hyroxRUN-1000.webp"
@@ -1939,6 +1972,62 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
     steps.forEach(function (st) { st.hidden = false; });
     sendBtn.hidden = false;
     nextBtn.hidden = true;
+  }
+})();
+</script>
+
+<!--
+  Atsiliepimai. Biblioteka guli tame pačiame vendor faile, kaip ir klientų
+  zonoje -- nėra prasmės laikyti dvi kopijas. Skaitoma per viešą (publishable)
+  raktą, kurį saugu laikyti kode: RLS leidžia anon rolei matyti tik
+  status='published' eilutes (žr. supabase/atsiliepimai.sql).
+-->
+<script src="zona/vendor/supabase-2.116.0.umd.js"></script>
+<script type="module">
+import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
+
+(async function () {
+  try {
+    const sukurkKlienta = window.supabase && window.supabase.createClient;
+    if (typeof sukurkKlienta !== 'function') return;
+    if (!/^https:\/\//.test(SUPABASE_URL) || SUPABASE_URL.includes('PROJEKTO')) return;
+
+    const client = sukurkKlienta(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    const { data, error } = await client
+      .from('testimonials')
+      .select('id, display_name, rating, body, photo_paths, published_at')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false });
+
+    if (error || !data || !data.length) return;
+
+    const esc = (v) => String(v == null ? '' : v)
+      .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+
+    const grid = document.getElementById('atsiliepimuGrid');
+    if (!grid) return;
+
+    grid.innerHTML = data.map(function (t) {
+      const zvaigzdutes = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
+      const nuotrauka = (t.photo_paths && t.photo_paths[0])
+        ? client.storage.from('atsiliepimu-nuotraukos').getPublicUrl(t.photo_paths[0]).data.publicUrl
+        : null;
+      return (
+        '<figure class="card atsiliepimo-kortele">'
+        + '<p class="atsiliepimo-zvaigzdutes" aria-label="' + t.rating + ' iš 5 žvaigždučių">' + zvaigzdutes + '</p>'
+        + '<blockquote class="atsiliepimo-tekstas"><p>' + esc(t.body) + '</p></blockquote>'
+        + '<figcaption class="atsiliepimo-apacia">'
+        + (nuotrauka ? '<img class="atsiliepimo-nuotrauka" src="' + esc(nuotrauka) + '" alt="" loading="lazy">' : '')
+        + '<span class="atsiliepimo-vardas">' + esc(t.display_name || 'Klientas') + '</span>'
+        + '</figcaption>'
+        + '</figure>'
+      );
+    }).join('');
+
+    document.getElementById('atsiliepimai').hidden = false;
+  } catch (err) {
+    // Tylus nutraukimas -- svetainė visada turi veikti ir be atsiliepimų.
   }
 })();
 </script>

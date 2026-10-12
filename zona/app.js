@@ -172,14 +172,14 @@ export const NUOTRAUKU_LIMITAS = 6;
 export const NUOTRAUKOS_MAX_MB = 10;
 
 /** Įkelia nuotraukas į kliento aplanką kibiryje ir grąžina jų saugojimo kelius. */
-export async function ikelkNuotraukas(failai, vartotojoId) {
+export async function ikelkNuotraukas(failai, vartotojoId, kibirys = NUOTRAUKU_KIBIRAS) {
   const keliai = [];
   for (let i = 0; i < failai.length; i += 1) {
     const failas = failai[i];
     const saugusVardas = failas.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase();
     const kelias = `${vartotojoId}/${Date.now()}-${i}-${saugusVardas}`;
     // eslint-disable-next-line no-await-in-loop -- kiekvienas kelias turi būti unikalus (Date.now()), tad įkeliame paeiliui
-    const { error } = await db.storage.from(NUOTRAUKU_KIBIRAS).upload(kelias, failas, {
+    const { error } = await db.storage.from(kibirys).upload(kelias, failas, {
       contentType: failas.type || 'application/octet-stream',
       upsert: false,
     });
@@ -227,6 +227,24 @@ export async function ikelkBibliotekosFaila(failas) {
 export async function trinkBibliotekosFaila(kelias) {
   if (!kelias) return;
   await db.storage.from(BIBLIOTEKOS_KIBIRAS).remove([kelias]);
+}
+
+// -----------------------------------------------------------------------------
+//  Atsiliepimų nuotraukos -- kibirys VIEŠAS (skirtingai nuo visų kitų), nes
+//  paskelbti atsiliepimai rodomi pagrindiniame puslapyje net neprisijungusiems
+//  lankytojams. Dėl to nuoroda gaunama iš karto (getPublicUrl), be pasirašymo.
+// -----------------------------------------------------------------------------
+export const ATSILIEPIMU_KIBIRAS = 'atsiliepimu-nuotraukos';
+export const ATSILIEPIMU_NUOTRAUKU_LIMITAS = 4;
+export const ATSILIEPIMU_NUOTRAUKOS_MAX_MB = 10;
+
+export function atsiliepimoNuotraukuUrl(keliai) {
+  return (keliai || []).map((kelias) => db.storage.from(ATSILIEPIMU_KIBIRAS).getPublicUrl(kelias).data.publicUrl);
+}
+
+export async function trinkAtsiliepimoNuotrauka(kelias) {
+  if (!kelias) return;
+  await db.storage.from(ATSILIEPIMU_KIBIRAS).remove([kelias]);
 }
 
 /**
@@ -535,6 +553,11 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   // ką jie mato).
   if (treneris || profilis?.plan_type === 'pilnas') {
     nuorodos.push({ href: 'biblioteka.html', tekstas: 'Biblioteka' });
+  }
+  // Atsiliepimas -- bet kokio paketo aktyviam klientui, treneriui nerodoma
+  // (jis pats sau atsiliepimo nerašo).
+  if (!treneris) {
+    nuorodos.push({ href: 'atsiliepimas.html', tekstas: 'Atsiliepimas' });
   }
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });

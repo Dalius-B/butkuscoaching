@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atsiliepimas | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css?v=20261014">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  /* Žvaigždučių vertinimas -- paslėpti radio, o DOM tvarka atvirkščia (5 pirma),
+     kad :hover/:has(:checked) paryškintų save IR visas vėlesnes (vizualiai
+     kairesnes, mažesnes) žvaigždutes. Kiekvienas input'as yra SAVO label'o
+     viduje (position:relative), o ne prieš jį kaip brolis -- taip absoliuti
+     pozicija lieka tik to vieno žvaigždutės ploto ribose, o ne susikrauna
+     visos ant viena kitos (kas nutinka, jei absoliučiai pozicionuojami
+     elementai yra tiesioginiai flex konteinerio vaikai). */
+  .zvaigzdutes { display: flex; flex-direction: row-reverse; gap: 2px; justify-content: flex-end; }
+  .zvaigzdute { position: relative; cursor: pointer; }
+  .zvaigzdute input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .zvaigzdute span {
+    display: block; font-size: 2.25rem; line-height: 1; color: var(--hair-ink);
+    transition: color 120ms var(--ease-out);
+  }
+  .zvaigzdute:hover span,
+  .zvaigzdute:hover ~ .zvaigzdute span,
+  .zvaigzdute:has(input:checked) span,
+  .zvaigzdute:has(input:checked) ~ .zvaigzdute span { color: var(--volt); }
+  .zvaigzdute input:focus-visible ~ span { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .zvaigzdutes-tik-skaitymas { font-size: 1.5rem; letter-spacing: 2px; color: var(--hair-ink); }
+  .zvaigzdutes-tik-skaitymas .pilna { color: var(--volt); }
+
+  .nuotrauku-perziura {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(96px, 100%), 1fr));
+    gap: var(--s-100); margin-top: var(--s-100);
+  }
+  .nuotrauku-perziura:empty { display: none; }
+  .nuotrauku-korta { position: relative; aspect-ratio: 1; border-radius: var(--r-sm); overflow: hidden; background: var(--surface); }
+  .nuotrauku-korta img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .nuotrauku-korta .pasalinti-nuotrauka {
+    position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; line-height: 1;
+    border: none; border-radius: 50%; background: rgba(16,16,16,0.72); color: var(--white);
+    cursor: pointer; font-size: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <h1>Atsiliepimas</h1>
+      <p>Trumpas atsiliepimas apie darbą kartu -- jei sutiksi, jį paskelbsiu svetainėje.</p>
+    </div>
+    <div id="turinio-vieta">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  db, $, $$, esc, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
+  ikelkNuotraukas, atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
+  ATSILIEPIMU_KIBIRAS, ATSILIEPIMU_NUOTRAUKU_LIMITAS, ATSILIEPIMU_NUOTRAUKOS_MAX_MB,
+} from './app.js?v=20261014';
+
+const vieta = $('#turinio-vieta');
+
+let vartotojas = null;
+let profilis = null;
+let esamas = null; // esamas testimonials įrašas arba null, jei dar niekada nepateikė
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+
+  if (s.klaida) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
+    return;
+  }
+
+  rodykNav(s.profilis, 'atsiliepimas.html', s.arTreneris);
+  vartotojas = s.vartotojas;
+  profilis = s.profilis;
+
+  if (s.arTreneris) {
+    vieta.innerHTML = '<p class="muted">Ši skiltis skirta klientams.</p>';
+    return;
+  }
+
+  await ikelk();
+}
+
+async function ikelk() {
+  const { data: irasas, error } = await db
+    .from('testimonials')
+    .select('id, rating, body, photo_paths, status')
+    .eq('client_id', vartotojas.id)
+    .maybeSingle();
+
+  if (error) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(error))}</div>`;
+    return;
+  }
+
+  esamas = irasas;
+  pies();
+}
+
+function pies() {
+  if (esamas?.status === 'published') {
+    piesPaskelbta();
+    return;
+  }
+  piesForma();
+}
+
+function piesPaskelbta() {
+  const pilnuZvaigzduciu = '★'.repeat(esamas.rating) + '☆'.repeat(5 - esamas.rating);
+  const nuorodos = atsiliepimoNuotraukuUrl(esamas.photo_paths || []);
+
+  vieta.innerHTML = `
+    <div class="card">
+      <div class="note note-ok" style="margin-bottom:var(--s-300)">Tavo atsiliepimas jau paskelbtas viešai svetainėje. Jei nori jį pakeisti, parašyk Daliui tiesiogiai.</div>
+      <p class="zvaigzdutes-tik-skaitymas" aria-label="${esamas.rating} iš 5 žvaigždučių">${pilnuZvaigzduciu}</p>
+      <p style="margin-top:var(--s-200);white-space:pre-wrap">${esc(esamas.body)}</p>
+      ${nuorodos.length ? `
+        <div class="nuotrauku-perziura" style="margin-top:var(--s-200)">
+          ${nuorodos.map((u) => `<div class="nuotrauku-korta"><img src="${esc(u)}" alt=""></div>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+function piesForma() {
+  const busenosPranesimas = esamas?.status === 'pending'
+    ? '<div class="note note-info">Atsiliepimas pateiktas, laukia Daliaus patvirtinimo. Gali jį pataisyti, kol dar nepatvirtintas.</div>'
+    : esamas?.status === 'rejected'
+      ? '<div class="note note-error">Atsiliepimas nebuvo patvirtintas. Gali jį pataisyti ir pateikti iš naujo.</div>'
+      : '';
+
+  const esamuNuorodu = atsiliepimoNuotraukuUrl(esamas?.photo_paths || []);
+  const esamosNuotraukos = (esamas?.photo_paths || []).map((kelias, i) => ({ kelias, url: esamuNuorodu[i] }));
+
+  vieta.innerHTML = `
+    ${busenosPranesimas}
+    <div class="card" style="margin-top:${busenosPranesimas ? 'var(--s-200)' : '0'}">
+      <form id="forma-atsiliepimas" novalidate>
+        <div class="field">
+          <span class="legend-inline" id="lbl-zvaigzdutes">Įvertinimas</span>
+          <div class="zvaigzdutes" role="radiogroup" aria-labelledby="lbl-zvaigzdutes">
+            ${[5, 4, 3, 2, 1].map((n) => `
+              <label class="zvaigzdute" aria-label="${n} iš 5">
+                <input id="zv-${n}" name="rating" type="radio" value="${n}"${esamas?.rating === n ? ' checked' : ''}>
+                <span aria-hidden="true">★</span>
+              </label>`).join('')}
+          </div>
+        </div>
+        <div class="field">
+          <label for="a-tekstas">Atsiliepimas</label>
+          <textarea id="a-tekstas" name="body" required placeholder="Kaip sekėsi dirbti kartu, kas pasikeitė, ką pasiekei...">${esc(esamas?.body || '')}</textarea>
+        </div>
+        <div class="field">
+          <label for="a-nuotraukos">Nuotraukos <span class="hint" style="display:inline">(neprivaloma, pvz. progreso)</span></label>
+          <p class="hint">Iki ${ATSILIEPIMU_NUOTRAUKU_LIMITAS} nuotraukų, kiekviena iki ${ATSILIEPIMU_NUOTRAUKOS_MAX_MB} MB. Bus matomos viešai.</p>
+          <div class="nuotrauku-perziura" id="esamos-nuotraukos">
+            ${esamosNuotraukos.map(({ kelias, url }) => `
+              <div class="nuotrauku-korta" data-kelias="${esc(kelias)}">
+                <img src="${esc(url)}" alt="">
+                <button class="pasalinti-nuotrauka" type="button" data-kelias="${esc(kelias)}" aria-label="Pašalinti nuotrauką">&times;</button>
+              </div>`).join('')}
+          </div>
+          <input id="a-nuotraukos" type="file" accept="image/*" multiple style="margin-top:var(--s-100)">
+          <div class="nuotrauku-perziura" id="naujos-nuotraukos"></div>
+          <p class="note" id="nuotrauku-klaida" hidden></p>
+        </div>
+        <div class="field">
+          <label class="check-opt" for="a-sutikimas">
+            <input id="a-sutikimas" type="checkbox" required${esamas ? ' checked' : ''}>
+            <span>Sutinku, kad šis atsiliepimas (įskaitant mano vardą ir nuotraukas) būtų viešai skelbiamas butkuscoaching.lt svetainėje.</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit" id="siustiBtn">${esamas ? 'Atnaujinti atsiliepimą' : 'Pateikti atsiliepimą'}</button>
+        </div>
+        <p class="note" id="formosPranesimas" hidden></p>
+      </form>
+    </div>`;
+
+  $('#forma-atsiliepimas').addEventListener('submit', pateik);
+  prijunkNuotraukuPerziura();
+  for (const b of $$('.pasalinti-nuotrauka')) {
+    b.addEventListener('click', () => pasalinkEsamaNuotrauka(b.dataset.kelias));
+  }
+}
+
+let pasalintiKeliai = [];
+
+async function pasalinkEsamaNuotrauka(kelias) {
+  $(`.nuotrauku-korta[data-kelias="${CSS.escape(kelias)}"]`)?.remove();
+  pasalintiKeliai.push(kelias);
+}
+
+function prijunkNuotraukuPerziura() {
+  const ivestis = $('#a-nuotraukos');
+  if (!ivestis) return;
+
+  ivestis.addEventListener('change', () => {
+    const perziura = $('#naujos-nuotraukos');
+    const klaidosVieta = $('#nuotrauku-klaida');
+    perziura.innerHTML = '';
+    valyk(klaidosVieta);
+
+    const jauYra = $$('#esamos-nuotraukos .nuotrauku-korta').length;
+    const failai = Array.from(ivestis.files || []);
+    if (jauYra + failai.length > ATSILIEPIMU_NUOTRAUKU_LIMITAS) {
+      pranesk(klaidosVieta, `Iš viso gali būti ne daugiau kaip ${ATSILIEPIMU_NUOTRAUKU_LIMITAS} nuotraukų.`, 'error');
+      ivestis.value = '';
+      return;
+    }
+    const perDidele = failai.find((f) => f.size > ATSILIEPIMU_NUOTRAUKOS_MAX_MB * 1024 * 1024);
+    if (perDidele) {
+      pranesk(klaidosVieta, `„${perDidele.name}“ per didelė -- didžiausias leidžiamas dydis ${ATSILIEPIMU_NUOTRAUKOS_MAX_MB} MB.`, 'error');
+      ivestis.value = '';
+      return;
+    }
+
+    for (const failas of failai) {
+      const korta = document.createElement('div');
+      korta.className = 'nuotrauku-korta';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(failas);
+      img.alt = '';
+      korta.appendChild(img);
+      perziura.appendChild(korta);
+    }
+  });
+}
+
+async function pateik(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  if (!forma.reportValidity()) return;
+
+  const reitingas = Number(forma.querySelector('input[name="rating"]:checked')?.value || 0);
+  const tekstas = $('#a-tekstas').value.trim();
+  const formosPranesimas = $('#formosPranesimas');
+
+  if (!reitingas) {
+    pranesk(formosPranesimas, 'Pasirink įvertinimą žvaigždutėmis.', 'error');
+    return;
+  }
+  if (!tekstas) {
+    pranesk(formosPranesimas, 'Parašyk atsiliepimo tekstą.', 'error');
+    return;
+  }
+
+  const btn = $('#siustiBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = 'Siunčiama...';
+
+  const naujiFailai = Array.from($('#a-nuotraukos')?.files || []);
+  let naujiKeliai = [];
+  if (naujiFailai.length) {
+    try {
+      naujiKeliai = await ikelkNuotraukas(naujiFailai, vartotojas.id, ATSILIEPIMU_KIBIRAS);
+    } catch (err) {
+      pranesk(formosPranesimas, klaidaLT(err), 'error');
+      btn.disabled = false;
+      btn.textContent = esamas ? 'Atnaujinti atsiliepimą' : 'Pateikti atsiliepimą';
+      return;
+    }
+  }
+
+  const likusiosSenos = (esamas?.photo_paths || []).filter((k) => !pasalintiKeliai.includes(k));
+  const visosNuotraukos = [...likusiosSenos, ...naujiKeliai];
+
+  const eilute = {
+    rating: reitingas,
+    body: tekstas,
+    photo_paths: visosNuotraukos.length ? visosNuotraukos : null,
+    display_name: profilis?.full_name?.trim() || profilis?.email || null,
+  };
+
+  const { error } = esamas
+    ? await db.from('testimonials').update({ ...eilute, status: 'pending' }).eq('id', esamas.id)
+    : await db.from('testimonials').insert({ ...eilute, client_id: vartotojas.id });
+
+  if (error) {
+    pranesk(formosPranesimas, klaidaLT(error), 'error');
+    btn.disabled = false;
+    btn.textContent = esamas ? 'Atnaujinti atsiliepimą' : 'Pateikti atsiliepimą';
+    return;
+  }
+
+  // Pašalintas senas nuotraukas iš saugyklos trinam tik po sėkmingo įrašymo.
+  for (const kelias of pasalintiKeliai) await trinkAtsiliepimoNuotrauka(kelias);
+  pasalintiKeliai = [];
+
+  await ikelk();
+}
+</script>
+</body>
+</html>
