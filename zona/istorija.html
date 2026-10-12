@@ -160,13 +160,16 @@ async function ikelk(arTreneris) {
   }
 
   // Treneriui rodomas kliento vardas -- jis gali žiūrėti bet kurio
-  // kliento istoriją, tad be vardo neaišku, kieno duomenis mato.
+  // kliento istoriją, tad be vardo neaišku, kieno duomenis mato. "Atgal"
+  // nuoroda tada veda į to konkretaus kliento profilį, o ne bendrą valdymą.
   let antrastesTekstas = programa.title;
   if (arTreneris) {
     const { data: klientas } = await db
       .from('profiles').select('full_name, email').eq('id', programa.client_id).maybeSingle();
     const vardas = klientas?.full_name?.trim() || klientas?.email || 'Klientas';
     antrastesTekstas = `${programa.title} — ${vardas}`;
+    $('#atgal-nuoroda').href = 'klientas.html?id=' + encodeURIComponent(programa.client_id);
+    $('#atgal-nuoroda').textContent = '← ' + vardas;
   }
   $('#paantraste').textContent = antrastesTekstas;
   document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';

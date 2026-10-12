@@ -138,6 +138,15 @@ async function paleisk() {
 
   await perkrauk();
 
+  // Atėjus iš kliento profilio (klientas.html) nuorodos "Tvarkyti" -- iškart
+  // atidaro Klientai skiltį ir to kliento programų sąrašą, kad nereikėtų
+  // ieškoti jo iš naujo lentelėje.
+  const atidarytiKlienta = new URLSearchParams(location.search).get('klientas');
+  if (atidarytiKlienta) {
+    rodykKortele('klientai');
+    rodykKlientoProgramas(atidarytiKlienta);
+  }
+
   $('#kraunasi').hidden = true;
   $('#skydelis').hidden = false;
 }
@@ -303,7 +312,7 @@ function piesKlientus() {
     return `
       <tr>
         <td data-label="Žmogus">
-          <strong>${esc(k.full_name || 'Be vardo')}</strong>
+          <a href="klientas.html?id=${esc(k.id)}" style="font-weight:700;text-decoration:underline">${esc(k.full_name || 'Be vardo')}</a>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
           ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
         </td>
@@ -314,6 +323,7 @@ function piesKlientus() {
         <td data-label="Užsiregistravo">${esc(data(k.created_at))}</td>
         <td data-label="">
           <div class="row">
+            <a class="btn btn-primary btn-sm" href="klientas.html?id=${esc(k.id)}">Profilis</a>
             <button class="btn btn-ghost btn-sm uzd-jungiklis" type="button" data-id="${esc(k.id)}" data-ijungta="${k.uzduotys_ijungtos ? '0' : '1'}">${k.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
             <button class="btn btn-ghost btn-sm zr-programos" type="button" data-id="${esc(k.id)}"${priskyrimai.some((a) => a.client_id === k.id) ? '' : ' disabled'}>Programos</button>
             ${k.status === 'blocked'
