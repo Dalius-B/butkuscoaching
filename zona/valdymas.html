@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261012">
+<link rel="stylesheet" href="stilius.css?v=20261013">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -82,6 +82,7 @@
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
         <button class="tab" role="tab" type="button" data-kortele="uzduotys" aria-selected="false">Užduotys</button>
+        <button class="tab" role="tab" type="button" data-kortele="biblioteka" aria-selected="false">Biblioteka</button>
       </div>
 
       <p class="note" id="pranesimas" hidden></p>
@@ -91,6 +92,7 @@
       <section id="kortele-kvietimai" hidden></section>
       <section id="kortele-patikrinimai" hidden></section>
       <section id="kortele-uzduotys" hidden></section>
+      <section id="kortele-biblioteka" hidden></section>
     </div>
   </div>
 </main>
@@ -106,8 +108,9 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
-} from './app.js?v=20261012';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261012';
+  ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
+} from './app.js?v=20261013';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261013';
 
 let profiliai = [];
 let savasId = null;
@@ -115,6 +118,8 @@ let programos = [];
 let kvietimai = [];
 let priskyrimai = [];
 let patikrinimai = [];
+let biblioteka = [];
+let redaguojamoBibliotekosIrasoId = null;
 
 // Kliento priskirtos programos kopijos redagavimo būsena.
 let redaguojamosKlientoProgramosId = null;
@@ -152,15 +157,16 @@ async function paleisk() {
 }
 
 async function perkrauk() {
-  const [p1, p2, p3, p4, p5] = await Promise.all([
+  const [p1, p2, p3, p4, p5, p6] = await Promise.all([
     db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, plan_type, created_at').order('created_at', { ascending: false }),
     db.from('client_programs').select('id, program_id, client_id, title, status, starts_on, assigned_at'),
     db.from('checkins').select('*').order('created_at', { ascending: false }),
+    db.from('library_items').select('*').order('position', { ascending: true }),
   ]);
 
-  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error;
+  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error || p6.error;
   if (pirmaKlaida) {
     pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
   }
@@ -170,19 +176,21 @@ async function perkrauk() {
   kvietimai    = p3.data || [];
   priskyrimai  = p4.data || [];
   patikrinimai = p5.data || [];
+  biblioteka   = p6.data || [];
 
   piesProgramas();
   piesKlientus();
   piesKvietimus();
   piesPatikrinimus();
   piesUzduotis(profiliai, savasId);
+  piesBiblioteka();
 }
 
 function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'biblioteka']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -1187,6 +1195,259 @@ async function rodykKlientoPatikrinimus(clientId) {
     ${kortos || '<p class="muted">Ataskaitų nėra.</p>'}`;
 
   $('#patikrinimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =============================================================================
+//  BIBLIOTEKA -- trenerio įkelta medžiaga (pristatymai, straipsniai, video),
+//  matoma tik "pilnas" paketo klientams (zona/biblioteka.html).
+// =============================================================================
+function piesBiblioteka() {
+  const surikiuota = [...biblioteka].sort((a, b) => a.position - b.position);
+
+  const eilutes = surikiuota.map((irasas, i) => {
+    if (irasas.id === redaguojamoBibliotekosIrasoId) return bibliotekosRedagavimoForma(irasas);
+    return `
+      <div class="pratimo-eilute" data-id="${esc(irasas.id)}">
+        <div class="pratimo-eilute-info">
+          <strong>${esc(irasas.title)}</strong>
+          ${irasas.category ? `<span class="chip chip-quiet" style="margin-left:6px">${esc(irasas.category)}</span>` : ''}
+          ${irasas.description ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(irasas.description)}</p>` : ''}
+          <div class="pratimo-meta muted" style="font-size:.8125rem">
+            ${irasas.file_path ? '<span>Failas įkeltas</span>' : ''}
+            ${irasas.external_url ? `<span><a href="${esc(irasas.external_url)}" target="_blank" rel="noopener">Nuoroda</a></span>` : ''}
+          </div>
+        </div>
+        <div class="pratimo-eilute-valdymas">
+          <div class="tvarkos-mygtukai">
+            <button type="button" class="kelk-biblioteka" data-id="${esc(irasas.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+            <button type="button" class="kelk-biblioteka" data-id="${esc(irasas.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === surikiuota.length - 1 ? ' disabled' : ''}>&#9660;</button>
+          </div>
+          <button class="btn btn-ghost btn-sm redaguoti-biblioteka" type="button" data-id="${esc(irasas.id)}">Redaguoti</button>
+          <button class="btn btn-danger btn-sm trinti-biblioteka" type="button" data-id="${esc(irasas.id)}" data-vardas="${esc(irasas.title)}">Trinti</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  $('#kortele-biblioteka').innerHTML = `
+    <div class="card" style="margin-bottom:var(--s-300)">
+      <div class="card-head"><h2>Biblioteka</h2><span class="row-end muted">${biblioteka.length}</span></div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Matys tik aktyvūs "pilnas" paketo klientai. Kiekvienas įrašas gali turėti įkeltą failą, išorinę nuorodą (pvz. YouTube), arba abu.
+      </p>
+      ${surikiuota.length ? eilutes : '<p class="muted">Įrašų dar nėra.</p>'}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Nauja medžiaga</h2></div>
+      <form id="forma-biblioteka" novalidate>
+        <div class="field-row">
+          <div class="field">
+            <label for="b-pavadinimas">Pavadinimas</label>
+            <input id="b-pavadinimas" name="title" type="text" required placeholder="Pvz., Mitybos pagrindai">
+          </div>
+          <div class="field">
+            <label for="b-kategorija">Kategorija <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="b-kategorija" name="category" type="text" placeholder="Pvz., Mityba">
+          </div>
+        </div>
+        <div class="field">
+          <label for="b-aprasas">Aprašas <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <textarea id="b-aprasas" name="description" placeholder="Trumpai, apie ką šis įrašas"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="b-failas">Failas <span class="hint" style="display:inline">(neprivaloma, iki ${BIBLIOTEKOS_MAX_MB} MB)</span></label>
+            <input id="b-failas" type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.webp,.mp4,.mov">
+          </div>
+          <div class="field">
+            <label for="b-nuoroda">Nuoroda <span class="hint" style="display:inline">(neprivaloma, pvz. YouTube)</span></label>
+            <input id="b-nuoroda" name="url" type="url" placeholder="https://...">
+          </div>
+        </div>
+        <p class="hint">Pridėk failą arba nuorodą -- bent vieną iš jų.</p>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Pridėti</button>
+        </div>
+      </form>
+    </div>`;
+
+  for (const b of $$('.kelk-biblioteka')) {
+    b.addEventListener('click', () => perkelkBibliotekosIrasa(b.dataset.id, Number(b.dataset.kryptis)));
+  }
+  for (const b of $$('.redaguoti-biblioteka')) {
+    b.addEventListener('click', () => { redaguojamoBibliotekosIrasoId = b.dataset.id; piesBiblioteka(); });
+  }
+  for (const b of $$('.atsaukti-biblioteka')) {
+    b.addEventListener('click', () => { redaguojamoBibliotekosIrasoId = null; piesBiblioteka(); });
+  }
+  for (const f of $$('.forma-redaguoti-biblioteka')) f.addEventListener('submit', issaugokBibliotekosRedagavima);
+  for (const b of $$('.trinti-biblioteka')) {
+    b.addEventListener('click', () => trinkBibliotekosIrasa(b.dataset.id, b.dataset.vardas));
+  }
+
+  $('#forma-biblioteka')?.addEventListener('submit', prideBibliotekosIrasa);
+}
+
+function bibliotekosRedagavimoForma(irasas) {
+  return `
+    <form class="pratimo-eilute forma-redaguoti-biblioteka forma-kliento-pratimas" data-id="${esc(irasas.id)}" novalidate style="flex-direction:column;align-items:stretch;gap:var(--s-200)">
+      <div class="field-row">
+        <div class="field">
+          <label for="rb-pavadinimas-${esc(irasas.id)}">Pavadinimas</label>
+          <input id="rb-pavadinimas-${esc(irasas.id)}" name="title" type="text" required value="${esc(irasas.title)}">
+        </div>
+        <div class="field">
+          <label for="rb-kategorija-${esc(irasas.id)}">Kategorija</label>
+          <input id="rb-kategorija-${esc(irasas.id)}" name="category" type="text" value="${esc(irasas.category || '')}">
+        </div>
+      </div>
+      <div class="field">
+        <label for="rb-aprasas-${esc(irasas.id)}">Aprašas</label>
+        <textarea id="rb-aprasas-${esc(irasas.id)}" name="description">${esc(irasas.description || '')}</textarea>
+      </div>
+      <div class="field">
+        <label for="rb-nuoroda-${esc(irasas.id)}">Nuoroda</label>
+        <input id="rb-nuoroda-${esc(irasas.id)}" name="url" type="url" value="${esc(irasas.external_url || '')}">
+      </div>
+      ${irasas.file_path ? '<p class="hint">Failo pakeisti čia negalima -- ištrink įrašą ir pridėk iš naujo su nauju failu.</p>' : ''}
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-biblioteka" type="button">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function prideBibliotekosIrasa(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const btn = ev.submitter;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+  const nuoroda = String(fd.get('url') || '').trim();
+  const failas = $('#b-failas')?.files?.[0] || null;
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pavadinimą.', 'error');
+    return;
+  }
+  if (!failas && !nuoroda) {
+    pranesk($('#pranesimas'), 'Pridėk failą arba nuorodą.', 'error');
+    return;
+  }
+  if (nuoroda && !/^https:\/\//i.test(nuoroda)) {
+    pranesk($('#pranesimas'), 'Nuoroda turi prasidėti https://.', 'error');
+    return;
+  }
+  if (failas && failas.size > BIBLIOTEKOS_MAX_MB * 1024 * 1024) {
+    pranesk($('#pranesimas'), `Failas per didelis -- riba ${BIBLIOTEKOS_MAX_MB} MB.`, 'error');
+    return;
+  }
+
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
+  let kelias = null;
+  if (failas) {
+    try {
+      kelias = await ikelkBibliotekosFaila(failas);
+    } catch (err) {
+      pranesk($('#pranesimas'), klaidaLT(err), 'error');
+      if (btn) btn.disabled = false;
+      return;
+    }
+  }
+
+  const { error } = await db.from('library_items').insert({
+    title: pavadinimas,
+    description: String(fd.get('description') || '').trim(),
+    category: String(fd.get('category') || '').trim(),
+    file_path: kelias,
+    external_url: nuoroda || null,
+    position: biblioteka.length,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  pranesk($('#pranesimas'), 'Įrašas pridėtas.', 'ok');
+  await perkrauk();
+}
+
+async function issaugokBibliotekosRedagavima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+  const nuoroda = String(fd.get('url') || '').trim();
+  const irasas = biblioteka.find((b) => b.id === id);
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pavadinimą.', 'error');
+    return;
+  }
+  if (!irasas?.file_path && !nuoroda) {
+    pranesk($('#pranesimas'), 'Įrašas turi turėti failą arba nuorodą.', 'error');
+    return;
+  }
+  if (nuoroda && !/^https:\/\//i.test(nuoroda)) {
+    pranesk($('#pranesimas'), 'Nuoroda turi prasidėti https://.', 'error');
+    return;
+  }
+
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
+  const { error } = await db.from('library_items').update({
+    title: pavadinimas,
+    category: String(fd.get('category') || '').trim(),
+    description: String(fd.get('description') || '').trim(),
+    external_url: nuoroda || null,
+  }).eq('id', id);
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  redaguojamoBibliotekosIrasoId = null;
+  pranesk($('#pranesimas'), 'Įrašas atnaujintas.', 'ok');
+  await perkrauk();
+}
+
+async function trinkBibliotekosIrasa(id, vardas) {
+  if (!confirm(`Ištrinti įrašą "${vardas}"?`)) return;
+  const irasas = biblioteka.find((b) => b.id === id);
+  const { error } = await db.from('library_items').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  if (irasas?.file_path) await trinkBibliotekosFaila(irasas.file_path);
+  await perkrauk();
+}
+
+async function perkelkBibliotekosIrasa(id, kryptis) {
+  const surikiuota = [...biblioteka].sort((a, b) => a.position - b.position);
+  const idx = surikiuota.findIndex((b) => b.id === id);
+  const naujasIdx = idx + kryptis;
+  if (idx < 0 || naujasIdx < 0 || naujasIdx >= surikiuota.length) return;
+
+  [surikiuota[idx], surikiuota[naujasIdx]] = [surikiuota[naujasIdx], surikiuota[idx]];
+
+  const atnaujinimai = surikiuota.map((b, i) => db.from('library_items').update({ position: i }).eq('id', b.id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return;
+  }
+  surikiuota.forEach((b, i) => { b.position = i; });
+  biblioteka = surikiuota;
+  piesBiblioteka();
 }
 </script>
 </body>

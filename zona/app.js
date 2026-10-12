@@ -189,18 +189,44 @@ export async function ikelkNuotraukas(failai, vartotojoId) {
   return keliai;
 }
 
-/** kelias -> laikina (1 val.) nuoroda peržiūrėti privačiame kibiryje saugomą nuotrauką. */
-export async function nuotraukuNuorodos(keliai) {
+/** kelias -> laikina (1 val.) nuoroda privačiame kibiryje saugomam failui peržiūrėti.
+ * Veikia bet kuriam privačiam kibiriui, ne vien nuotraukoms -- vardas liko senas,
+ * kad nereikėtų keisti jau veikiančių iškvietimų. */
+export async function nuotraukuNuorodos(keliai, kibirys = NUOTRAUKU_KIBIRAS) {
   const rezultatas = new Map();
   if (!keliai?.length) return rezultatas;
   const { data: pasirasytos, error } = await db.storage
-    .from(NUOTRAUKU_KIBIRAS)
+    .from(kibirys)
     .createSignedUrls(keliai, 3600);
   if (error || !pasirasytos) return rezultatas;
   for (const p of pasirasytos) {
     if (p.signedUrl) rezultatas.set(p.path, p.signedUrl);
   }
   return rezultatas;
+}
+
+// -----------------------------------------------------------------------------
+//  Biblioteka -- trenerio įkelta medžiaga (pristatymai, straipsniai, video),
+//  matoma "pilnas" paketo klientams. Bendras turinys, ne kiekvieno kliento
+//  atskirai, tad kelias be kliento aplanko -- tik laiko žyma ir failo vardas.
+// -----------------------------------------------------------------------------
+export const BIBLIOTEKOS_KIBIRAS = 'biblioteka';
+export const BIBLIOTEKOS_MAX_MB = 50;
+
+export async function ikelkBibliotekosFaila(failas) {
+  const saugusVardas = failas.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase();
+  const kelias = `${Date.now()}-${saugusVardas}`;
+  const { error } = await db.storage.from(BIBLIOTEKOS_KIBIRAS).upload(kelias, failas, {
+    contentType: failas.type || 'application/octet-stream',
+    upsert: false,
+  });
+  if (error) throw error;
+  return kelias;
+}
+
+export async function trinkBibliotekosFaila(kelias) {
+  if (!kelias) return;
+  await db.storage.from(BIBLIOTEKOS_KIBIRAS).remove([kelias]);
 }
 
 /**
@@ -504,6 +530,11 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   // Užduotys -- privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.
   if (!treneris && profilis?.uzduotys_ijungtos) {
     nuorodos.push({ href: 'uzduotys.html', tekstas: 'Užduotys' });
+  }
+  // Biblioteka -- tik "pilnas" paketo klientams (treneriui visada, kad matytų,
+  // ką jie mato).
+  if (treneris || profilis?.plan_type === 'pilnas') {
+    nuorodos.push({ href: 'biblioteka.html', tekstas: 'Biblioteka' });
   }
   if (treneris) nuorodos.push({ href: 'valdymas.html', tekstas: 'Valdymas' });
   nuorodos.push({ href: 'paskyra.html', tekstas: 'Paskyra' });

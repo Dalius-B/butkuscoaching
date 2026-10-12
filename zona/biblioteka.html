@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblioteka | Butkus Coaching</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#101010">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="icon" href="../favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="stilius.css?v=20261013">
+
+<!--
+  Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
+  Taip zona veikia ir tada, kai CDN neprieinamas, ir nesiunčia lankytojo
+  duomenų trečiai šaliai. Paprastas skriptas įvykdomas anksčiau už modulį,
+  tad app.js jį jau randa.
+  Atnaujinimas: curl -sL -o zona/vendor/supabase-2.116.0.umd.js \n                  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@VERSIJA
+-->
+<script src="vendor/supabase-2.116.0.umd.js"></script>
+<style>
+  .biblio-kortele { display: flex; flex-direction: column; }
+  .biblio-kortele .aprasas { color: var(--ink-soft); font-size: .9375rem; margin-top: var(--s-75); flex: 1; }
+  .biblio-kortele .form-actions { margin-top: var(--s-200); }
+  .kategorijos-antraste { margin-top: var(--s-500); margin-bottom: var(--s-200); }
+  .kategorijos-antraste:first-child { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<header class="nav on-ink">
+  <div class="shell nav-inner">
+    <a class="wordmark" href="mano.html">Butkus<i>/</i>Coaching<small>Klientų zona</small></a>
+    <div class="nav-right" id="nav-right"></div>
+  </div>
+</header>
+
+<main id="turinys">
+  <div class="shell page">
+    <div class="page-head">
+      <h1>Biblioteka</h1>
+      <p>Pristatymai, straipsniai ir video, kuriuos Dalius dalinasi su pilno koučingo klientais.</p>
+    </div>
+    <div id="turinio-vieta">
+      <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="shell">
+    <span>Butkus Coaching, Dalius Butkus</span>
+    <a href="../index.html">Į svetainę</a>
+  </div>
+</footer>
+
+<script type="module">
+import { db, $, esc, klaidaLT, reikiaSesijos, rodykNav, nuotraukuNuorodos, BIBLIOTEKOS_KIBIRAS } from './app.js?v=20261013';
+
+const vieta = $('#turinio-vieta');
+
+paleisk();
+
+async function paleisk() {
+  const s = await reikiaSesijos();
+  if (!s) return;
+
+  if (s.klaida) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
+    return;
+  }
+
+  rodykNav(s.profilis, 'biblioteka.html', s.arTreneris);
+
+  // Ta pati taisyklė kaip duomenų bazėje (private.has_library_access) --
+  // čia tik aiškus paaiškinimas, kodėl sąrašas tuščias, o ne klaidinantis
+  // "turinio dar nėra" tam, kas iš tikro tiesiog neturi prieigos.
+  if (!s.arTreneris && s.profilis?.plan_type !== 'pilnas') {
+    vieta.innerHTML = `
+      <div class="empty">
+        <h2>Prieinama tik pilno koučingo klientams</h2>
+        <p>Biblioteka yra pilno koučingo paketo dalis. Jei nori prie jos prieigos, susisiek su Daliumi.</p>
+      </div>`;
+    return;
+  }
+
+  await ikelk();
+}
+
+async function ikelk() {
+  const { data: irasai, error } = await db
+    .from('library_items')
+    .select('id, title, description, category, file_path, external_url, position')
+    .order('position', { ascending: true });
+
+  if (error) {
+    vieta.innerHTML = `<div class="note note-error">${esc(klaidaLT(error))}</div>`;
+    return;
+  }
+
+  const visi = irasai || [];
+  if (!visi.length) {
+    vieta.innerHTML = `
+      <div class="empty">
+        <h2>Kol kas tuščia</h2>
+        <p>Dalius dar nepridėjo medžiagos. Kai pridės, ji atsiras čia.</p>
+      </div>`;
+    return;
+  }
+
+  const failuKeliai = visi.filter((i) => i.file_path).map((i) => i.file_path);
+  const nuorodos = await nuotraukuNuorodos(failuKeliai, BIBLIOTEKOS_KIBIRAS);
+
+  // Grupuojame pagal kategoriją, nekategorizuoti -- į pabaigą po visų
+  // pavadintų grupių, savo tvarka išlaikoma.
+  const grupes = new Map();
+  for (const irasas of visi) {
+    const raktas = irasas.category?.trim() || '';
+    if (!grupes.has(raktas)) grupes.set(raktas, []);
+    grupes.get(raktas).push(irasas);
+  }
+  const raktai = [...grupes.keys()].sort((a, b) => (a === '') - (b === ''));
+
+  const kortele = (irasas) => `
+    <div class="card biblio-kortele">
+      <h3 style="margin:0">${esc(irasas.title)}</h3>
+      ${irasas.description ? `<p class="aprasas">${esc(irasas.description)}</p>` : ''}
+      <div class="form-actions">
+        ${irasas.file_path && nuorodos.get(irasas.file_path)
+          ? `<a class="btn btn-primary btn-sm" href="${esc(nuorodos.get(irasas.file_path))}" target="_blank" rel="noopener">Atsisiųsti</a>`
+          : ''}
+        ${irasas.external_url
+          ? `<a class="btn btn-ghost btn-sm" href="${esc(irasas.external_url)}" target="_blank" rel="noopener">Žiūrėti nuorodą</a>`
+          : ''}
+      </div>
+    </div>`;
+
+  vieta.innerHTML = raktai.map((raktas) => `
+    <div class="kategorijos-antraste"><h2>${raktas ? esc(raktas) : 'Kita'}</h2></div>
+    <div class="grid-cards">${grupes.get(raktas).map(kortele).join('')}</div>
+  `).join('');
+}
+</script>
+</body>
+</html>

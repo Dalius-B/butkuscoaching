@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /zona/
+
+Sitemap: https://butkuscoaching.lt/sitemap.xml
