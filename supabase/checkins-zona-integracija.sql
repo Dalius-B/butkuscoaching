@@ -8,7 +8,7 @@
 -- original "anyone can submit" policy from checkins.sql with three narrower
 -- ones:
 --   1. a logged-in client can insert a check-in, but only attributed to
---      themselves (user_id must equal their own auth id) -- they cannot
+--      themselves (user_id must equal their own auth id) — they cannot
 --      submit one pretending to be someone else
 --   2. a logged-in client can read their own check-ins (their history on
 --      mano.html), and nobody else's

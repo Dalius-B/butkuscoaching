@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -23,10 +23,10 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
-  /* Žvaigždučių vertinimas -- paslėpti radio, o DOM tvarka atvirkščia (5 pirma),
+  /* Žvaigždučių vertinimas — paslėpti radio, o DOM tvarka atvirkščia (5 pirma),
      kad :hover/:has(:checked) paryškintų save IR visas vėlesnes (vizualiai
      kairesnes, mažesnes) žvaigždutes. Kiekvienas input'as yra SAVO label'o
-     viduje (position:relative), o ne prieš jį kaip brolis -- taip absoliuti
+     viduje (position:relative), o ne prieš jį kaip brolis — taip absoliuti
      pozicija lieka tik to vieno žvaigždutės ploto ribose, o ne susikrauna
      visos ant viena kitos (kas nutinka, jei absoliučiai pozicionuojami
      elementai yra tiesioginiai flex konteinerio vaikai). */
@@ -73,7 +73,7 @@
   <div class="shell page">
     <div class="page-head">
       <h1>Atsiliepimas</h1>
-      <p>Trumpas atsiliepimas apie darbą kartu -- jei sutiksi, jį paskelbsiu svetainėje.</p>
+      <p>Trumpas atsiliepimas apie darbą kartu — jei sutiksi, jį paskelbsiu svetainėje.</p>
     </div>
     <div id="turinio-vieta">
       <div class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
@@ -93,7 +93,7 @@ import {
   db, $, $$, esc, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   ikelkNuotraukas, atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
   ATSILIEPIMU_KIBIRAS, ATSILIEPIMU_NUOTRAUKU_LIMITAS, ATSILIEPIMU_NUOTRAUKOS_MAX_MB,
-} from './app.js?v=20261016';
+} from './app.js?v=20261017';
 
 const vieta = $('#turinio-vieta');
 
@@ -252,7 +252,7 @@ function prijunkNuotraukuPerziura() {
     }
     const perDidele = failai.find((f) => f.size > ATSILIEPIMU_NUOTRAUKOS_MAX_MB * 1024 * 1024);
     if (perDidele) {
-      pranesk(klaidosVieta, `„${perDidele.name}“ per didelė -- didžiausias leidžiamas dydis ${ATSILIEPIMU_NUOTRAUKOS_MAX_MB} MB.`, 'error');
+      pranesk(klaidosVieta, `„${perDidele.name}“ per didelė — didžiausias leidžiamas dydis ${ATSILIEPIMU_NUOTRAUKOS_MAX_MB} MB.`, 'error');
       ivestis.value = '';
       return;
     }
@@ -312,7 +312,7 @@ async function pateik(ev) {
     rating: reitingas,
     body: tekstas,
     photo_paths: visosNuotraukos.length ? visosNuotraukos : null,
-    // Tik vardas, be pavardės -- viešai pagrindiniame puslapyje pavardės
+    // Tik vardas, be pavardės — viešai pagrindiniame puslapyje pavardės
     // rodyti nenorima.
     display_name: profilis?.full_name?.trim()?.split(/\s+/)[0] || profilis?.email || null,
   };

@@ -21,7 +21,7 @@ alter table public.client_exercises
 alter table public.exercise_logs
   add column if not exists duration_seconds integer;
 
--- Pilnas assign_program() perrašymas -- vienintelis pakeitimas nuo supersetai.sql
+-- Pilnas assign_program() perrašymas — vienintelis pakeitimas nuo supersetai.sql
 -- versijos yra log_type kopijavimas.
 create or replace function public.assign_program(p_program_id uuid, p_client_id uuid, p_starts_on date default null)
 returns uuid

@@ -339,12 +339,12 @@ p { text-wrap: pretty; }
 .atsiliepimo-kortele { display: flex; flex-direction: column; }
 .atsiliepimo-zvaigzdutes { color: var(--volt); font-size: 1.125rem; letter-spacing: 2px; margin-top: var(--s-200); }
 .atsiliepimo-tekstas { margin-top: var(--s-100); flex: 1; }
-/* Nuotraukos -- jei klientas jų pridėjo -- rodomos kaip kuklaus dydžio,
+/* Nuotraukos — jei klientas jų pridėjo — rodomos kaip kuklaus dydžio,
    aiškiai matomos miniatiūros po tekstu (kaip prekių atsiliepimuose), o ne
    mažas profilio apskritimas prie vardo (per mažas, nematyti rezultato) ir
    ne per visą kortelę ištemptas vaizdas (per agresyvu, lūžta maketas su
    dideliais originaliais telefono nuotraukų matmenimis). Fiksuotas plotis/
-   aukštis (ne %) -- tinklelio/lankstumo elementui nebereikia aspect-ratio
+   aukštis (ne %) — tinklelio/lankstumo elementui nebereikia aspect-ratio
    skaičiavimo iš dinamiško pločio, tad nėra ir pavojaus, kad nuotrauka
    išspaus savo langelį didesnį už numatytą. */
 .atsiliepimo-nuotraukos { display: flex; flex-wrap: wrap; gap: var(--s-75); margin-top: var(--s-200); }
@@ -354,7 +354,7 @@ p { text-wrap: pretty; }
 .atsiliepimo-apacia { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-100); }
 .atsiliepimo-vardas { font-weight: 700; font-size: 0.9375rem; }
 /* Atsiliepimą gali parašyti tik tikras, aktyvus klientas iš savo zonos
-   paskyros (zona/atsiliepimas.html) -- niekada viešas niekieno pildomas
+   paskyros (zona/atsiliepimas.html) — niekada viešas niekieno pildomas
    langelis. Ši žyma tai pasako lankytojui, kuris šio pastatymo "iš vidaus"
    nemato. */
 .atsiliepimo-patvirtinta {
@@ -1022,7 +1022,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
   </section>
 
   <!-- ===================== ATSILIEPIMAI ===================== -->
-  <!-- Paslėpta pagal nutylėjimą -- script.js pabaigoje ją parodo tik jei
+  <!-- Paslėpta pagal nutylėjimą — script.js pabaigoje ją parodo tik jei
        randa bent vieną PASKELBTĄ (patvirtintą) klientų atsiliepimą. -->
   <section class="section section--paper" id="atsiliepimai" aria-labelledby="atsiliepimai-h" hidden>
     <div class="shell">
@@ -2000,7 +2000,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
 
 <!--
   Atsiliepimai. Biblioteka guli tame pačiame vendor faile, kaip ir klientų
-  zonoje -- nėra prasmės laikyti dvi kopijas. Skaitoma per viešą (publishable)
+  zonoje — nėra prasmės laikyti dvi kopijas. Skaitoma per viešą (publishable)
   raktą, kurį saugu laikyti kode: RLS leidžia anon rolei matyti tik
   status='published' eilutes (žr. supabase/atsiliepimai.sql).
 -->
@@ -2032,13 +2032,13 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
 
     grid.innerHTML = data.map(function (t) {
       const zvaigzdutes = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
-      // Tik pirmas žodis -- jei kas nors patvirtintas anksčiau su pilnu
+      // Tik pirmas žodis — jei kas nors patvirtintas anksčiau su pilnu
       // vardu, pavardė čia vis tiek nerodoma.
       const vardas = esc((t.display_name || 'Klientas').trim().split(/\s+/)[0]);
       const keliai = t.photo_paths || [];
       const nuorodos = keliai.map((k) => client.storage.from('atsiliepimu-nuotraukos').getPublicUrl(k).data.publicUrl);
 
-      // Nuotraukos -- jei yra -- kuklaus dydžio miniatiūros po tekstu, kad
+      // Nuotraukos — jei yra — kuklaus dydžio miniatiūros po tekstu, kad
       // aiškiai matytųsi, bet neperimtų visos kortelės.
       const nuotraukuBlokas = nuorodos.length
         ? '<div class="atsiliepimo-nuotraukos">'
@@ -2061,7 +2061,7 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
 
     document.getElementById('atsiliepimai').hidden = false;
   } catch (err) {
-    // Tylus nutraukimas -- svetainė visada turi veikti ir be atsiliepimų.
+    // Tylus nutraukimas — svetainė visada turi veikti ir be atsiliepimų.
   }
 })();
 </script>

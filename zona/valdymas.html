@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -31,7 +31,7 @@
   .nuotrauku-galerija img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
   .nuotrauku-galerija img:hover { opacity: .85; }
 
-  /* Kliento priskirtos programos kopijos pratimų eilutė -- tas pats
+  /* Kliento priskirtos programos kopijos pratimų eilutė — tas pats
      vaizdas kaip redaguoti.html šablono sąraše, bet be tempimo (čia
      tvarką keisti pakanka mygtukais, programa paprastai trumpa). */
   .pratimo-eilute {
@@ -112,8 +112,8 @@ import {
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
-} from './app.js?v=20261016';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261016';
+} from './app.js?v=20261017';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261017';
 
 let profiliai = [];
 let savasId = null;
@@ -147,7 +147,7 @@ async function paleisk() {
 
   await perkrauk();
 
-  // Atėjus iš kliento profilio (klientas.html) nuorodos "Tvarkyti" -- iškart
+  // Atėjus iš kliento profilio (klientas.html) nuorodos "Tvarkyti" — iškart
   // atidaro Klientai skiltį ir to kliento programų sąrašą, kad nereikėtų
   // ieškoti jo iš naujo lentelėje.
   const atidarytiKlienta = new URLSearchParams(location.search).get('klientas');
@@ -253,7 +253,7 @@ function piesProgramas() {
           <span class="row-end muted">${programos.length}</span>
         </summary>
         <p class="muted" style="font-size:.8125rem;margin:var(--s-200) 0">
-          Būsena nurodo, ar programą gali priskirti NAUJAM klientui -- klientai, kurie programą jau turi
+          Būsena nurodo, ar programą gali priskirti NAUJAM klientui — klientai, kurie programą jau turi
           priskirtą, mato savo kopiją nepriklausomai nuo šios būsenos (ir jei ją pakeisi į Juodraštis ar
           Archyve, jau priskirtiems klientams niekas nepasikeičia).
         </p>
@@ -294,7 +294,7 @@ async function sukurkPrograma(ev) {
 
 async function trinkPrograma(id, vardas) {
   // Dienos ir pratimai turi on delete cascade ryšį su programa. Klientų
-  // kopijos (client_programs) nuo šablono nepriklauso -- program_id ten tik
+  // kopijos (client_programs) nuo šablono nepriklauso — program_id ten tik
   // paliekamas tuščias, o kliento kopija ir jos istorija lieka nepaliesta.
   if (!confirm(`Ištrinti programą "${vardas}"?\n\nKartu dings jos dienos ir pratimai. Klientams jau priskirtos kopijos ir jų įrašyta treniruočių istorija liks nepaliestos. To atstatyti nebus galima.`)) return;
 
@@ -307,7 +307,7 @@ async function trinkPrograma(id, vardas) {
   await perkrauk();
 }
 
-/** Paketo žyma klientų ir kvietimų lentelėse -- viena vieta trims tipams. */
+/** Paketo žyma klientų ir kvietimų lentelėse — viena vieta trims tipams. */
 function paketoText(planType) {
   if (planType === 'tik_programa') return 'Tik programa';
   if (planType === 'tik_uzduotys') return 'Tik užduotys';
@@ -412,7 +412,7 @@ async function keiskUzduotis(id, ijungta) {
 
 // Kliento visos programos kopijos (aktyvios ir baigtos), su galimybe
 // nereikalingą (pvz. bandomąją) visam laikui ištrinti. Tai skiriasi nuo
-// "Atimti" priskyrimų skiltyje -- ten tik pažymima 'finished' ir istorija
+// "Atimti" priskyrimų skiltyje — ten tik pažymima 'finished' ir istorija
 // lieka, o čia eilutė (ir per cascade jos dienos/pratimai/įrašai) dingsta.
 function rodykKlientoProgramas(clientId) {
   const klientas = profiliai.find((p) => p.id === clientId);
@@ -438,7 +438,7 @@ function rodykKlientoProgramas(clientId) {
   $('#klientu-programu-detale').innerHTML = `
     <div class="card" style="margin-top:var(--s-300)">
       <div class="card-head">
-        <h2>${esc(klientas.full_name || klientas.email)} -- programos</h2>
+        <h2>${esc(klientas.full_name || klientas.email)} — programos</h2>
         <span class="row-end muted">${savos.length}</span>
       </div>
       ${savos.length ? `
@@ -462,7 +462,7 @@ function rodykKlientoProgramas(clientId) {
   $('#klientu-programu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-/** Pervadinimas nepaliečia client_days/client_exercises/exercise_logs --
+/** Pervadinimas nepaliečia client_days/client_exercises/exercise_logs —
  * tik pačios kopijos pavadinimo, tad kliento istorija nenukenčia. */
 async function pervadinkKlientoPrograma(id, senasPavadinimas, clientId) {
   const naujas = prompt('Naujas programos pavadinimas:', senasPavadinimas);
@@ -482,11 +482,11 @@ async function pervadinkKlientoPrograma(id, senasPavadinimas, clientId) {
 
 // =============================================================================
 //  KLIENTO PRISKIRTOS PROGRAMOS KOPIJOS TAISYMAS
-//  Priskyrimo metu kliento kopija "sušąla" -- vėlesni šablono pakeitimai jos
+//  Priskyrimo metu kliento kopija "sušąla" — vėlesni šablono pakeitimai jos
 //  nebepasiekia. Čia leidžiama taisyti patį kliento egzempliorių (pratimų
 //  laukus, tvarką, dienos pavadinimą, pridėti ar ištrinti pratimą), be viso
 //  priskyrimo kartojimo, kuris sukurtų naują kopiją ir nutrauktų ryšį su jau
-//  įrašyta istorija -- kiti klientai ir šablonas lieka nepaliesti.
+//  įrašyta istorija — kiti klientai ir šablonas lieka nepaliesti.
 // =============================================================================
 async function redaguokKlientoPratimus(clientProgramId) {
   redaguojamosKlientoProgramosId = clientProgramId;
@@ -533,7 +533,7 @@ function piesKlientoPratimus() {
         <button class="btn btn-ghost btn-sm row-end" type="button" id="uzdaryti-kliento-pratimus">Uždaryti</button>
       </div>
       <p class="muted" style="font-size:.875rem">
-        Čia taisomas tik šio kliento jau priskirtas egzempliorius -- šablonas ir kiti klientai nepasikeičia,
+        Čia taisomas tik šio kliento jau priskirtas egzempliorius — šablonas ir kiti klientai nepasikeičia,
         o kliento jau įrašyta treniruočių istorija lieka susieta su tais pačiais pratimais.
       </p>
       ${klientoDienos.map((d) => {
@@ -824,7 +824,7 @@ async function pridekKlientoPratima(ev) {
     return;
   }
 
-  // Skaičiuojame pagal didžiausią esamą position, ne pagal kiekį -- jei
+  // Skaičiuojame pagal didžiausią esamą position, ne pagal kiekį — jei
   // tarp esamų pratimų jau yra spraga (pvz. vienas ištrintas viduryje),
   // vien kiekis duotų tą pačią position reikšmę, kaip jau turi kitas
   // pratimas.
@@ -888,7 +888,7 @@ async function perkelkKlientoPratima(pratimoId, kryptis) {
     const x = klientoPratimai.find((y) => y.id === id);
     if (x) x.position = idx;
   });
-  // Pačių .position reikšmių pakeitimo neužtenka -- piešimas filtruoja
+  // Pačių .position reikšmių pakeitimo neužtenka — piešimas filtruoja
   // masyvą jo DABARTINE tvarka, ne pagal position, tad be perrikiavimo
   // mygtukai atnaujintų duomenų bazę, bet ekranas liktų nepasikeitęs.
   klientoPratimai.sort((a, b) => a.position - b.position);
@@ -970,9 +970,9 @@ function piesKvietimus() {
           <div class="field">
             <label for="k-paketas">Paketas</label>
             <select id="k-paketas">
-              <option value="pilnas">Pilnas koučingas -- programa, istorija ir savaitinė ataskaita</option>
-              <option value="tik_programa">Tik programa -- programa ir istorija, be savaitinės ataskaitos</option>
-              <option value="tik_uzduotys">Tik užduotys -- be programos, be istorijos</option>
+              <option value="pilnas">Pilnas koučingas — programa, istorija ir savaitinė ataskaita</option>
+              <option value="tik_programa">Tik programa — programa ir istorija, be savaitinės ataskaitos</option>
+              <option value="tik_uzduotys">Tik užduotys — be programos, be istorijos</option>
             </select>
           </div>
           <div class="field">
@@ -1205,7 +1205,7 @@ async function rodykKlientoPatikrinimus(clientId) {
 }
 
 // =============================================================================
-//  BIBLIOTEKA -- trenerio įkelta medžiaga (pristatymai, straipsniai, video),
+//  BIBLIOTEKA — trenerio įkelta medžiaga (pristatymai, straipsniai, video),
 //  matoma tik "pilnas" paketo klientams (zona/biblioteka.html).
 // =============================================================================
 function piesBiblioteka() {
@@ -1271,7 +1271,7 @@ function piesBiblioteka() {
             <input id="b-nuoroda" name="url" type="url" placeholder="https://...">
           </div>
         </div>
-        <p class="hint">Pridėk failą arba nuorodą -- bent vieną iš jų.</p>
+        <p class="hint">Pridėk failą arba nuorodą — bent vieną iš jų.</p>
         <div class="form-actions">
           <button class="btn btn-primary" type="submit">Pridėti</button>
         </div>
@@ -1316,7 +1316,7 @@ function bibliotekosRedagavimoForma(irasas) {
         <label for="rb-nuoroda-${esc(irasas.id)}">Nuoroda</label>
         <input id="rb-nuoroda-${esc(irasas.id)}" name="url" type="url" value="${esc(irasas.external_url || '')}">
       </div>
-      ${irasas.file_path ? '<p class="hint">Failo pakeisti čia negalima -- ištrink įrašą ir pridėk iš naujo su nauju failu.</p>' : ''}
+      ${irasas.file_path ? '<p class="hint">Failo pakeisti čia negalima — ištrink įrašą ir pridėk iš naujo su nauju failu.</p>' : ''}
       <div class="form-actions">
         <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
         <button class="btn btn-ghost btn-sm atsaukti-biblioteka" type="button">Atšaukti</button>
@@ -1346,7 +1346,7 @@ async function prideBibliotekosIrasa(ev) {
     return;
   }
   if (failas && failas.size > BIBLIOTEKOS_MAX_MB * 1024 * 1024) {
-    pranesk($('#pranesimas'), `Failas per didelis -- riba ${BIBLIOTEKOS_MAX_MB} MB.`, 'error');
+    pranesk($('#pranesimas'), `Failas per didelis — riba ${BIBLIOTEKOS_MAX_MB} MB.`, 'error');
     return;
   }
 
@@ -1458,13 +1458,13 @@ async function perkelkBibliotekosIrasa(id, kryptis) {
 }
 
 // =============================================================================
-//  ATSILIEPIMAI -- klientų iš zona/atsiliepimas.html pateikti atsiliepimai,
+//  ATSILIEPIMAI — klientų iš zona/atsiliepimas.html pateikti atsiliepimai,
 //  rodomi viešai pagrindiniame puslapyje tik po trenerio patvirtinimo.
 // =============================================================================
 function piesAtsiliepimus() {
   if (!atsiliepimai.length) {
     $('#kortele-atsiliepimai').innerHTML = `
-      <div class="card"><p class="muted">Atsiliepimų dar nėra -- klientai juos rašo skiltyje „Atsiliepimas“ savo zonoje.</p></div>`;
+      <div class="card"><p class="muted">Atsiliepimų dar nėra — klientai juos rašo skiltyje „Atsiliepimas“ savo zonoje.</p></div>`;
     return;
   }
 

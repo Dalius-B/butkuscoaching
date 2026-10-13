@@ -12,7 +12,7 @@
 -- Kvietimai tab). It is copied onto the client's profile the moment they
 -- redeem that invite, and from then on controls both what the nav bar shows
 -- them (rodykNav() in app.js) and, here, whether the database will actually
--- accept a checkins row from them -- hiding the link is not real access
+-- accept a checkins row from them — hiding the link is not real access
 -- control on its own, a program-only client could otherwise still POST
 -- straight to the API.
 --
@@ -27,7 +27,7 @@ alter table public.profiles
   add column if not exists plan_type text not null default 'pilnas'
     check (plan_type in ('pilnas', 'tik_programa'));
 
--- Pilnas redeem_invite() perrašymas -- vienintelis pakeitimas nuo
+-- Pilnas redeem_invite() perrašymas — vienintelis pakeitimas nuo
 -- duomenu-baze.sql versijos yra plan_type kopijavimas kartu su full_name.
 create or replace function public.redeem_invite(p_token text)
 returns void

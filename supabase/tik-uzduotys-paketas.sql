@@ -3,14 +3,14 @@
 -- redeem_invite()), uzduotys.sql (uzduotys_ijungtos) and pratimo-tipas.sql
 -- (assign_program() with log_type) to already exist.
 --
--- A third plan_type: 'tik_uzduotys' -- a client who gets ONLY the daily
+-- A third plan_type: 'tik_uzduotys' — a client who gets ONLY the daily
 -- challenges page, nothing else (no programs, no history, no weekly
 -- check-in). Picked the same way as the other two, when the trainer
 -- creates an invite. Redeeming it also turns uzduotys_ijungtos on
 -- automatically, so the trainer doesn't have to flip that switch
 -- separately right after. Programs still cannot be assigned to this kind
 -- of client even by direct RPC call, not just because the button is
--- hidden -- same "don't rely on the UI alone" rule as checkins already
+-- hidden — same "don't rely on the UI alone" rule as checkins already
 -- follows for plan_type.
 
 alter table public.invites drop constraint if exists invites_plan_type_check;
@@ -21,7 +21,7 @@ alter table public.profiles drop constraint if exists profiles_plan_type_check;
 alter table public.profiles add constraint profiles_plan_type_check
   check (plan_type in ('pilnas', 'tik_programa', 'tik_uzduotys'));
 
--- Pilnas redeem_invite() perrašymas -- vienintelis pakeitimas nuo
+-- Pilnas redeem_invite() perrašymas — vienintelis pakeitimas nuo
 -- kliento-tipas.sql versijos yra automatinis uzduotys_ijungtos įjungimas
 -- "tik užduotys" paketui.
 create or replace function public.redeem_invite(p_token text)
@@ -77,7 +77,7 @@ begin
 end;
 $$;
 
--- Pilnas assign_program() perrašymas -- vienintelis pakeitimas nuo
+-- Pilnas assign_program() perrašymas — vienintelis pakeitimas nuo
 -- pratimo-tipas.sql versijos yra apsauga nuo priskyrimo "tik užduotys"
 -- klientui.
 create or replace function public.assign_program(p_program_id uuid, p_client_id uuid, p_starts_on date default null)
@@ -98,7 +98,7 @@ begin
   end if;
 
   if (select plan_type from public.profiles where id = p_client_id) = 'tik_uzduotys' then
-    raise exception 'Šis klientas turi tik užduočių paketą -- programos nepriskiriamos' using errcode = '42501';
+    raise exception 'Šis klientas turi tik užduočių paketą — programos nepriskiriamos' using errcode = '42501';
   end if;
 
   select title into v_title from public.programs where id = p_program_id;

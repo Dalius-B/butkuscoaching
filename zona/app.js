@@ -106,7 +106,7 @@ export function data(iso, suLaiku = false) {
 
 /**
  * Programos savaitės numeris pagal jos pradžios datą (starts_on), o jei ji
- * nenustatyta -- pagal priskyrimo datą (assigned_at). Grąžina null, jei
+ * nenustatyta — pagal priskyrimo datą (assigned_at). Grąžina null, jei
  * programa dar neprasidėjo (pradžios data ateityje) arba nėra jokios datos.
  * Skaičiuojama pagal kalendorines dienas, ne pagal savaitės dieną, kad
  * numeris nepasikeistų vidury savaitės netikėtai.
@@ -126,7 +126,7 @@ export function programosSavaite(programa) {
 }
 
 /** Sekundės į skaitomą trukmę, pvz. "45s" arba "1 min 30 s". Naudojama ir
- * programos setų lauko placeholder tekste, ir istorijos lentelėse -- viena
+ * programos setų lauko placeholder tekste, ir istorijos lentelėse — viena
  * vieta, kad abi visada rodytų tą patį formatą. */
 export function formatuokTrukme(sek) {
   if (sek == null) return '';
@@ -137,9 +137,9 @@ export function formatuokTrukme(sek) {
 }
 
 /**
- * Supersetų grupės -- ne atskiras stulpelis grupei, o vien tik gretimų
+ * Supersetų grupės — ne atskiras stulpelis grupei, o vien tik gretimų
  * pratimų (pagal position) grandinė, kur kiekvienas paženklintas
- * superset_with_previous. Grupė rodoma (A1, A2...) tik jei joje 2+ nariai --
+ * superset_with_previous. Grupė rodoma (A1, A2...) tik jei joje 2+ nariai —
  * viena pažymėta eilutė be poros tiesiog nėra supersetas. Naudojama ir
  * treneriui redaguojant šabloną, ir klientui matant savo programą, tad
  * abi vietos visada sutaria dėl tos pačios tvarkos.
@@ -164,7 +164,7 @@ export function apskaiciuokSupersetuZenklus(pratimai) {
 
 // -----------------------------------------------------------------------------
 //  Progreso nuotraukos (savaitinė ataskaita)
-//  Kibirys privatus -- nuorodos niekada nesaugomos, tik keliai. Rodymo metu
+//  Kibirys privatus — nuorodos niekada nesaugomos, tik keliai. Rodymo metu
 //  nuoroda sugeneruojama laikinai per nuotraukuNuorodos().
 // -----------------------------------------------------------------------------
 const NUOTRAUKU_KIBIRAS = 'progreso-nuotraukos';
@@ -178,7 +178,7 @@ export async function ikelkNuotraukas(failai, vartotojoId, kibirys = NUOTRAUKU_K
     const failas = failai[i];
     const saugusVardas = failas.name.replace(/[^a-zA-Z0-9.-]/g, '_').toLowerCase();
     const kelias = `${vartotojoId}/${Date.now()}-${i}-${saugusVardas}`;
-    // eslint-disable-next-line no-await-in-loop -- kiekvienas kelias turi būti unikalus (Date.now()), tad įkeliame paeiliui
+    // eslint-disable-next-line no-await-in-loop — kiekvienas kelias turi būti unikalus (Date.now()), tad įkeliame paeiliui
     const { error } = await db.storage.from(kibirys).upload(kelias, failas, {
       contentType: failas.type || 'application/octet-stream',
       upsert: false,
@@ -190,7 +190,7 @@ export async function ikelkNuotraukas(failai, vartotojoId, kibirys = NUOTRAUKU_K
 }
 
 /** kelias -> laikina (1 val.) nuoroda privačiame kibiryje saugomam failui peržiūrėti.
- * Veikia bet kuriam privačiam kibiriui, ne vien nuotraukoms -- vardas liko senas,
+ * Veikia bet kuriam privačiam kibiriui, ne vien nuotraukoms — vardas liko senas,
  * kad nereikėtų keisti jau veikiančių iškvietimų. */
 export async function nuotraukuNuorodos(keliai, kibirys = NUOTRAUKU_KIBIRAS) {
   const rezultatas = new Map();
@@ -206,9 +206,9 @@ export async function nuotraukuNuorodos(keliai, kibirys = NUOTRAUKU_KIBIRAS) {
 }
 
 // -----------------------------------------------------------------------------
-//  Biblioteka -- trenerio įkelta medžiaga (pristatymai, straipsniai, video),
+//  Biblioteka — trenerio įkelta medžiaga (pristatymai, straipsniai, video),
 //  matoma "pilnas" paketo klientams. Bendras turinys, ne kiekvieno kliento
-//  atskirai, tad kelias be kliento aplanko -- tik laiko žyma ir failo vardas.
+//  atskirai, tad kelias be kliento aplanko — tik laiko žyma ir failo vardas.
 // -----------------------------------------------------------------------------
 export const BIBLIOTEKOS_KIBIRAS = 'biblioteka';
 export const BIBLIOTEKOS_MAX_MB = 50;
@@ -230,7 +230,7 @@ export async function trinkBibliotekosFaila(kelias) {
 }
 
 // -----------------------------------------------------------------------------
-//  Atsiliepimų nuotraukos -- kibirys VIEŠAS (skirtingai nuo visų kitų), nes
+//  Atsiliepimų nuotraukos — kibirys VIEŠAS (skirtingai nuo visų kitų), nes
 //  paskelbti atsiliepimai rodomi pagrindiniame puslapyje net neprisijungusiems
 //  lankytojams. Dėl to nuoroda gaunama iš karto (getPublicUrl), be pasirašymo.
 // -----------------------------------------------------------------------------
@@ -534,27 +534,27 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
   const vardas = profilis?.full_name?.trim() || profilis?.email || '';
 
   const nuorodos = [];
-  // "Tik užduotys" tipo klientas neturi nei programos, nei istorijos -- jam
+  // "Tik užduotys" tipo klientas neturi nei programos, nei istorijos — jam
   // "Mano programa" nuorodos nerodome (treneriui, žinoma, visada rodoma).
   if (treneris || profilis?.plan_type !== 'tik_uzduotys') {
     nuorodos.push({ href: 'mano.html', tekstas: 'Mano programa' });
   }
-  // Savaitinė ataskaita yra kliento savaitinis pildomas dalykas -- treneriui
+  // Savaitinė ataskaita yra kliento savaitinis pildomas dalykas — treneriui
   // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. Tik
   // "pilnas" paketas apima savaitinį patikrinimą.
   if (!treneris && profilis?.plan_type === 'pilnas') {
     nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
   }
-  // Užduotys -- privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.
+  // Užduotys — privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.
   if (!treneris && profilis?.uzduotys_ijungtos) {
     nuorodos.push({ href: 'uzduotys.html', tekstas: 'Užduotys' });
   }
-  // Biblioteka -- tik "pilnas" paketo klientams (treneriui visada, kad matytų,
+  // Biblioteka — tik "pilnas" paketo klientams (treneriui visada, kad matytų,
   // ką jie mato).
   if (treneris || profilis?.plan_type === 'pilnas') {
     nuorodos.push({ href: 'biblioteka.html', tekstas: 'Biblioteka' });
   }
-  // Atsiliepimas -- bet kokio paketo aktyviam klientui, treneriui nerodoma
+  // Atsiliepimas — bet kokio paketo aktyviam klientui, treneriui nerodoma
   // (jis pats sau atsiliepimo nerašo).
   if (!treneris) {
     nuorodos.push({ href: 'atsiliepimas.html', tekstas: 'Atsiliepimas' });
@@ -567,7 +567,7 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
     .join('');
 
   // Vienoje eilutėje su horizontaliu slinkimu meniu netilpdavo plačiuose
-  // telefonuose -- dabar iki 760px pločio nuorodos slepiamos į "meniu"
+  // telefonuose — dabar iki 760px pločio nuorodos slepiamos į "meniu"
   // mygtuko atidaromą skydelį, o ne verčia slinkti į šoną.
   holder.innerHTML = `
     <nav class="nav-links" aria-label="Zonos meniu">${nuorodosHtml}</nav>

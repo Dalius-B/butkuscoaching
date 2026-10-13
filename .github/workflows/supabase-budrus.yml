@@ -2,11 +2,11 @@
 # veiklos ir pats nepabunda. Šis darbas tris kartus per savaitę perskaito
 # public.keepalive lentelę (žr. supabase/duomenu-baze.sql, 9 dalis), kad
 # projektas liktų gyvas. Naudoja tik viešą "publishable" raktą, kuris
-# pats savaime prieigos neduoda -- apsauga yra duomenų bazės taisyklėse.
+# pats savaime prieigos neduoda — apsauga yra duomenų bazės taisyklėse.
 #
 # GitHub suplanuotus darbus paleidžia tik iš numatytosios šakos (main), ir
 # juos automatiškai išjungia, kai repozitorijoje 60 dienų nebūna jokios
-# veiklos -- tada Actions skiltyje jį reikia įjungti ranka.
+# veiklos — tada Actions skiltyje jį reikia įjungti ranka.
 name: Supabase budrumo darbas
 
 on:

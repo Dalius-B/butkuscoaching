@@ -3,13 +3,13 @@
 -- already exist.
 --
 -- Lets a client attach progress photos to their weekly check-in. The bucket
--- is PRIVATE (not public) -- these can be body photos, so nothing is served
+-- is PRIVATE (not public) — these can be body photos, so nothing is served
 -- by a guessable URL. Each file is uploaded under a path starting with the
 -- uploading client's own auth id (e.g. "3fa8.../169900-0-photo.jpg"), and
 -- the storage policies below only allow a client to read/write inside their
 -- own folder, or the trainer to read everyone's. The site always generates
 -- a short-lived signed URL to actually display a photo (see
--- nuotraukuNuorodos() in app.js) -- the stored path itself is not enough to
+-- nuotraukuNuorodos() in app.js) — the stored path itself is not enough to
 -- view the file.
 
 insert into storage.buckets (id, name, public)
@@ -40,7 +40,7 @@ create policy "progreso_nuotraukos_delete_own" on storage.objects
     and (storage.foldername(name))[1] = auth.uid()::text
   );
 
--- Kur checkins eilutė saugo, kurie failai jai priklauso -- pačių nuotraukų
+-- Kur checkins eilutė saugo, kurie failai jai priklauso — pačių nuotraukų
 -- kibiryje ištrinti savaime niekas neišvalo, jei eilutė vėliau ištrinama,
 -- bet checkins šiuo metu niekada netrinamas iš svetainės, tad tai nesvarbu.
 alter table public.checkins add column if not exists photo_paths text[];

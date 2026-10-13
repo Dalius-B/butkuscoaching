@@ -51,7 +51,7 @@ html {
      subpikselių apvalinimas skiriasi nuo darbalaukio) koks nors elementas
      per klaidą tampa truputį platesnis už ekraną, visas puslapis tampa
      slenkamas į šoną ir antraštė su turiniu pasislenka vienas nuo kito.
-     Tyčia slenkamiems blokams (pvz. .table-wrap lentelėms) tai netrukdo --
+     Tyčia slenkamiems blokams (pvz. .table-wrap lentelėms) tai netrukdo —
      jie turi savo vidinį slinkimą, nepriklausomą nuo šios taisyklės. */
   overflow-x: hidden;
 }
@@ -146,7 +146,7 @@ p { text-wrap: pretty; }
   justify-content: space-between; gap: var(--s-200);
 }
 /* Navigacijos juosta turi daugiau nuorodų nei puslapio turinys, tad jai
-   duodame platesnę ribą už bendrą --shell (1120px) -- kitaip nuorodos
+   duodame platesnę ribą už bendrą --shell (1120px) — kitaip nuorodos
    susigrūda ir juosta persipildo net plačiuose languose, nes turinio
    plotis vis tiek liktų suvaržytas iki 1120px. */
 .nav .shell { max-width: 1400px; }
@@ -158,7 +158,7 @@ p { text-wrap: pretty; }
 }
 .wordmark i { font-style: normal; color: var(--volt); }
 .wordmark small {
-  /* Ta pati priežastis kaip .nav-user aukščiau -- vien dekoratyvus
+  /* Ta pati priežastis kaip .nav-user aukščiau — vien dekoratyvus
      paantraštis, kuris plačioje juostoje tik atima vietą nuorodoms. */
   display: none;
   font-size: 0.6875rem; font-weight: 600; font-stretch: 84%; letter-spacing: 0.16em;
@@ -166,7 +166,7 @@ p { text-wrap: pretty; }
 }
 .nav-right { display: flex; align-items: center; gap: var(--s-200); }
 .nav-user {
-  /* Visada paslėpta plačiajame (ne-meniu) rodinyje -- vardą vis tiek matyti
+  /* Visada paslėpta plačiajame (ne-meniu) rodinyje — vardą vis tiek matyti
      meniu skydelyje telefone (.nav-user-mobilus) ir skiltyje Paskyra, o čia
      jis tik atimtų vietą nuorodoms. */
   display: none;
@@ -182,7 +182,7 @@ p { text-wrap: pretty; }
 }
 .nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--paper); }
 
-/* Meniu mygtukas -- rodomas tik siaurame ekrane vietoj į šoną slenkančių
+/* Meniu mygtukas — rodomas tik siaurame ekrane vietoj į šoną slenkančių
    nuorodų (žr. mobilų bloką žemiau). */
 .nav-meniu-mygtukas {
   display: none; flex: none; align-items: center; justify-content: center;
@@ -332,11 +332,11 @@ p { text-wrap: pretty; }
 .chip-opt input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* 1 iki 10 skalė. Siauresniuose telefonuose 10 mygtukų nebetelpa vienoje
-   eilutėje ir lūžta į dvi -- todėl galų paaiškinimas yra viena eilutė virš
+   eilutėje ir lūžta į dvi — todėl galų paaiškinimas yra viena eilutė virš
    skalės, o ne po kairę/dešinę išskaidytas tekstas, kuris sulūžus eilutei
    nebeatitiktų, po kuriuo mygtuku stovi. */
 .scale-hint { font-size: 0.8125rem; color: var(--ink-soft); margin: var(--s-75) 0 var(--s-100); }
-/* Grid su 5 stulpeliais (ne flex-wrap) -- skalė visada 1-5 / 6-10 dviem
+/* Grid su 5 stulpeliais (ne flex-wrap) — skalė visada 1-5 / 6-10 dviem
    lygiomis eilutėmis, nepriklausomai nuo ekrano pločio. flex-wrap anksčiau
    laužydavo eilutę pagal tai, kiek mygtukų tiesiog sutilpdavo (dažniausiai
    7+3), o ne po lygiai. */
@@ -446,10 +446,10 @@ th {
 tbody tr:last-child td { border-bottom: 0; }
 td .row { gap: var(--s-50); }
 
-/* Siaurame ekrane lentelė nebeslenka į šoną -- kiekviena eilutė tampa sava
+/* Siaurame ekrane lentelė nebeslenka į šoną — kiekviena eilutė tampa sava
    kortelė, o stulpelio pavadinimas (iš data-label) rodomas prieš reikšmę,
    vietoje antraštės eilutės. Veikia tik lentelėms, kurių <td> turi
-   data-label -- kitos (be jo) lieka prie senojo horizontalaus slinkimo. */
+   data-label — kitos (be jo) lieka prie senojo horizontalaus slinkimo. */
 @media (max-width: 700px) {
   .table-wrap.table-kortelese table,
   .table-wrap.table-kortelese thead,
@@ -469,14 +469,14 @@ td .row { gap: var(--s-50); }
   }
   .table-wrap.table-kortelese td:last-child { border-bottom: 0; }
   /* Pirmas stulpelis paprastai turi kelių eilučių turinį (vardas, el.
-     paštas, telefonas) -- žyma virš, o ne greta, kad netilptų spraustis. */
+     paštas, telefonas) — žyma virš, o ne greta, kad netilptų spraustis. */
   .table-wrap.table-kortelese td:first-child { flex-direction: column; align-items: flex-start; gap: 2px; }
   .table-wrap.table-kortelese td[data-label]::before {
     content: attr(data-label); flex: none;
     font-size: 0.6875rem; font-weight: 700; font-stretch: 84%;
     text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft);
   }
-  /* Tuščia data-label (veiksmų stulpelis) -- mygtukai per visą plotį, be
+  /* Tuščia data-label (veiksmų stulpelis) — mygtukai per visą plotį, be
      žymos ir be eilutės-eilutės išlygiavimo į dešinę. */
   .table-wrap.table-kortelese td[data-label=""] { display: block; }
   .table-wrap.table-kortelese td[data-label=""] .row { justify-content: flex-start; }
@@ -522,7 +522,7 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
    Mobilus
    ----------------------------------------------------------------------------- */
 /* Siaurame ekrane nuorodos nebetelpa vienoje eilutėje ir nebeverčiamos
-   slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. Riba
+   slinkti į šoną — vietoj to paslepiamos į meniu mygtuko skydelį. Riba
    (1360px) išmatuota pagal realų nuorodų kiekį: žemiau jos šešios nuorodos
    + mygtukas "Atsijungti" nebesutelpa į 1400px pločio .nav .shell juostą. */
 @media (max-width: 1360px) {
@@ -559,7 +559,7 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
   .auth-card { padding: var(--s-400) var(--s-300); }
   .card { padding: var(--s-300); }
   .page { padding-block: var(--s-500) var(--s-600); }
-  /* white-space:normal priklauso tik čia -- pilno pločio formos mygtukams,
+  /* white-space:normal priklauso tik čia — pilno pločio formos mygtukams,
      kur ilgas tekstas gali lūžti per dvi eilutes. Anksčiau ši taisyklė
      galiojo VISIEMS .btn, todėl bet kur kitur (navigacijos juostoje,
      lentelių veiksmų mygtukuose) ilgesnis tekstas netikėtai lūždavo per
@@ -568,7 +568,7 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
 }
 
 /* Labai siauruose telefonuose žodžio ženklas + antraštės mygtukas
-   nebetelpa vienoje eilutėje net ir be lūžio -- sumažiname tarpus ir
+   nebetelpa vienoje eilutėje net ir be lūžio — sumažiname tarpus ir
    šriftą, kad juosta liktų vienos eilutės aukščio. */
 @media (max-width: 400px) {
   .nav .shell { padding-inline: var(--s-200); }

@@ -2,12 +2,12 @@
 -- Safe to re-run any time. Needs private.is_admin() (duomenu-baze.sql).
 --
 -- Testimonials, written only by real clients from inside the client zone
--- (zona/atsiliepimas.html -- never a public form), reviewed by the trainer
+-- (zona/atsiliepimas.html — never a public form), reviewed by the trainer
 -- before anything appears on the public site. One per client; a client can
 -- edit theirs freely while it's still pending/rejected, but once published
 -- it's locked (the trainer would have to unpublish it first to allow edits).
 
--- display_name yra sąmoningai nukopijuotas (ne JOIN su profiles) -- anon
+-- display_name yra sąmoningai nukopijuotas (ne JOIN su profiles) — anon
 -- raktas, kuriuo skaito pagrindinis puslapis, neturi (ir neturėtų turėti)
 -- teisės skaityti profiles lentelės (ten el. paštas, telefonas). Vardas
 -- paimamas iš kliento profilio pateikimo metu ir įrašomas tiesiai čia.
@@ -26,7 +26,7 @@ create table if not exists public.testimonials (
 
 create index if not exists testimonials_status_idx on public.testimonials (status);
 
--- Kas gali RAŠYTI atsiliepimą: aktyvus klientas (bet koks paketas -- jei turi
+-- Kas gali RAŠYTI atsiliepimą: aktyvus klientas (bet koks paketas — jei turi
 -- profilį ir dirbo su Daliumi, gali palikti atsiliepimą, ne vien "pilnas").
 create or replace function private.can_write_testimonial()
 returns boolean
@@ -48,7 +48,7 @@ grant execute on function private.can_write_testimonial() to authenticated;
 -- is_admin() buvo suteikta tik 'authenticated' (duomenu-baze.sql), nes iki
 -- šiol visada buvo kviečiama tik prisijungus. Žemiau esanti testimonials
 -- select taisyklė ją kviečia ir 'anon' rolei (pagrindinis puslapis be
--- prisijungimo) -- be šios teisės PostgreSQL atsisako vykdyti bet kokią
+-- prisijungimo) — be šios teisės PostgreSQL atsisako vykdyti bet kokią
 -- užklausą, kurios taisyklėje ta funkcija paminėta, nepriklausomai nuo to,
 -- ar OR sąlyga iki jos jau būtų teisinga.
 grant execute on function private.is_admin() to anon;
@@ -61,9 +61,9 @@ grant delete on public.testimonials to authenticated;
 
 alter table public.testimonials enable row level security;
 
--- Viešai (net neprisijungus) matomi tik PASKELBTI atsiliepimai -- tai
+-- Viešai (net neprisijungus) matomi tik PASKELBTI atsiliepimai — tai
 -- pagrindinio puslapio skaito per anon raktą. Prisijungęs klientas papildomai
--- mato savo paties įrašą bet kokia būsena, treneris -- visus.
+-- mato savo paties įrašą bet kokia būsena, treneris — visus.
 drop policy if exists "testimonials_select" on public.testimonials;
 create policy "testimonials_select" on public.testimonials
   for select to anon, authenticated
@@ -78,7 +78,7 @@ create policy "testimonials_insert_own" on public.testimonials
   for insert to authenticated
   with check (client_id = (select auth.uid()) and private.can_write_testimonial());
 
--- Klientas gali taisyti SAVO įrašą, kol jis dar nepaskelbtas viešai -- ir
+-- Klientas gali taisyti SAVO įrašą, kol jis dar nepaskelbtas viešai — ir
 -- taisydamas visada grąžina jį į "pending" (nebegali pats savęs "patvirtinti"
 -- perrašydamas status lauką).
 drop policy if exists "testimonials_update_own" on public.testimonials;
@@ -87,7 +87,7 @@ create policy "testimonials_update_own" on public.testimonials
   using (client_id = (select auth.uid()) and status <> 'published')
   with check (client_id = (select auth.uid()) and status = 'pending');
 
--- Treneris mato/tvirtina/atmeta/atšaukia paskelbimą -- bet koks statuso
+-- Treneris mato/tvirtina/atmeta/atšaukia paskelbimą — bet koks statuso
 -- pakeitimas, nepriklausomai nuo kliento taisyklės aukščiau.
 drop policy if exists "testimonials_admin_write" on public.testimonials;
 create policy "testimonials_admin_write" on public.testimonials
@@ -102,7 +102,7 @@ create policy "testimonials_admin_delete" on public.testimonials
 
 
 -- ---------------------------------------------------------------------------
--- Failų saugykla. VIEŠAS krepšys (skirtingai nuo progreso-nuotraukų) --
+-- Failų saugykla. VIEŠAS krepšys (skirtingai nuo progreso-nuotraukų) —
 -- paskelbti atsiliepimai su nuotraukomis rodomi pagrindiniame puslapyje
 -- lankytojams, kurie net neprisijungę, tad nuotraukai rodyti nereikia
 -- pasirašytos nuorodos, pakanka tiesioginio viešo adreso (getPublicUrl()).
@@ -117,7 +117,7 @@ on conflict (id) do update
       file_size_limit = 10485760,
       allowed_mime_types = excluded.allowed_mime_types;
 
--- Įkelti gali tik savo aplanke (kelio pirmas segmentas -- paties auth id), ir
+-- Įkelti gali tik savo aplanke (kelio pirmas segmentas — paties auth id), ir
 -- tik aktyvus klientas.
 drop policy if exists "atsiliepimu_nuotraukos_insert_own" on storage.objects;
 create policy "atsiliepimu_nuotraukos_insert_own" on storage.objects

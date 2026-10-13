@@ -7,14 +7,14 @@
 -- the only way to change an already-assigned client's copy beyond log_type/
 -- video_url was to re-run assign_program(), which creates a brand new
 -- client_programs/client_days/client_exercises chain and leaves the old
--- exercise_logs pointing at exercise ids the client no longer sees -- their
+-- exercise_logs pointing at exercise ids the client no longer sees — their
 -- "last session" placeholders and history go blank even though the rows
 -- are still in the database. This grants the admin full CRUD on a client's
 -- existing copy instead, so edits land on the SAME client_exercises/
 -- client_days rows the client's history already points to.
 --
 -- Deliberately NOT extended to client_programs or to inserting/deleting
--- client_days -- adding or removing whole training days changes the shape
+-- client_days — adding or removing whole training days changes the shape
 -- of the program more than a "slight adjustment," and assign_program()
 -- already covers that case by creating a fresh, independent copy.
 

@@ -28,7 +28,7 @@ begin
     raise exception 'Nerastas profilis su email dalius.butkus98@gmail.com';
   end if;
 
-  -- Programa, kurią Dalius pildė visą savaitę -- ji dar priklauso senai
+  -- Programa, kurią Dalius pildė visą savaitę — ji dar priklauso senai
   -- testinei paskyrai ir dar nepabaigta (status <> 'finished').
   select id, title into v_old_cp, v_old_title
   from public.client_programs
@@ -37,10 +37,10 @@ begin
   limit 1;
 
   if v_old_cp is null then
-    raise notice 'Senoje paskyroje (treneris@pavyzdys.lt) nebėra aktyvios programos -- tikriausiai jau perkelta anksčiau. Nieko nedarau.';
+    raise notice 'Senoje paskyroje (treneris@pavyzdys.lt) nebėra aktyvios programos — tikriausiai jau perkelta anksčiau. Nieko nedarau.';
   else
     -- Patikriname, kad tai tikrai ta pati programa, kurios dar nėra realioje
-    -- paskyroje -- jei realioje paskyroje jau yra programa su tuo pačiu
+    -- paskyroje — jei realioje paskyroje jau yra programa su tuo pačiu
     -- pavadinimu IR joje jau yra įrašų, kažkas neatitinka laukiamo vaizdo.
     select cp.id, cp.title into v_new_cp, v_new_title
     from public.client_programs cp
@@ -56,12 +56,12 @@ begin
       where cd.client_program_id = v_new_cp;
 
       if v_log_count > 0 then
-        raise exception 'Realioje paskyroje programa "%" jau turi % įrašų -- nebevykdau automatinio perkėlimo, patikrink rankiniu būdu.', v_new_title, v_log_count;
+        raise exception 'Realioje paskyroje programa "%" jau turi % įrašų — nebevykdau automatinio perkėlimo, patikrink rankiniu būdu.', v_new_title, v_log_count;
       end if;
     end if;
 
     -- Perkeliame pačią programos kopiją ir TIK jos pačios įrašus į realią
-    -- paskyrą -- apsiribojame v_old_cp pratimais, o ne visais senos
+    -- paskyrą — apsiribojame v_old_cp pratimais, o ne visais senos
     -- paskyros client_id įrašais, jei senoje paskyroje būtų ir kitų,
     -- nesusijusių programų su savo istorija.
     update public.client_programs set client_id = v_new_profile where id = v_old_cp;

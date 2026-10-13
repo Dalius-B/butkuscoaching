@@ -5,7 +5,7 @@
 --
 -- WHY THIS FILE EXISTS
 -- Until now, assigning a program to a client just pointed at the shared
--- template (public.assignments) -- editing a client's workout would have
+-- template (public.assignments) — editing a client's workout would have
 -- edited the template everyone sees. This file changes that: assigning a
 -- program now COPIES it into client_programs / client_days / client_exercises,
 -- so each client's plan is their own independent record. The coach can edit
@@ -225,7 +225,7 @@ create policy "client_exercises_select" on public.client_exercises
 
 -- --- exercise_logs ----------------------------------------------------------
 -- A client's own workout log: they write it, they read it back, the trainer
--- can read all of it. The trainer never writes here -- see the same note in
+-- can read all of it. The trainer never writes here — see the same note in
 -- treniruociu-programos.sql, unchanged in spirit, just pointed at the
 -- client's own exercise copy now instead of the shared template.
 drop policy if exists "exercise_logs_own" on public.exercise_logs;

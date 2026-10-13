@@ -1,7 +1,7 @@
 -- Run this once in the Supabase dashboard: Project -> SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run any time. Needs duomenu-baze.sql (private.is_admin()).
 --
--- "Užduotys" -- a private daily-challenges page (zona/uzduotys.html) for
+-- "Užduotys" — a private daily-challenges page (zona/uzduotys.html) for
 -- close clients only. Nobody sees it by default: the trainer switches it on
 -- per client (valdymas.html -> Klientai -> "Užduotys"), and the database
 -- itself enforces that, not just the hidden menu link.

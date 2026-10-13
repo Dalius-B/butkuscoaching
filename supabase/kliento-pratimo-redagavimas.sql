@@ -1,7 +1,7 @@
 -- Run this once in the Supabase dashboard: Project -> SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run any time. Needs klientu-kopijos.sql (client_exercises, private.is_admin()).
 --
--- client_exercises has been select-only for everyone until now -- a client's
+-- client_exercises has been select-only for everyone until now — a client's
 -- copy was fixed at the moment it was assigned, and the only way to change
 -- it was to re-run assign_program(), which creates a brand new copy. That
 -- meant a trainer editing the shared template (e.g. changing an exercise's

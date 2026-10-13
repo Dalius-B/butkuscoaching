@@ -1,7 +1,7 @@
 -- Run this once in the Supabase dashboard: Project -> SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run any time.
 --
--- The weekly check-in form no longer asks about nutrition ("for now" --
+-- The weekly check-in form no longer asks about nutrition ("for now" —
 -- Dalius wants to redesign that section later). Existing rows and their
 -- nutrition data are left untouched; new check-ins simply submit without
 -- these three columns, which requires them to stop being NOT NULL or every

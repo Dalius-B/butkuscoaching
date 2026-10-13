@@ -6,16 +6,16 @@
 -- Adds the actual workout structure on top of the existing programs /
 -- program_sections tables:
 --   programs         a training block, e.g. "12 savaičių jėgos blokas"
---   program_sections  already exists -- reused here as a training DAY inside
---                     a program, e.g. "1 diena -- stumdymas"
+--   program_sections  already exists — reused here as a training DAY inside
+--                     a program, e.g. "1 diena — stumdymas"
 --   exercises        one exercise inside a day: prescribed sets, reps, load
---   exercise_logs    what the client actually did -- superseded, see below
+--   exercise_logs    what the client actually did — superseded, see below
 --
 -- IMPORTANT: this file's exercise_logs table (logging straight against the
 -- shared template exercise) is superseded by supabase/klientu-kopijos.sql,
 -- which drops it and recreates it pointed at the client's own exercise copy
 -- instead. Always run klientu-kopijos.sql after this file. programs and
--- exercises here remain the coach's reusable template either way -- only
+-- exercises here remain the coach's reusable template either way — only
 -- exercise_logs changes what it points at.
 
 create table if not exists public.exercises (

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -23,7 +23,7 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
-  /* Treniruočių diena (Leg Day, Upper Body...) -- viršutinis grupavimo
+  /* Treniruočių diena (Leg Day, Upper Body...) — viršutinis grupavimo
      lygis, kad klientas iškart matytų tik tos dienos istoriją, o ne visą
      programą sumaišytą kartu. */
   .treniruotes-diena + .treniruotes-diena { margin-top: var(--s-600); }
@@ -60,7 +60,7 @@
 
   #rodinys-pratimas .field { max-width: 360px; }
 
-  /* Asmeniniai rekordai -- du kompaktiški skaitliukai virš istorijos
+  /* Asmeniniai rekordai — du kompaktiški skaitliukai virš istorijos
      lentelės, kad klientas iš karto matytų savo geriausią rezultatą, o ne
      turėtų ieškoti jo pats per visą lentelę. */
   .pb-tinklelis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr)); gap: var(--s-200); margin: var(--s-300) 0; }
@@ -123,7 +123,7 @@
 </footer>
 
 <script type="module">
-import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, formatuokTrukme } from './app.js?v=20261016';
+import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, formatuokTrukme } from './app.js?v=20261017';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -159,7 +159,7 @@ async function ikelk(arTreneris) {
     return;
   }
 
-  // Treneriui rodomas kliento vardas -- jis gali žiūrėti bet kurio
+  // Treneriui rodomas kliento vardas — jis gali žiūrėti bet kurio
   // kliento istoriją, tad be vardo neaišku, kieno duomenis mato. "Atgal"
   // nuoroda tada veda į to konkretaus kliento profilį, o ne bendrą valdymą.
   let antrastesTekstas = programa.title;
@@ -241,7 +241,7 @@ function perjunkRodini(vardas) {
 }
 
 // =============================================================================
-//  PAGAL TRENIRUOČIŲ DIENĄ -- diena (Leg Day, Upper Body...) -> sesijos data
+//  PAGAL TRENIRUOČIŲ DIENĄ — diena (Leg Day, Upper Body...) -> sesijos data
 // =============================================================================
 function piesPagalDiena(dienos, pratimai, irasai, pratimoInfo) {
   const vieta = $('#rodinys-diena');
@@ -252,7 +252,7 @@ function piesPagalDiena(dienos, pratimai, irasai, pratimoInfo) {
     const dienosIrasai = irasai.filter((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id);
 
     // Sugrupuojama pagal dieną, kurią setai buvo įrašyti, ne pagal
-    // treniruočių dienos pavadinimą -- tai realaus apsilankymo sporto
+    // treniruočių dienos pavadinimą — tai realaus apsilankymo sporto
     // salėje data.
     const sesijos = new Map();
     for (const i of dienosIrasai) {
@@ -275,7 +275,7 @@ function piesPagalDiena(dienos, pratimai, irasai, pratimoInfo) {
 
 function sesijosKortele(eilutes, pratimoInfo, atidaryta) {
   // Viena sesijos diena gali turėti kelis to pačio pratimo setus (setas 1,
-  // setas 2 ...) -- juos sugrupuojame į vieną eilutę, kad "viena eilutė =
+  // setas 2 ...) — juos sugrupuojame į vieną eilutę, kad "viena eilutė =
   // vienas pratimas", o ne kartojame pratimo pavadinimą per kelias eilutes.
   const pagalPratima = new Map();
   for (const i of eilutes) {
@@ -311,7 +311,7 @@ function sesijosKortele(eilutes, pratimoInfo, atidaryta) {
 }
 
 // =============================================================================
-//  PAGAL PRATIMĄ -- visa vieno pratimo (pvz. Squat) istorija chronologiškai,
+//  PAGAL PRATIMĄ — visa vieno pratimo (pvz. Squat) istorija chronologiškai,
 //  kad klientas iš karto matytų savo progresą, o ne rausiantis po dešimtis
 //  sesijų kortelių.
 // =============================================================================
@@ -362,7 +362,7 @@ function piesPratimoProgresa(pagalPavadinima, raktas) {
 }
 
 /** Sunkiausias kada nors pakeltas svoris ir daugiausiai kada nors padarytų
- * vieno seto kartų -- ne visos istorijos vidurkis, o rekordinė reikšmė. */
+ * vieno seto kartų — ne visos istorijos vidurkis, o rekordinė reikšmė. */
 function pbSantrauka(irasai) {
   let pbSvoris = null;
   let pbKartai = null;
@@ -420,7 +420,7 @@ function setuTekstas(setai) {
     .map((s) => vienoSetoTekstas(s)).join(' | ');
 }
 
-/** Vieno seto tekstas priklauso nuo to, kas jame įrašyta -- svoris+kartai,
+/** Vieno seto tekstas priklauso nuo to, kas jame įrašyta — svoris+kartai,
  * vien kartai (be svorio pratimai), ar trukmė (laikas, pvz. planka). */
 function vienoSetoTekstas(s) {
   if (s.duration_seconds != null) return formatuokTrukme(s.duration_seconds);

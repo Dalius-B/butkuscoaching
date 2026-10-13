@@ -1,7 +1,7 @@
 -- Run this once in the Supabase dashboard: Project -> SQL Editor -> New query -> paste -> Run.
 -- Safe to re-run any time. Needs private.is_admin() (duomenu-baze.sql).
 --
--- Lets the trainer permanently delete one of a client's program copies --
+-- Lets the trainer permanently delete one of a client's program copies —
 -- e.g. leftover test assignments cluttering "Ankstesnės programos" on
 -- mano.html. This is different from "Atimti" in redaguoti.html, which only
 -- sets status to 'finished' and keeps everything: this genuinely erases the

@@ -61,10 +61,10 @@ create policy "library_items_admin_write" on public.library_items
 
 
 -- ---------------------------------------------------------------------------
--- Failų saugykla. Privatus krepšys -- prieiga tik per pasirašytą nuorodą,
+-- Failų saugykla. Privatus krepšys — prieiga tik per pasirašytą nuorodą,
 -- sugeneruojamą puslapyje (nuotraukuNuorodos() app.js, ta pati funkcija kaip
 -- progreso nuotraukoms, tik su kitu kibirio vardu).
--- 50 MB riba -- ta pati nemokamo Supabase plano riba, kaip ir kitur šiame
+-- 50 MB riba — ta pati nemokamo Supabase plano riba, kaip ir kitur šiame
 -- projekte. Ilgi video geriau kelti į YouTube ir nurodyti kaip nuorodą.
 -- ---------------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)

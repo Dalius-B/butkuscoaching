@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -58,7 +58,7 @@
 </footer>
 
 <script type="module">
-import { db, $, esc, klaidaLT, reikiaSesijos, rodykNav, nuotraukuNuorodos, BIBLIOTEKOS_KIBIRAS } from './app.js?v=20261016';
+import { db, $, esc, klaidaLT, reikiaSesijos, rodykNav, nuotraukuNuorodos, BIBLIOTEKOS_KIBIRAS } from './app.js?v=20261017';
 
 const vieta = $('#turinio-vieta');
 
@@ -75,7 +75,7 @@ async function paleisk() {
 
   rodykNav(s.profilis, 'biblioteka.html', s.arTreneris);
 
-  // Ta pati taisyklė kaip duomenų bazėje (private.has_library_access) --
+  // Ta pati taisyklė kaip duomenų bazėje (private.has_library_access) —
   // čia tik aiškus paaiškinimas, kodėl sąrašas tuščias, o ne klaidinantis
   // "turinio dar nėra" tam, kas iš tikro tiesiog neturi prieigos.
   if (!s.arTreneris && s.profilis?.plan_type !== 'pilnas') {
@@ -114,7 +114,7 @@ async function ikelk() {
   const failuKeliai = visi.filter((i) => i.file_path).map((i) => i.file_path);
   const nuorodos = await nuotraukuNuorodos(failuKeliai, BIBLIOTEKOS_KIBIRAS);
 
-  // Grupuojame pagal kategoriją, nekategorizuoti -- į pabaigą po visų
+  // Grupuojame pagal kategoriją, nekategorizuoti — į pabaigą po visų
   // pavadintų grupių, savo tvarka išlaikoma.
   const grupes = new Map();
   for (const irasas of visi) {

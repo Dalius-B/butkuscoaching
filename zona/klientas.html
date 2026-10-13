@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -49,7 +49,7 @@
   .nuotrauku-galerija img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
   .nuotrauku-galerija img:hover { opacity: .85; }
 
-  /* Ataskaitų sąrašas: viena savaitė -- viena eilutė, paspaudus atsiveria
+  /* Ataskaitų sąrašas: viena savaitė — viena eilutė, paspaudus atsiveria
      detalės. <details>/<summary> duoda sulankstymą be papildomo JS, o
      summary vidus stilizuotas kaip lentelės eilutė su stulpeliais. */
   .ataskaitu-lentele { border-top: 1px solid var(--hair-ink); }
@@ -76,7 +76,7 @@
   .at-etikete { display: none; font-size: .6875rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft); }
   .ataskaitos-detale { padding: 0 var(--s-200) var(--s-300); }
 
-  /* Riba (780px) -- natūraliam vienos eilutės turiniui (be lūžio) reikia
+  /* Riba (780px) — natūraliam vienos eilutės turiniui (be lūžio) reikia
      ~691px + .shell paminkštinimas; žemiau jos žymos virš kiekvienos reikšmės
      ir sudėjimas į kelias eilutes patogesnis nei glaudinimas vienoje. */
   @media (max-width: 780px) {
@@ -125,7 +125,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   BUSENOS, zodis, nuotraukuNuorodos,
-} from './app.js?v=20261016';
+} from './app.js?v=20261017';
 
 const clientId = new URLSearchParams(location.search).get('id');
 
@@ -228,7 +228,7 @@ async function keiskUzduotis(ijungta) {
 
 // =============================================================================
 //  SVORIO STATISTIKA IR GRAFIKAS
-//  Pradžios/dabartinis svoris imami iš savaitinių ataskaitų -- atskiro
+//  Pradžios/dabartinis svoris imami iš savaitinių ataskaitų — atskiro
 //  "svorio" lauko profilyje nėra, o ataskaitos yra vienintelis vietis, kur
 //  klientas savo svorį reguliariai įveda.
 // =============================================================================
@@ -237,7 +237,7 @@ function piesStatistika() {
   const suSvoriu = checkinai.filter((c) => c.weight_kg != null);
 
   if (!suSvoriu.length) {
-    vieta.innerHTML = '<p class="muted">Svorio duomenų dar nėra -- jie atsiras, kai klientas pateiks pirmą savaitinę ataskaitą.</p>';
+    vieta.innerHTML = '<p class="muted">Svorio duomenų dar nėra — jie atsiras, kai klientas pateiks pirmą savaitinę ataskaitą.</p>';
     return;
   }
 
@@ -290,7 +290,7 @@ function piesGrafika(taskai) {
 
   const linija = taskai.map((t, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(t.weight_kg).toFixed(1)}`).join(' ');
 
-  // Trys horizontalios gardelės: min, vidurys, max -- pakanka orientacijai,
+  // Trys horizontalios gardelės: min, vidurys, max — pakanka orientacijai,
   // be reikalo neperkraunant grafiko skaičiais.
   const gardeles = [min + (max - min), min + (max - min) / 2, min]
     .map((sv) => `
@@ -300,7 +300,7 @@ function piesGrafika(taskai) {
 
   const taskaiSvg = taskai.map((t, i) => `<circle class="taskas" cx="${x(i).toFixed(1)}" cy="${y(t.weight_kg).toFixed(1)}" r="3.5"><title>${esc(data(t.created_at))}: ${t.weight_kg} kg</title></circle>`).join('');
 
-  // Tiesioginiai užrašai tik pirmam ir paskutiniam taškui -- tarpiniai jau
+  // Tiesioginiai užrašai tik pirmam ir paskutiniam taškui — tarpiniai jau
   // pasiekiami per pelės užvedimą (title), skaičiais neperkraunant vaizdo.
   const pirmasLabel = `<text class="verte-tekstas" x="${x(0).toFixed(1)}" y="${(y(taskai[0].weight_kg) - 10).toFixed(1)}" text-anchor="start">${taskai[0].weight_kg}</text>`;
   const paskutinisLabel = `<text class="verte-tekstas" x="${x(taskai.length - 1).toFixed(1)}" y="${(y(taskai[taskai.length - 1].weight_kg) - 10).toFixed(1)}" text-anchor="end">${taskai[taskai.length - 1].weight_kg}</text>`;
@@ -368,7 +368,7 @@ async function piesProgramas() {
 }
 
 // =============================================================================
-//  SAVAITINĖS ATASKAITOS -- ta pati kortelių forma, kaip Valdymas / Patikrinimai
+//  SAVAITINĖS ATASKAITOS — ta pati kortelių forma, kaip Valdymas / Patikrinimai
 // =============================================================================
 async function piesPatikrinimus() {
   const vieta = $('#patikrinimu-vieta');

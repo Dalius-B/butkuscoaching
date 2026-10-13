@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261016">
+<link rel="stylesheet" href="stilius.css?v=20261017">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -30,7 +30,7 @@
   }
   .pratimo-eilute:first-child { border-top: 0; }
   /* Redagavimo forma dalinasi .pratimo-eilute klase (dėl bendro rėmelio),
-     bet ji nėra tas pats vaizdas -- flex-wrap paveldėtas iš aukščiau kartu
+     bet ji nėra tas pats vaizdas — flex-wrap paveldėtas iš aukščiau kartu
      su inline flex-direction:column verčia Chromium siaubingai išpūsti
      kiekvienos eilutės aukštį. Forma visada rikiuojama viena kolona. */
   .forma-redaguoti-pratima { flex-wrap: nowrap; }
@@ -38,7 +38,7 @@
   .pratimo-eilute-info { flex: 1 1 180px; min-width: 0; }
   .pratimo-eilute-valdymas { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; flex: none; margin-left: auto; }
 
-  /* Pratimų tvarkos keitimas -- pele tempiant rankeną, arba mygtukais ten,
+  /* Pratimų tvarkos keitimas — pele tempiant rankeną, arba mygtukais ten,
      kur tempimas nepatogus ar neveikia (dauguma liečiamų ekranų). */
   .pratimo-eilute[draggable="true"] { cursor: grab; }
   .pratimo-eilute.velkama { opacity: .35; }
@@ -55,7 +55,7 @@
   .tvarkos-mygtukai button:hover:not(:disabled) { border-color: rgba(16,16,16,0.42); }
   .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
 
-  /* Supersetai -- kairinis rėmelis jungia grupės nares, o A1/A2 ženklelis
+  /* Supersetai — kairinis rėmelis jungia grupės nares, o A1/A2 ženklelis
      parodo, kokia tvarka jos atliekamos. */
   .pratimo-eilute.supersete { border-left: 3px solid var(--volt); padding-left: var(--s-100); margin-left: -1px; }
   .pratimo-eilute.supersete-tesinys { border-top: 0; padding-top: 2px; }
@@ -108,7 +108,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   apskaiciuokSupersetuZenklus,
-} from './app.js?v=20261016';
+} from './app.js?v=20261017';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -121,14 +121,14 @@ let redaguojamoPratimoId = null;
 let redaguojamosDienosId = null;
 let velkamaEilute = null;
 
-// Visi pratimai iš VISŲ programų (ne tik šios) -- leidžia naujam pratimui
+// Visi pratimai iš VISŲ programų (ne tik šios) — leidžia naujam pratimui
 // nukopijuoti pavadinimą, pastabas ir vaizdo nuorodą iš anksčiau jau naudoto,
 // paliekant setus/kartus/svorį/poilsį pildyti ranka. Kraunama vieną kartą
 // atidarant puslapį, nebe kaskart perkrauk().
 let pratimuBiblioteka = [];
 
 /** Nauja eilutė visada gauna position vieneriu didesnį už didžiausią esamą
- * tos pačios grupės (dienos) narį -- ne vien pagal kiekį, nes jei tarp
+ * tos pačios grupės (dienos) narį — ne vien pagal kiekį, nes jei tarp
  * esamų narių jau yra spraga (pvz. vienas ištrintas viduryje), kiekis
  * duotų tą pačią position reikšmę, kaip jau turi kitas narys. */
 function kitaPozicija(sarasas, raktas, reiksme) {
@@ -160,7 +160,7 @@ async function paleisk() {
   if (programa) $('#skydelis').hidden = false;
 }
 
-/** Visų programų pratimai, sugrupuoti pagal programos pavadinimą -- naudotojui
+/** Visų programų pratimai, sugrupuoti pagal programos pavadinimą — naudotojui
  * pasirinkti, iš ko kopijuoti pavadinimą/pastabas/vaizdo nuorodą. Kraunama
  * vieną kartą, nebe kiekvieną perkrauk() kartą, nes tai nesikeičia redaguojant
  * šią programą. */
@@ -201,7 +201,7 @@ async function perkrauk() {
 
   programa = p1.data;
   dienos   = p2.data || [];
-  // Treneris pats savęs iš sąrašo NEŠALINAME -- jis gali priskirti programą
+  // Treneris pats savęs iš sąrašo NEŠALINAME — jis gali priskirti programą
   // ir sau, nes save seka kaip klientą (turi savo profilio įrašą kaip ir kiti).
   klientai = (p3.data || []).filter((k) => k.status !== 'blocked');
 
@@ -297,7 +297,7 @@ async function issaugokAntraste(ev) {
     return;
   }
 
-  // Mygtuką užrakiname kol vyksta užklausa -- kitaip antras paspaudimas, kol
+  // Mygtuką užrakiname kol vyksta užklausa — kitaip antras paspaudimas, kol
   // pirmas dar nebaigtas (pvz. lėtas ryšys), paleidžia antrą perkrauk() ir
   // vėlesnis atsakymas gali ateiti pirmiau, "pamesdamas" tik ką įrašytus
   // duomenis vaizde (nors DB jie lieka).
@@ -327,7 +327,7 @@ function piesDienuSarasa() {
     return;
   }
 
-  // Bibliotekos pratimai iš KITŲ programų -- šios programos pratimai
+  // Bibliotekos pratimai iš KITŲ programų — šios programos pratimai
   // nerodomi čia, jiems jau yra atskiras "Kopijuoti" pasirinkimas aukščiau.
   const bibliotekaGrupes = new Map();
   for (const p of pratimuBiblioteka) {
@@ -413,7 +413,7 @@ function piesDienuSarasa() {
                     ${savi.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}
                   </optgroup>`).join('')}
               </select>
-              <p class="hint">Perkelia tik pavadinimą, pastabas ir vaizdo nuorodą -- setus, kartus, svorį ir poilsį įrašysi pats žemiau.</p>
+              <p class="hint">Perkelia tik pavadinimą, pastabas ir vaizdo nuorodą — setus, kartus, svorį ir poilsį įrašysi pats žemiau.</p>
             </div>
             <div class="form-actions">
               <button class="btn btn-ghost btn-sm naudoti-is-bibliotekos" type="button" data-sekcija="${esc(d.id)}">Perkelti į formą žemiau</button>
@@ -514,7 +514,7 @@ function piesDienuSarasa() {
 }
 
 /** Pripildo naujo pratimo formą pavadinimu/pastabomis/vaizdo nuoroda iš
- * bibliotekos -- į duomenų bazę NIEKO neįrašo, trenerias patikrina, prideda
+ * bibliotekos — į duomenų bazę NIEKO neįrašo, trenerias patikrina, prideda
  * setus/kartus/svorį/poilsį ir pats paspaudžia "Pridėti pratimą". */
 function naudokIsBibliotekos(sectionId, pratimoId) {
   const pratimas = pratimuBiblioteka.find((p) => p.id === pratimoId);
@@ -603,7 +603,7 @@ async function issaugokDienosRedagavima(ev) {
 }
 
 // =============================================================================
-//  PRATIMŲ TVARKA -- tempimas pele arba mygtukai ten, kur tempimas nepatogu
+//  PRATIMŲ TVARKA — tempimas pele arba mygtukai ten, kur tempimas nepatogu
 //  (dauguma liečiamų ekranų HTML5 tempimo įvykių gerai nepalaiko).
 // =============================================================================
 async function issaugokTvarka(sectionId, tvarkaId) {
@@ -777,10 +777,10 @@ async function pridePratima(ev) {
 
   // Mygtuką užrakiname kol vyksta užklausa. Be šito, antras paspaudimas per
   // tą laiką (pvz. kai lėtas ryšys ir atrodo, kad pirmas "neįvyko") paleidžia
-  // antrą lygiagrečią perkrauk() -- jei jos atsakymai sugrįžta ne tokia
+  // antrą lygiagrečią perkrauk() — jei jos atsakymai sugrįžta ne tokia
   // tvarka, kaip buvo paleisti, vėlesnis (bet pasenusios imties) perkrauk()
   // gali "išvalyti" vaizdą be ką tik pridėto pratimo, nors jis iš tikro
-  // sėkmingai įrašytas duomenų bazėje -- iš trenerio pusės atrodo, kad
+  // sėkmingai įrašytas duomenų bazėje — iš trenerio pusės atrodo, kad
   // paspaudus "Pridėti" laukai tiesiog išsitrina ir nieko neatsitinka.
   const btn = ev.submitter;
   if (btn?.disabled) return;
@@ -859,7 +859,7 @@ async function trinkPratima(id, vardas) {
 // =============================================================================
 //  PRISKYRIMAI
 //
-//  Priskyrimas nekuria nuorodos į bendrą šabloną -- jis nukopijuoja dienas ir
+//  Priskyrimas nekuria nuorodos į bendrą šabloną — jis nukopijuoja dienas ir
 //  pratimus į kliento paties client_programs / client_days / client_exercises
 //  įrašus (žr. assign_program() funkciją, supabase/klientu-kopijos.sql).
 //  Vėliau pakeitus klientui vieną pratimą, šablonas ir kiti klientai lieka
@@ -867,7 +867,7 @@ async function trinkPratima(id, vardas) {
 // =============================================================================
 function piesPriskyrimus() {
   const eilutes = klientai.map((k) => {
-    // "Tik užduotys" paketo klientui programos neprisiskiriamos -- tą pačią
+    // "Tik užduotys" paketo klientui programos neprisiskiriamos — tą pačią
     // taisyklę saugo ir assign_program() duomenų bazėje, čia tik nerodomas
     // mygtukas, kurio paspaudus vis tiek gautum klaidą.
     if (k.plan_type === 'tik_uzduotys') {

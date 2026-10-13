@@ -3,7 +3,7 @@
 -- klientu-kopijos.sql (client_exercises, assign_program()) to already exist.
 --
 -- Supersets: a boolean on each exercise saying "do this immediately after
--- the previous exercise, no rest between them" -- the group is just a run
+-- the previous exercise, no rest between them" — the group is just a run
 -- of consecutive exercises (by position) that are each flagged this way.
 -- No separate group id/table: grouping is purely adjacency + the flag, so
 -- it always matches what the drag-and-drop reorder / position order shows,
@@ -15,7 +15,7 @@ alter table public.exercises
 alter table public.client_exercises
   add column if not exists superset_with_previous boolean not null default false;
 
--- Pilnas assign_program() perrašymas -- vienintelis pakeitimas nuo
+-- Pilnas assign_program() perrašymas — vienintelis pakeitimas nuo
 -- klientu-kopijos.sql versijos yra superset_with_previous kopijavimas.
 create or replace function public.assign_program(p_program_id uuid, p_client_id uuid, p_starts_on date default null)
 returns uuid

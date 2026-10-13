@@ -5,7 +5,7 @@
 -- by supabase/checkins-zona-integracija.sql, which locks submissions to
 -- logged-in clients writing their own row. Run this file first regardless
 -- (it creates the table), then always run checkins-zona-integracija.sql
--- after it -- that second file is safe to re-run any time.
+-- after it — that second file is safe to re-run any time.
 
 create extension if not exists pgcrypto;
 
