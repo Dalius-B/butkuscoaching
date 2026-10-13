@@ -351,7 +351,18 @@ p { text-wrap: pretty; }
 .atsiliepimo-nuotraukos a { display: block; width: 88px; height: 88px; border-radius: var(--r-sm); overflow: hidden; flex: none; }
 .atsiliepimo-nuotraukos img { width: 88px; height: 88px; object-fit: cover; display: block; transition: opacity 150ms var(--ease-out); }
 .atsiliepimo-nuotraukos a:hover img { opacity: .85; }
-.atsiliepimo-vardas { display: block; font-weight: 700; font-size: 0.9375rem; margin-top: var(--s-300); }
+.atsiliepimo-apacia { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-100); margin-top: var(--s-300); }
+.atsiliepimo-vardas { font-weight: 700; font-size: 0.9375rem; }
+/* Atsiliepimą gali parašyti tik tikras, aktyvus klientas iš savo zonos
+   paskyros (zona/atsiliepimas.html) -- niekada viešas niekieno pildomas
+   langelis. Ši žyma tai pasako lankytojui, kuris šio pastatymo "iš vidaus"
+   nemato. */
+.atsiliepimo-patvirtinta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--ink-soft); box-shadow: inset 0 0 0 1px rgba(16,16,16,0.20);
+  padding: 3px var(--s-100) 3px var(--s-75); border-radius: var(--r-pill);
+}
 
 /* ============================================================
    9. MISSION — word-by-word reveal
@@ -2038,7 +2049,10 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
         + '<p class="atsiliepimo-zvaigzdutes" aria-label="' + t.rating + ' iš 5 žvaigždučių">' + zvaigzdutes + '</p>'
         + '<blockquote class="atsiliepimo-tekstas"><p>' + esc(t.body) + '</p></blockquote>'
         + nuotraukuBlokas
-        + '<figcaption class="atsiliepimo-vardas">' + vardas + '</figcaption>'
+        + '<figcaption class="atsiliepimo-apacia">'
+        + '<cite class="atsiliepimo-vardas">' + vardas + '</cite>'
+        + '<span class="atsiliepimo-patvirtinta">&#10003; Patvirtintas klientas</span>'
+        + '</figcaption>'
         + '</figure>'
       );
     }).join('');
