@@ -145,6 +145,11 @@ p { text-wrap: pretty; }
   height: var(--nav-h); display: flex; align-items: center;
   justify-content: space-between; gap: var(--s-200);
 }
+/* Navigacijos juosta turi daugiau nuorodų nei puslapio turinys, tad jai
+   duodame platesnę ribą už bendrą --shell (1120px) -- kitaip nuorodos
+   susigrūda ir juosta persipildo net plačiuose languose, nes turinio
+   plotis vis tiek liktų suvaržytas iki 1120px. */
+.nav .shell { max-width: 1400px; }
 .wordmark {
   display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
   font-family: var(--display); font-weight: 800; font-stretch: 108%;
@@ -153,11 +158,18 @@ p { text-wrap: pretty; }
 }
 .wordmark i { font-style: normal; color: var(--volt); }
 .wordmark small {
+  /* Ta pati priežastis kaip .nav-user aukščiau -- vien dekoratyvus
+     paantraštis, kuris plačioje juostoje tik atima vietą nuorodoms. */
+  display: none;
   font-size: 0.6875rem; font-weight: 600; font-stretch: 84%; letter-spacing: 0.16em;
   color: var(--soft-paper); margin-left: var(--s-75);
 }
 .nav-right { display: flex; align-items: center; gap: var(--s-200); }
 .nav-user {
+  /* Visada paslėpta plačiajame (ne-meniu) rodinyje -- vardą vis tiek matyti
+     meniu skydelyje telefone (.nav-user-mobilus) ir skiltyje Paskyra, o čia
+     jis tik atimtų vietą nuorodoms. */
+  display: none;
   font-size: 0.75rem; font-weight: 600; font-stretch: 84%;
   text-transform: uppercase; letter-spacing: 0.14em; color: var(--soft-paper);
   max-width: 20ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -507,16 +519,11 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
    Mobilus
    ----------------------------------------------------------------------------- */
 /* Siaurame ekrane nuorodos nebetelpa vienoje eilutėje ir nebeverčiamos
-   slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. */
-/* Vidutinio pločio ekranuose nuorodos su vardu nebetelpa vienoje eilutėje. */
-@media (max-width: 1400px) {
-  .nav-user, .wordmark small { display: none; }
-  .nav-links { gap: var(--s-200); }
-}
-
-@media (max-width: 980px) {
-  .wordmark small { display: none; }
-  .nav-links, .nav-user, .nav-right > #atsijungti { display: none; }
+   slinkti į šoną -- vietoj to paslepiamos į meniu mygtuko skydelį. Riba
+   (1360px) išmatuota pagal realų nuorodų kiekį: žemiau jos šešios nuorodos
+   + mygtukas "Atsijungti" nebesutelpa į 1400px pločio .nav .shell juostą. */
+@media (max-width: 1360px) {
+  .nav-links, .nav-right > #atsijungti { display: none; }
   .nav-meniu-mygtukas { display: inline-flex; }
 
   .nav-meniu-skydelis:not([hidden]) {
