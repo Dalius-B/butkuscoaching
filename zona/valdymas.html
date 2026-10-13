@@ -210,7 +210,7 @@ function piesProgramas() {
     const kiek = priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length;
     return `
       <tr>
-        <td data-label="Programa">
+        <td>
           <strong>${esc(p.title)}</strong>
           ${p.summary ? `<div class="muted" style="font-size:.8125rem">${esc(p.summary.slice(0, 90))}${p.summary.length > 90 ? '…' : ''}</div>` : ''}
         </td>
@@ -326,7 +326,7 @@ function piesKlientus() {
 
     return `
       <tr>
-        <td data-label="Žmogus">
+        <td>
           <a href="klientas.html?id=${esc(k.id)}" style="font-weight:700;text-decoration:underline">${esc(k.full_name || 'Be vardo')}</a>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
           ${k.phone ? `<div class="muted" style="font-size:.8125rem">${esc(k.phone)}</div>` : ''}
@@ -422,7 +422,7 @@ function rodykKlientoProgramas(clientId) {
 
   const eilutes = savos.map((a) => `
     <tr>
-      <td data-label="Programa">${esc(a.title)}</td>
+      <td>${esc(a.title)}</td>
       <td data-label="Būsena"><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
       <td data-label="Pradžia">${a.starts_on ? esc(data(a.starts_on)) : esc(data(a.assigned_at))}</td>
       <td data-label="">
@@ -923,7 +923,7 @@ function piesKvietimus() {
 
     return `
       <tr>
-        <td data-label="Kam">
+        <td>
           <strong>${esc(k.full_name || 'Be vardo')}</strong>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || 'be el. pašto')}</div>
           ${k.note ? `<div class="muted" style="font-size:.8125rem">${esc(k.note)}</div>` : ''}
