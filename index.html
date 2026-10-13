@@ -2032,7 +2032,9 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
 
     grid.innerHTML = data.map(function (t) {
       const zvaigzdutes = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
-      const vardas = esc(t.display_name || 'Klientas');
+      // Tik pirmas žodis -- jei kas nors patvirtintas anksčiau su pilnu
+      // vardu, pavardė čia vis tiek nerodoma.
+      const vardas = esc((t.display_name || 'Klientas').trim().split(/\s+/)[0]);
       const keliai = t.photo_paths || [];
       const nuorodos = keliai.map((k) => client.storage.from('atsiliepimu-nuotraukos').getPublicUrl(k).data.publicUrl);
 

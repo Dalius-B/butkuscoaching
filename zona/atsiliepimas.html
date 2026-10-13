@@ -312,7 +312,9 @@ async function pateik(ev) {
     rating: reitingas,
     body: tekstas,
     photo_paths: visosNuotraukos.length ? visosNuotraukos : null,
-    display_name: profilis?.full_name?.trim() || profilis?.email || null,
+    // Tik vardas, be pavardės -- viešai pagrindiniame puslapyje pavardės
+    // rodyti nenorima.
+    display_name: profilis?.full_name?.trim()?.split(/\s+/)[0] || profilis?.email || null,
   };
 
   const { error } = esamas
