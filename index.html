@@ -336,12 +336,27 @@ p { text-wrap: pretty; }
    palieka hidden, jei įrašų kol kas nėra.
    ============================================================ */
 .atsiliepimu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--s-300); margin-top: var(--s-600); }
-.atsiliepimo-kortele { display: flex; flex-direction: column; }
+/* Nuotraukos -- jei klientas jų pridėjo -- yra pati įtikinamiausia atsiliepimo
+   dalis (rezultato įrodymas), todėl rodomos stambiai kortelės viršuje, o ne
+   mažu profilio paveikslėliu prie vardo. Be nuotraukų liekam su vien tekstine
+   kortele, kaip įprasta. */
+.atsiliepimo-kortele {
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border-radius: var(--r-lg);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 8px 24px -16px rgba(16,16,16,0.30);
+}
+.section--surface .atsiliepimo-kortele { background: #FFFFFF; }
+.atsiliepimo-nuotraukos {
+  display: grid; grid-template-columns: repeat(var(--n, 1), 1fr); gap: 2px;
+  background: var(--hair-ink);
+}
+.atsiliepimo-nuotraukos a { display: block; aspect-ratio: 4 / 5; overflow: hidden; }
+.atsiliepimo-nuotraukos img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 300ms var(--ease-out); }
+.atsiliepimo-nuotraukos a:hover img { transform: scale(1.03); }
+.atsiliepimo-turinys { padding: var(--s-300) var(--s-400) var(--s-400); display: flex; flex-direction: column; flex: 1; }
 .atsiliepimo-zvaigzdutes { color: var(--volt); font-size: 1.125rem; letter-spacing: 2px; }
 .atsiliepimo-tekstas { margin-top: var(--s-200); flex: 1; }
-.atsiliepimo-apacia { display: flex; align-items: center; gap: var(--s-100); margin-top: var(--s-300); }
-.atsiliepimo-nuotrauka { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex: none; }
-.atsiliepimo-vardas { font-weight: 700; font-size: 0.9375rem; }
+.atsiliepimo-vardas { display: block; font-weight: 700; font-size: 0.9375rem; margin-top: var(--s-300); }
 
 /* ============================================================
    9. MISSION — word-by-word reveal
@@ -1194,7 +1209,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
   <section class="section section--surface" id="atsiliepimai" aria-labelledby="atsiliepimai-h" hidden>
     <div class="shell">
       <p class="label reveal">Atsiliepimai</p>
-      <h2 class="h2 section-head reveal" id="atsiliepimai-h" style="--i:1">Ką sako žmonės, su kuriais dirbu.</h2>
+      <h2 class="h2 section-head reveal" id="atsiliepimai-h" style="--i:1">Ką sako žmonės</h2>
       <div class="atsiliepimu-grid" id="atsiliepimuGrid"></div>
     </div>
   </section>
@@ -2011,16 +2026,26 @@ import { SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY } from './zona/konfig.js';
 
     grid.innerHTML = data.map(function (t) {
       const zvaigzdutes = '★'.repeat(t.rating) + '☆'.repeat(5 - t.rating);
-      const nuotrauka = (t.photo_paths && t.photo_paths[0])
-        ? client.storage.from('atsiliepimu-nuotraukos').getPublicUrl(t.photo_paths[0]).data.publicUrl
-        : null;
+      const vardas = esc(t.display_name || 'Klientas');
+      const keliai = t.photo_paths || [];
+      const nuorodos = keliai.map((k) => client.storage.from('atsiliepimu-nuotraukos').getPublicUrl(k).data.publicUrl);
+
+      // Nuotraukos -- jei yra -- pačios yra įrodymas, tad rodomos stambiai
+      // kortelės viršuje. Viena nuotrauka užima visą plotį, dvi ir daugiau
+      // sudedamos į dviejų stulpelių tinklelį (natūraliai tinka "prieš/po").
+      const nuotraukuBlokas = nuorodos.length
+        ? '<div class="atsiliepimo-nuotraukos" style="--n:' + Math.min(nuorodos.length, 2) + '">'
+          + nuorodos.map((u) => '<a href="' + esc(u) + '" target="_blank" rel="noopener"><img src="' + esc(u) + '" alt="' + vardas + ' rezultato nuotrauka" loading="lazy"></a>').join('')
+          + '</div>'
+        : '';
+
       return (
-        '<figure class="card atsiliepimo-kortele">'
+        '<figure class="atsiliepimo-kortele">'
+        + nuotraukuBlokas
+        + '<figcaption class="atsiliepimo-turinys">'
         + '<p class="atsiliepimo-zvaigzdutes" aria-label="' + t.rating + ' iš 5 žvaigždučių">' + zvaigzdutes + '</p>'
         + '<blockquote class="atsiliepimo-tekstas"><p>' + esc(t.body) + '</p></blockquote>'
-        + '<figcaption class="atsiliepimo-apacia">'
-        + (nuotrauka ? '<img class="atsiliepimo-nuotrauka" src="' + esc(nuotrauka) + '" alt="" loading="lazy">' : '')
-        + '<span class="atsiliepimo-vardas">' + esc(t.display_name || 'Klientas') + '</span>'
+        + '<cite class="atsiliepimo-vardas">' + vardas + '</cite>'
         + '</figcaption>'
         + '</figure>'
       );
