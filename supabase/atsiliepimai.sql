@@ -45,6 +45,14 @@ $$;
 revoke all on function private.can_write_testimonial() from public;
 grant execute on function private.can_write_testimonial() to authenticated;
 
+-- is_admin() buvo suteikta tik 'authenticated' (duomenu-baze.sql), nes iki
+-- šiol visada buvo kviečiama tik prisijungus. Žemiau esanti testimonials
+-- select taisyklė ją kviečia ir 'anon' rolei (pagrindinis puslapis be
+-- prisijungimo) -- be šios teisės PostgreSQL atsisako vykdyti bet kokią
+-- užklausą, kurios taisyklėje ta funkcija paminėta, nepriklausomai nuo to,
+-- ar OR sąlyga iki jos jau būtų teisinga.
+grant execute on function private.is_admin() to anon;
+
 grant usage on schema public to anon, authenticated;
 revoke all on public.testimonials from anon, authenticated;
 grant select on public.testimonials to anon, authenticated;
