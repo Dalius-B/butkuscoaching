@@ -336,8 +336,11 @@ p { text-wrap: pretty; }
    skalės, o ne po kairę/dešinę išskaidytas tekstas, kuris sulūžus eilutei
    nebeatitiktų, po kuriuo mygtuku stovi. */
 .scale-hint { font-size: 0.8125rem; color: var(--ink-soft); margin: var(--s-75) 0 var(--s-100); }
-.scale { display: flex; flex-wrap: wrap; gap: var(--s-50); }
-.scale-opt { flex: 1 1 40px; }
+/* Grid su 5 stulpeliais (ne flex-wrap) -- skalė visada 1-5 / 6-10 dviem
+   lygiomis eilutėmis, nepriklausomai nuo ekrano pločio. flex-wrap anksčiau
+   laužydavo eilutę pagal tai, kiek mygtukų tiesiog sutilpdavo (dažniausiai
+   7+3), o ne po lygiai. */
+.scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-50); }
 .scale-opt span { padding: 0; font-variant-numeric: tabular-nums; }
 
 /* Sukrautos kortelės, kai variantų tekstas per ilgas chip mygtukui, pavyzdžiui
