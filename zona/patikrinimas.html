@@ -359,6 +359,7 @@ async function siųskAtaskaita(ev) {
     try {
       nuotraukuKeliai = await ikelkNuotraukas(failai, vartotojas.id);
     } catch (nkKlaida) {
+      console.error('Nepavyko įkelti nuotraukos:', nkKlaida);
       btn.disabled = false;
       btn.textContent = 'Siųsti ataskaitą';
       pranesk($('#formosPranesimas'), klaidaLT(nkKlaida), 'error');
@@ -413,6 +414,7 @@ async function siųskAtaskaita(ev) {
   btn.textContent = 'Siųsti ataskaitą';
 
   if (error) {
+    console.error('Nepavyko išsaugoti ataskaitos:', error);
     pranesk($('#formosPranesimas'), klaidaLT(error), 'error');
     return;
   }
