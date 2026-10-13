@@ -1021,6 +1021,17 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
     </div>
   </section>
 
+  <!-- ===================== ATSILIEPIMAI ===================== -->
+  <!-- Paslėpta pagal nutylėjimą -- script.js pabaigoje ją parodo tik jei
+       randa bent vieną PASKELBTĄ (patvirtintą) klientų atsiliepimą. -->
+  <section class="section section--paper" id="atsiliepimai" aria-labelledby="atsiliepimai-h" hidden>
+    <div class="shell">
+      <p class="label reveal">Atsiliepimai</p>
+      <h2 class="h2 section-head reveal" id="atsiliepimai-h" style="--i:1">Ką sako žmonės</h2>
+      <div class="atsiliepimu-grid" id="atsiliepimuGrid"></div>
+    </div>
+  </section>
+
   <!-- ===================== INCLUDED ===================== -->
   <section class="section section--ink on-ink" id="included" aria-labelledby="inc-h">
     <div class="shell">
@@ -1206,17 +1217,6 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
         </div>
 
       </div>
-    </div>
-  </section>
-
-  <!-- ===================== ATSILIEPIMAI ===================== -->
-  <!-- Paslėpta pagal nutylėjimą -- script.js pabaigoje ją parodo tik jei
-       randa bent vieną PASKELBTĄ (patvirtintą) klientų atsiliepimą. -->
-  <section class="section section--surface" id="atsiliepimai" aria-labelledby="atsiliepimai-h" hidden>
-    <div class="shell">
-      <p class="label reveal">Atsiliepimai</p>
-      <h2 class="h2 section-head reveal" id="atsiliepimai-h" style="--i:1">Ką sako žmonės</h2>
-      <div class="atsiliepimu-grid" id="atsiliepimuGrid"></div>
     </div>
   </section>
 
