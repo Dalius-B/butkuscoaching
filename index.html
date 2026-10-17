@@ -423,7 +423,7 @@ p { text-wrap: pretty; }
 .method-media::after { content: ""; position: absolute; inset: 0; outline: 1px solid rgba(16,16,16,0.10); outline-offset: -1px; border-radius: var(--r-lg); }
 
 /* ============================================================
-   12. SPLIT SHEET (the 12-week line)
+   12. SPLIT SHEET (the 8-week line)
    ============================================================ */
 .sheet { margin-top: var(--s-600); position: relative; }
 .sheet-rail { position: absolute; left: 7px; top: 12px; bottom: 12px; width: 2px; background: rgba(16,16,16,0.14); }
@@ -998,20 +998,15 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
           <span class="split-w">4 savaitė</span>
           <div class="split-b"><h3>Pirma peržiūra</h3><p>Programa koreguojama pagal tai, ką iš tikrųjų rodo tavo treniruotės ir savijauta.</p></div>
         </div>
-        <div class="split reveal">
-          <span class="dot" aria-hidden="true"></span>
-          <span class="split-w">8 savaitė</span>
-          <div class="split-b"><h3>Antra peržiūra</h3><p>Tas pats dar kartą. Kas keturias savaites programa juda kartu su tavimi, o ne lieka ten, kur prasidėjo.</p></div>
-        </div>
         <div class="split is-key reveal">
           <span class="dot" aria-hidden="true"></span>
-          <span class="split-w">12 savaitė</span>
+          <span class="split-w">8 savaitė</span>
           <div class="split-b"><h3>Žvilgsnis atgal</h3><p>Rezultatų, savijautos, tikslų peržiūra, progreso įvertinimas, grįžtamasis ryšys.</p></div>
         </div>
       </div>
 
       <div class="track-alt reveal">
-        <p class="label" style="margin-bottom:var(--s-200)">12 savaičių programa, be treniravimo</p>
+        <p class="label" style="margin-bottom:var(--s-200)">8 savaičių programa, be treniravimo</p>
         <div class="track-alt-steps">
           <p><strong>Užpildyk anketą</strong>Penkios minutės. Tavo tikslai, grafikas, treniruočių istorija.</p>
           <p><strong>Gauk programą</strong>Treniruočių programa ir mitybos planas, sudaryti iš tavo atsakymų, per 72 valandas.</p>
@@ -1090,7 +1085,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
         <article class="plan reveal">
           <div>
             <p class="label" style="margin-bottom:var(--s-100)">Savarankiškai</p>
-            <h3 class="plan-name">12 savaičių programa</h3>
+            <h3 class="plan-name">8 savaičių programa</h3>
           </div>
           <div class="plan-price">59 € <span>vienkartinis mokestis</span></div>
           <p class="plan-desc">Tiems, kam netrūksta savos motyvacijos ir tiesiog reikia aiškaus, struktūruoto plano. Be treniravimo, tik įrankiai.</p>
@@ -1114,7 +1109,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
           <div class="plan-price">144 € <span>per mėnesį</span></div>
           <p class="plan-desc">Tiems, kurie nori atskaitomybės, savaitinio grįžtamojo ryšio ir trenerio, stebinčio kiekvieną žingsnį. Viskas, kas programoje, plius aš.</p>
           <ul>
-            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span><strong>Viskas iš „12 savaičių programa“</strong></li>
+            <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span><strong>Viskas iš „8 savaičių programa“</strong></li>
             <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>20 minučių pažintinis pokalbis</li>
             <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Savaitinė ataskaita, asmeninis atsakymas per 72 valandas</li>
             <li><span class="tick"><svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg></span>Tiesioginis ryšys su treneriu, atsakymai į klausimus per 24 valandas</li>
@@ -1203,7 +1198,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
 
         <div class="qa">
           <h3><button class="qa-btn" type="button" aria-expanded="false" aria-controls="qa6">Kaip vyksta mokėjimai?<span class="qa-sign" aria-hidden="true"></span></button></h3>
-          <div class="qa-panel" id="qa6" role="region"><div class="qa-panel-in">12 savaičių programa: vienkartinis 59 € mokestis. Pilnas treniravimas: 144 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu.</div></div>
+          <div class="qa-panel" id="qa6" role="region"><div class="qa-panel-in">8 savaičių programa: vienkartinis 59 € mokestis. Pilnas treniravimas: 144 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu.</div></div>
         </div>
 
         <div class="qa">
@@ -1272,8 +1267,8 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
               <div class="plan-pick">
                 <label class="opt"><input type="radio" name="Variantas" value="Pilnas treniravimas: programa, savaitinės ataskaitos ir tiesioginis ryšys su treneriu" required>
                   <span><b>Pilnas treniravimas</b><em>144 € / mėn.</em></span></label>
-                <label class="opt"><input type="radio" name="Variantas" value="12 savaičių programa: treniruočių planas ir mitybos planas">
-                  <span><b>12 savaičių programa</b><em>59 € vienkartinis</em></span></label>
+                <label class="opt"><input type="radio" name="Variantas" value="8 savaičių programa: treniruočių planas ir mitybos planas">
+                  <span><b>8 savaičių programa</b><em>59 € vienkartinis</em></span></label>
               </div>
               <p class="err" id="e-option" aria-live="polite"></p>
             </div>
@@ -1590,7 +1585,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
         "@type": "OfferCatalog",
         "name": "Treniravimo variantai",
         "itemListElement": [
-          { "@type": "Offer", "name": "12 savaičių programa", "price": "49", "priceCurrency": "EUR" },
+          { "@type": "Offer", "name": "8 savaičių programa", "price": "49", "priceCurrency": "EUR" },
           { "@type": "Offer", "name": "Pilnas treniravimas", "price": "124", "priceCurrency": "EUR" }
         ]
       }
@@ -1601,7 +1596,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
         { "@type": "Question", "name": "Kas vyksta pirmą savaitę?", "acceptedAnswer": { "@type": "Answer", "text": "Užpildai trumpą anketą, surengiame 20 minučių pažintinį pokalbį, o treniruočių programa ir mitybos planas parašomi iš tavo atsakymų ir pristatomi per 72 valandas." } },
         { "@type": "Question", "name": "Ar reikia konkrečios sporto salės ar įrangos?", "acceptedAnswer": { "@type": "Answer", "text": "Programa sudaroma pagal sporto salę, kurioje jau treniruojiesi, ir dienas, kurias iš tikrųjų turi." } },
         { "@type": "Question", "name": "Kaip greitai gausiu atsakymą į užklausą?", "acceptedAnswer": { "@type": "Answer", "text": "Į savaitines ataskaitas gauni asmeninį atsakymą per 72 valandas. Į tiesiogines žinutes atsakau per 24 valandas." } },
-        { "@type": "Question", "name": "Kaip vyksta mokėjimai?", "acceptedAnswer": { "@type": "Answer", "text": "12 savaičių programa: vienkartinis 59 € mokestis. Pilnas treniravimas: 144 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu." } }
+        { "@type": "Question", "name": "Kaip vyksta mokėjimai?", "acceptedAnswer": { "@type": "Answer", "text": "8 savaičių programa: vienkartinis 59 € mokestis. Pilnas treniravimas: 144 € per mėnesį. Mokėjimus apdoroja Stripe: kortele, Apple Pay arba BECS tiesioginiu debetu." } }
       ]
     }
   ]
