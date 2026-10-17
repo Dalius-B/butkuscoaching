@@ -192,7 +192,7 @@ async function ikelk(arTreneris) {
 
   const dienuId = (dienos || []).map((d) => d.id);
   const { data: pratimai, error: prKlaida } = dienuId.length
-    ? await db.from('client_exercises').select('id, title, client_day_id').in('client_day_id', dienuId)
+    ? await db.from('client_exercises').select('id, title, client_day_id, position').in('client_day_id', dienuId).order('position', { ascending: true })
     : { data: [] };
   if (prKlaida) {
     $('#kraunasi').hidden = true;
@@ -224,7 +224,7 @@ function paruoskRodinius(dienos, pratimai, irasai) {
   }
 
   $('#skydelis').hidden = false;
-  const pratimoInfo = new Map(pratimai.map((p) => [p.id, { pavadinimas: p.title, dienaId: p.client_day_id }]));
+  const pratimoInfo = new Map(pratimai.map((p) => [p.id, { pavadinimas: p.title, dienaId: p.client_day_id, pozicija: p.position }]));
 
   piesPagalDiena(dienos, pratimai, irasai, pratimoInfo);
   piesPagalPratima(pratimoInfo, irasai);
@@ -302,15 +302,20 @@ function sesijosKortele(eilutes, pratimoInfo, atidaryta, dienaId, dienosPavadini
     pagalPratima.get(i.client_exercise_id).push(i);
   }
 
-  const eilutesHtml = Array.from(pagalPratima.entries()).map(([pratimoId, setai]) => {
-    const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)' };
-    return `
-      <tr>
-        <td><strong>${esc(info.pavadinimas)}</strong></td>
-        <td class="setai">${esc(setuTekstas(setai))}</td>
-        <td class="pastaba">${esc(pastabosTekstas(setai))}</td>
-      </tr>`;
-  }).join('');
+  // Rikiuojama pagal pratimo poziciją programoje, ne pagal tai, kurio
+  // pratimo setas tą dieną buvo įvestas pirmas — kitaip eilių tvarka
+  // skiriasi nuo sesijos iki sesijos, nors pratimų tvarka programoje ta pati.
+  const eilutesHtml = Array.from(pagalPratima.entries())
+    .sort((a, b) => (pratimoInfo.get(a[0])?.pozicija ?? Infinity) - (pratimoInfo.get(b[0])?.pozicija ?? Infinity))
+    .map(([pratimoId, setai]) => {
+      const info = pratimoInfo.get(pratimoId) || { pavadinimas: '(pratimas ištrintas)' };
+      return `
+        <tr>
+          <td><strong>${esc(info.pavadinimas)}</strong></td>
+          <td class="setai">${esc(setuTekstas(setai))}</td>
+          <td class="pastaba">${esc(pastabosTekstas(setai))}</td>
+        </tr>`;
+    }).join('');
 
   return `
     <details class="card sesija-kortele" data-diena-id="${esc(dienaId)}"${atidaryta ? ' open' : ''}>
