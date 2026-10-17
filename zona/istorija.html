@@ -23,15 +23,10 @@
 -->
 <script src="vendor/supabase-2.116.0.umd.js"></script>
 <style>
-  /* Treniruočių diena (Leg Day, Upper Body...) — viršutinis grupavimo
-     lygis, kad klientas iškart matytų tik tos dienos istoriją, o ne visą
-     programą sumaišytą kartu. */
-  .treniruotes-diena + .treniruotes-diena { margin-top: var(--s-600); }
-  .treniruotes-diena-antraste {
-    font-size: .8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
-    color: var(--ink-soft); padding-bottom: var(--s-200); margin-bottom: var(--s-300);
-    border-bottom: 1px solid var(--hair-ink);
-  }
+  /* Dienos filtras — vienas iš kelių treniruočių dienos pavadinimų (Leg
+     Day, Upper Body...), kad klientas galėtų susiaurinti sąrašą iki vienos
+     dienos, bet pagal nutylėjimą matytų viską chronologine tvarka. */
+  #dienos-filtras { margin-bottom: var(--s-300); }
 
   .sesija-kortele { padding: 0; overflow: hidden; }
   .sesija-kortele + .sesija-kortele { margin-top: var(--s-200); }
@@ -40,7 +35,9 @@
     padding: var(--s-300) var(--s-400); cursor: pointer; list-style: none;
   }
   .sesija-antraste::-webkit-details-marker { display: none; }
+  .sesija-antraste-kaire { display: flex; align-items: baseline; gap: var(--s-150); flex-wrap: wrap; min-width: 0; }
   .sesija-antraste h3 { margin: 0; font-size: 1.0625rem; }
+  .sesija-diena { font-size: .8125rem; color: var(--ink-soft); }
   .sesija-antraste .rodykle {
     flex: none; width: 20px; height: 20px; transition: rotate 180ms var(--ease-out);
     stroke: var(--ink-soft);
@@ -98,11 +95,14 @@
 
     <div id="skydelis" hidden>
       <div class="tabs" role="tablist" id="rodinio-tabs">
-        <button class="tab" role="tab" type="button" data-rodinys="diena" aria-selected="true">Pagal treniruočių dieną</button>
+        <button class="tab" role="tab" type="button" data-rodinys="diena" aria-selected="true">Pagal datą</button>
         <button class="tab" role="tab" type="button" data-rodinys="pratimas" aria-selected="false">Pagal pratimą</button>
       </div>
 
-      <div id="rodinys-diena"></div>
+      <div id="rodinys-diena">
+        <div class="chips" id="dienos-filtras" role="radiogroup" aria-label="Filtruoti pagal treniruočių dieną"></div>
+        <div id="sesiju-sarasas"></div>
+      </div>
 
       <div id="rodinys-pratimas" hidden>
         <div class="field">
@@ -241,39 +241,58 @@ function perjunkRodini(vardas) {
 }
 
 // =============================================================================
-//  PAGAL TRENIRUOČIŲ DIENĄ — diena (Leg Day, Upper Body...) -> sesijos data
+//  PAGAL DATĄ — viena plokščia sesijų juosta, naujausios viršuje, su
+//  pasirenkamu treniruočių dienos filtru. Anksčiau sesijos buvo pirmiausia
+//  suskirstytos pagal dienos pavadinimą (Leg Day, Upper Body...), tad
+//  atsiverdavo "paskutinė" kortelė kiekvienoje dienos grupėje — telefone tai
+//  reiškė kelias atviras korteles išbarstytas per visą puslapį, o ne vieną
+//  aiškų "štai kas buvo paskiausiai".
 // =============================================================================
 function piesPagalDiena(dienos, pratimai, irasai, pratimoInfo) {
-  const vieta = $('#rodinys-diena');
+  const dienuPavadinimai = new Map(dienos.map((d) => [d.id, d.title]));
 
-  const dienosSuIrasais = dienos.filter((d) => irasai.some((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id));
+  // Raktas — (data, dienos id), nes tą pačią kalendorinę dieną klientas
+  // retkarčiais gali būti atlikęs daugiau nei vienos treniruočių dienos
+  // pratimus; tada tai dvi atskiros kortelės, o ne viena sumaišyta.
+  const sesijos = new Map();
+  for (const i of irasai) {
+    const dienaId = pratimoInfo.get(i.client_exercise_id)?.dienaId;
+    if (!dienaId) continue;
+    const ymd = new Date(i.logged_at).toISOString().slice(0, 10);
+    const raktas = ymd + '|' + dienaId;
+    if (!sesijos.has(raktas)) sesijos.set(raktas, { ymd, dienaId, eilutes: [] });
+    sesijos.get(raktas).eilutes.push(i);
+  }
 
-  vieta.innerHTML = dienosSuIrasais.map((d) => {
-    const dienosIrasai = irasai.filter((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id);
+  const isrikiuotos = Array.from(sesijos.values())
+    .sort((a, b) => b.ymd.localeCompare(a.ymd));
 
-    // Sugrupuojama pagal dieną, kurią setai buvo įrašyti, ne pagal
-    // treniruočių dienos pavadinimą — tai realaus apsilankymo sporto
-    // salėje data.
-    const sesijos = new Map();
-    for (const i of dienosIrasai) {
-      const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
-      if (!sesijos.has(raktas)) sesijos.set(raktas, []);
-      sesijos.get(raktas).push(i);
-    }
+  // Filtro mygtukai tik toms dienoms, kurios iš tikrųjų turi istorijos —
+  // dienai be nė vieno įrašo filtras tiesiog rodytų tuščią sąrašą.
+  const naudotosDienuId = Array.from(new Set(isrikiuotos.map((s) => s.dienaId)));
+  const filtroVieta = $('#dienos-filtras');
+  filtroVieta.innerHTML = [
+    `<label class="chip-opt"><input type="radio" name="dienos-filtras-pasirinkimas" value="" checked><span>Visos dienos</span></label>`,
+    ...naudotosDienuId.map((id) => `<label class="chip-opt"><input type="radio" name="dienos-filtras-pasirinkimas" value="${esc(id)}"><span>${esc(dienuPavadinimai.get(id) || '')}</span></label>`),
+  ].join('');
+  filtroVieta.hidden = naudotosDienuId.length < 2;
 
-    const sesijuHtml = Array.from(sesijos.entries())
-      .map(([, eilutes], idx) => sesijosKortele(eilutes, pratimoInfo, idx === 0))
-      .join('');
+  $('#sesiju-sarasas').innerHTML = isrikiuotos
+    .map((s, idx) => sesijosKortele(s.eilutes, pratimoInfo, idx === 0, s.dienaId, dienuPavadinimai.get(s.dienaId) || ''))
+    .join('');
 
-    return `
-      <section class="treniruotes-diena">
-        <h2 class="treniruotes-diena-antraste">${esc(d.title)}</h2>
-        ${sesijuHtml}
-      </section>`;
-  }).join('');
+  for (const r of $$('#dienos-filtras input')) {
+    r.addEventListener('change', () => taikykDienosFiltra(r.value));
+  }
 }
 
-function sesijosKortele(eilutes, pratimoInfo, atidaryta) {
+function taikykDienosFiltra(dienaId) {
+  for (const kortele of $$('#sesiju-sarasas .sesija-kortele')) {
+    kortele.hidden = Boolean(dienaId) && kortele.dataset.dienaId !== dienaId;
+  }
+}
+
+function sesijosKortele(eilutes, pratimoInfo, atidaryta, dienaId, dienosPavadinimas) {
   // Viena sesijos diena gali turėti kelis to pačio pratimo setus (setas 1,
   // setas 2 ...) — juos sugrupuojame į vieną eilutę, kad "viena eilutė =
   // vienas pratimas", o ne kartojame pratimo pavadinimą per kelias eilutes.
@@ -294,9 +313,12 @@ function sesijosKortele(eilutes, pratimoInfo, atidaryta) {
   }).join('');
 
   return `
-    <details class="card sesija-kortele"${atidaryta ? ' open' : ''}>
+    <details class="card sesija-kortele" data-diena-id="${esc(dienaId)}"${atidaryta ? ' open' : ''}>
       <summary class="sesija-antraste">
-        <h3>${esc(data(eilutes[0].logged_at))}</h3>
+        <span class="sesija-antraste-kaire">
+          <h3>${esc(data(eilutes[0].logged_at))}</h3>
+          <span class="sesija-diena">${esc(dienosPavadinimas)}</span>
+        </span>
         <svg class="rodykle" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </summary>
       <div class="sesija-turinys">
