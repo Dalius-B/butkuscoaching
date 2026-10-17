@@ -226,6 +226,11 @@ p { text-wrap: pretty; }
 .btn-ghost:hover { border-color: var(--ink); background: rgba(16,16,16,0.05); }
 .on-ink .btn-ghost { border-color: var(--hair-paper); color: var(--paper); }
 .on-ink .btn-ghost:hover { border-color: var(--paper); background: rgba(232,232,227,0.08); }
+/* .form-card keeps a light surface even inside .on-ink sections (the apply
+   form), so its ghost button needs the light-mode border/text back, or it
+   nearly vanishes against the card. */
+.on-ink .form-card .btn-ghost { border-color: var(--hair-ink); color: var(--ink); }
+.on-ink .form-card .btn-ghost:hover { border-color: var(--ink); background: rgba(16,16,16,0.05); }
 .btn-sm { min-height: 44px; font-size: 0.875rem; padding: var(--s-75) var(--s-200); }
 
 /* ============================================================
@@ -1342,13 +1347,13 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
               <p class="err" id="e-followedaprogram" aria-live="polite"></p>
             </div>
             <div class="field">
-              <label for="f-worked">Kas tau anksčiau veikė</label>
-<textarea id="f-worked" name="Kas veikė" required></textarea>
+              <label for="f-worked">Jei taip, kas programoje patiko <span class="hint">(neprivaloma)</span></label>
+<textarea id="f-worked" name="Kas veikė"></textarea>
               <p class="err" id="e-f-worked" aria-live="polite"></p>
             </div>
             <div class="field">
-              <label for="f-notworked">Kas tau neveikė</label>
-<textarea id="f-notworked" name="Kas neveikė" required></textarea>
+              <label for="f-notworked">Kas programoje nepatiko <span class="hint">(neprivaloma)</span></label>
+<textarea id="f-notworked" name="Kas neveikė"></textarea>
               <p class="err" id="e-f-notworked" aria-live="polite"></p>
             </div>
           </fieldset>
@@ -1518,7 +1523,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
             <div class="field">
               <label class="consent" for="f-consent">
                 <input id="f-consent" name="Sutikimas" type="checkbox" value="taip" required>
-                <span>Sutinku, kad Dalius susisiektų su manimi dėl šios paraiškos ir saugotų tai, ką čia parašiau, įskaitant aukščiau nurodytą sveikatos informaciją, kol bendraujame.</span>
+                <span>Sutinku, kad su manimi būtų susisiekta ir duomenys būtų saugomi, įskaitant aukščiau nurodytą sveikatos informaciją.</span>
               </label>
               <p class="err" id="e-consent" aria-live="polite"></p>
               <p class="fine"><a href="privacy.html">Kas nutinka su tuo, ką atsiuntei</a></p>
