@@ -1268,9 +1268,9 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
           <div class="hp" aria-hidden="true"><label>Palik tuščią<input type="text" name="botcheck" tabindex="-1" autocomplete="off"></label></div>
 
           <div class="form-head">
-            <span class="form-step-label" id="stepLabel">1 žingsnis iš 7: Apie tave</span>
+            <span class="form-step-label" id="stepLabel">1 žingsnis iš 8: Apie tave</span>
           </div>
-          <div class="progress" aria-hidden="true"><i id="progressBar" style="scale:0.1429 1"></i></div>
+          <div class="progress" aria-hidden="true"><i id="progressBar" style="scale:0.125 1"></i></div>
 
           <fieldset class="step" data-step="1">
             <legend>Apie tave</legend>
@@ -1425,7 +1425,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
           </fieldset>
 
           <fieldset class="step" data-step="6" hidden>
-            <legend>Tavo gyvenimas ir maistas</legend>
+            <legend>Tavo gyvenimas</legend>
             <div class="field">
               <label for="f-job">Koks tavo darbas</label>
 <input id="f-job" name="Darbas" type="text" required>
@@ -1470,6 +1470,10 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
 <input id="f-steps" name="Žingsniai per dieną" type="text" placeholder="Praleisk, jei jų neseki">
               <p class="err" id="e-f-steps" aria-live="polite"></p>
             </div>
+          </fieldset>
+
+          <fieldset class="step" data-step="7" hidden>
+            <legend>Tavo mityba</legend>
             <div class="field">
               <label for="f-diet">Mitybos apribojimai</label>
 <input id="f-diet" name="Mitybos apribojimai" type="text" required placeholder="Jei nėra, parašyk „nėra“.">
@@ -1480,7 +1484,6 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
 <textarea id="f-typicalday" name="Įprasta valgymo diena" required placeholder="Pvz. pusryčiai, pietūs, vakarienė, užkandžiai — kiek, kada, kas paprastai pakliūva į lėkštę."></textarea>
               <p class="err" id="e-f-typicalday" aria-live="polite"></p>
             </div>
-            <div class="field-row">
             <div class="field">
               <label for="f-mealsperday">Kiek kartų per dieną valgai</label>
 <select id="f-mealsperday" name="Valgymų skaičius per dieną" required>
@@ -1514,7 +1517,6 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
               </select>
               <p class="err" id="e-f-alcohol" aria-live="polite"></p>
             </div>
-            </div>
             <div class="field" role="group" aria-labelledby="lbl-nutritionstruggle">
               <span class="legend-inline" id="lbl-nutritionstruggle">Kas tau sunkiausia mityboje <span class="hint">(pažymėk visus tinkamus)</span></span>
             <div class="checks" data-required-group="1">
@@ -1530,7 +1532,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
             </div>
           </fieldset>
 
-          <fieldset class="step" data-step="7" hidden>
+          <fieldset class="step" data-step="8" hidden>
             <legend>Darbas kartu</legend>
             <div class="field">
               <label for="f-expect">Ko tikiesi iš manęs kaip trenerio</label>
@@ -1839,7 +1841,7 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
   var keyEl   = document.getElementById("accessKey");
   var reduce  = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var TITLES  = ["Apie tave", "Tavo tikslas", "Treniruočių istorija", "Tavo grafikas",
-                 "Traumos ir sveikata", "Gyvenimas ir maistas", "Darbas kartu"];
+                 "Traumos ir sveikata", "Tavo gyvenimas", "Tavo mityba", "Darbas kartu"];
   var current = 0;
   var openedAt = Date.now();
 
