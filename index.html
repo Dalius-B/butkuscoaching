@@ -1294,6 +1294,14 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
               </div>
               <p class="err" id="e-option" aria-live="polite"></p>
             </div>
+            <div class="field" role="group" aria-labelledby="lbl-sex">
+              <span class="legend-inline" id="lbl-sex">Lytis <span class="hint">(reikia tiksliam kalorijų poreikio skaičiavimui)</span></span>
+            <div class="chips" role="radiogroup" aria-labelledby="lbl-sex">
+              <label class="chip-opt"><input type="radio" name="Lytis" value="Vyras" required><span>Vyras</span></label>
+              <label class="chip-opt"><input type="radio" name="Lytis" value="Moteris"><span>Moteris</span></label>
+            </div>
+              <p class="err" id="e-sex" aria-live="polite"></p>
+            </div>
             <div class="field-row">
             <div class="field">
               <label for="f-age">Amžius</label>
@@ -1466,6 +1474,46 @@ html:not(.js) .progress, html:not(.js) .form-step-label { display: none; }
               <label for="f-diet">Mitybos apribojimai</label>
 <input id="f-diet" name="Mitybos apribojimai" type="text" required placeholder="Jei nėra, parašyk „nėra“.">
               <p class="err" id="e-f-diet" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-typicalday">Papasakok, ką paprastai suvalgai per dieną</label>
+<textarea id="f-typicalday" name="Įprasta valgymo diena" required placeholder="Pvz. pusryčiai, pietūs, vakarienė, užkandžiai — kiek, kada, kas paprastai pakliūva į lėkštę."></textarea>
+              <p class="err" id="e-f-typicalday" aria-live="polite"></p>
+            </div>
+            <div class="field-row">
+            <div class="field">
+              <label for="f-mealsperday">Kiek kartų per dieną valgai</label>
+<select id="f-mealsperday" name="Valgymų skaičius per dieną" required>
+                <option value="">Pasirink</option>
+                <option>1-2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5 ar daugiau</option>
+              </select>
+              <p class="err" id="e-f-mealsperday" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-eatingout">Kaip dažnai valgai lauke / užsisakai</label>
+<select id="f-eatingout" name="Valgymas lauke arba užsakymas" required>
+                <option value="">Pasirink</option>
+                <option>Beveik niekada</option>
+                <option>1-2 kartus per savaitę</option>
+                <option>3-5 kartus per savaitę</option>
+                <option>Beveik kasdien</option>
+              </select>
+              <p class="err" id="e-f-eatingout" aria-live="polite"></p>
+            </div>
+            <div class="field">
+              <label for="f-alcohol">Kaip dažnai geri alkoholį</label>
+<select id="f-alcohol" name="Alkoholio vartojimas" required>
+                <option value="">Pasirink</option>
+                <option>Negeriu</option>
+                <option>Retai (kelis kartus per mėnesį)</option>
+                <option>1-2 kartus per savaitę</option>
+                <option>3 ir daugiau kartų per savaitę</option>
+              </select>
+              <p class="err" id="e-f-alcohol" aria-live="polite"></p>
+            </div>
             </div>
             <div class="field" role="group" aria-labelledby="lbl-nutritionstruggle">
               <span class="legend-inline" id="lbl-nutritionstruggle">Kas tau sunkiausia mityboje <span class="hint">(pažymėk visus tinkamus)</span></span>
