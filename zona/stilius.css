@@ -753,3 +753,10 @@ dialog .video-wrap { margin-top: 0; }
 .u-plano-diena li { display: flex; gap: var(--s-75); font-size: 0.875rem; line-height: 1.35; }
 .u-plano-papildomos { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-50); }
 .u-plano-papildomos .chip { align-self: flex-start; }
+
+.u-plano-red { align-self: flex-start; min-height: 36px; }
+.u-dienos-sarasas { display: flex; flex-direction: column; max-height: 55vh; overflow-y: auto; }
+.u-dienos-sarasas li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-50) var(--s-100); border-bottom: 1px solid var(--hair-ink); }
+.u-dienos-sarasas li:last-child { border-bottom: 0; }
+.u-dienos-sarasas .check-opt { flex: 1 1 260px; }
+#u-dienos-dialogas { margin: auto; }
