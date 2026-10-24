@@ -121,6 +121,7 @@ let programos = [];
 let kvietimai = [];
 let priskyrimai = [];
 let patikrinimai = [];
+let treniruociuIrasai = [];
 let biblioteka = [];
 let redaguojamoBibliotekosIrasoId = null;
 let atsiliepimai = [];
@@ -161,7 +162,7 @@ async function paleisk() {
 }
 
 async function perkrauk() {
-  const [p1, p2, p3, p4, p5, p6, p7] = await Promise.all([
+  const [p1, p2, p3, p4, p5, p6, p7, p8] = await Promise.all([
     db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at').order('created_at', { ascending: false }),
     db.from('programs').select('id, title, summary, status, created_at, updated_at').order('updated_at', { ascending: false }),
     db.from('invites').select('id, token, email, full_name, note, used_by, used_at, expires_at, plan_type, created_at').order('created_at', { ascending: false }),
@@ -169,20 +170,25 @@ async function perkrauk() {
     db.from('checkins').select('*').order('created_at', { ascending: false }),
     db.from('library_items').select('*').order('position', { ascending: true }),
     db.from('testimonials').select('*').order('created_at', { ascending: false }),
+    // Tik client_id ir data — "Paskutinė treniruotė" skiltyje reikia tik
+    // naujausio seto laiko, o ne visos istorijos (ta jau skaičiuojama
+    // istorija.html per konkrečią programą).
+    db.from('exercise_logs').select('client_id, logged_at').order('logged_at', { ascending: false }),
   ]);
 
-  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error || p6.error || p7.error;
+  const pirmaKlaida = p1.error || p2.error || p3.error || p4.error || p5.error || p6.error || p7.error || p8.error;
   if (pirmaKlaida) {
     pranesk($('#pranesimas'), klaidaLT(pirmaKlaida), 'error');
   }
 
-  profiliai    = p1.data || [];
-  programos    = p2.data || [];
-  kvietimai    = p3.data || [];
-  priskyrimai  = p4.data || [];
-  patikrinimai = p5.data || [];
-  biblioteka   = p6.data || [];
-  atsiliepimai = p7.data || [];
+  profiliai       = p1.data || [];
+  programos       = p2.data || [];
+  kvietimai       = p3.data || [];
+  priskyrimai     = p4.data || [];
+  patikrinimai    = p5.data || [];
+  biblioteka      = p6.data || [];
+  atsiliepimai    = p7.data || [];
+  treniruociuIrasai = p8.data || [];
 
   piesProgramas();
   piesKlientus();
@@ -322,8 +328,7 @@ function piesKlientus() {
 
   const eilutes = klientai.map((k) => {
     const savos = priskyrimai.filter((a) => a.client_id === k.id && a.status === 'active');
-    const pavadinimai = savos.map((a) => a.title).filter(Boolean);
-    const paskutinis = klientoPatikrinimai(k)[0];
+    const paskutinisIrasas = treniruociuIrasai.find((i) => i.client_id === k.id);
 
     return `
       <tr>
@@ -334,8 +339,10 @@ function piesKlientus() {
         </td>
         <td data-label="Būsena"><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
         <td data-label="Paketas"><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
-        <td data-label="Programos">${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
-        <td data-label="Paskutinis įrašas">${paskutinis ? esc(data(paskutinis.created_at)) : '<span class="muted">nėra</span>'}</td>
+        <td data-label="Programos">${savos.length
+          ? savos.map((a) => `<div><a href="istorija.html?id=${esc(a.id)}">${esc(a.title)}</a></div>`).join('')
+          : '<span class="muted">nėra</span>'}</td>
+        <td data-label="Paskutinė treniruotė">${paskutinisIrasas ? esc(data(paskutinisIrasas.logged_at)) : '<span class="muted">nėra</span>'}</td>
         <td data-label="">
           <div class="row">
             <a class="btn btn-primary btn-sm" href="klientas.html?id=${esc(k.id)}">Profilis</a>
@@ -360,7 +367,7 @@ function piesKlientus() {
       ${klientai.length ? `
         <div class="table-wrap table-kortelese">
           <table>
-            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Programos</th><th>Paskutinis įrašas</th><th></th></tr></thead>
+            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Programos</th><th>Paskutinė treniruotė</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
           </table>
         </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
