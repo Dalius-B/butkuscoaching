@@ -134,6 +134,12 @@ p { text-wrap: pretty; }
 .btn-sm { min-height: 40px; font-size: 0.8125rem; padding: var(--s-75) var(--s-200); }
 .btn-block { width: 100%; }
 
+/* Mažas, tekstą primenantis mygtukas — antrinis veiksmas šalia nuorodos ar
+   pavadinimo, kuriam pilnas .btn apvalkalas (dydis, paminkštinimas) būtų per
+   sunkus. */
+.btn-link { font-size: 0.8125rem; color: var(--ink-soft); text-decoration: underline; min-height: 0; }
+.btn-link:hover { color: var(--ink); }
+
 /* -----------------------------------------------------------------------------
    Viršutinė juosta
    ----------------------------------------------------------------------------- */

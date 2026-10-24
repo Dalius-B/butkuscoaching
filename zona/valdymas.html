@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261019">
+<link rel="stylesheet" href="stilius.css?v=20261024">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -112,8 +112,8 @@ import {
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
-} from './app.js?v=20261019';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261019';
+} from './app.js?v=20261024';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261024';
 
 let profiliai = [];
 let savasId = null;
@@ -340,7 +340,11 @@ function piesKlientus() {
         <td data-label="Būsena"><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
         <td data-label="Paketas"><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
         <td data-label="Programos">${savos.length
-          ? savos.map((a) => `<div><a href="istorija.html?id=${esc(a.id)}">${esc(a.title)}</a></div>`).join('')
+          ? savos.map((a) => `
+              <div>
+                <a href="istorija.html?id=${esc(a.id)}">${esc(a.title)}</a>
+                <button class="btn-link redaguoti-pratimus-tiesiai" type="button" data-id="${esc(a.id)}">redaguoti</button>
+              </div>`).join('')
           : '<span class="muted">nėra</span>'}</td>
         <td data-label="Paskutinė treniruotė">${paskutinisIrasas ? esc(data(paskutinisIrasas.logged_at)) : '<span class="muted">nėra</span>'}</td>
         <td data-label="">
@@ -385,6 +389,9 @@ function piesKlientus() {
 
   for (const b of $$('.busena')) {
     b.addEventListener('click', () => keiskBusena(b.dataset.id, b.dataset.busena));
+  }
+  for (const b of $$('.redaguoti-pratimus-tiesiai')) {
+    b.addEventListener('click', () => redaguokKlientoPratimus(b.dataset.id));
   }
 }
 
