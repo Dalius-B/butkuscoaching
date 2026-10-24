@@ -57,6 +57,22 @@
 
   #rodinys-pratimas .field { max-width: 360px; }
 
+  /* Lentelė — pratimas × data tinklelis, tik treneriui (žr. piesLentele()).
+     Neišvengiamai plati (viena data = vienas stulpelis), tad pirmas
+     stulpelis (pratimo pavadinimas) lieka matomas slenkant į šoną. */
+  .lenteles-diena + .lenteles-diena { margin-top: var(--s-600); }
+  .lenteles-diena-antraste {
+    font-size: .8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--ink-soft); padding-bottom: var(--s-200); margin-bottom: var(--s-200);
+    border-bottom: 1px solid var(--hair-ink);
+  }
+  table.lentele th, table.lentele td { white-space: nowrap; }
+  table.lentele thead th { font-size: .75rem; }
+  table.lentele tbody th { text-align: left; font-size: .9375rem; font-weight: 700; }
+  table.lentele tbody th, table.lentele thead th:first-child {
+    position: sticky; left: 0; background: var(--paper); z-index: 1;
+  }
+
   /* Progreso grafikas — vieno pratimo geriausias kiekvienos sesijos
      rezultatas (svoris, trukmė arba kartai, priklausomai nuo pratimo tipo)
      per laiką, kad progresas matytųsi iš karto, o ne reikėtų lyginti
@@ -108,6 +124,7 @@
       <div class="tabs" role="tablist" id="rodinio-tabs">
         <button class="tab" role="tab" type="button" data-rodinys="diena" aria-selected="true">Pagal datą</button>
         <button class="tab" role="tab" type="button" data-rodinys="pratimas" aria-selected="false">Pagal pratimą</button>
+        <button class="tab" role="tab" type="button" data-rodinys="lentele" aria-selected="false" id="lenteles-mygtukas" hidden>Lentelė</button>
       </div>
 
       <div id="rodinys-diena">
@@ -122,6 +139,8 @@
         </div>
         <div id="pratimo-progresas" style="margin-top:var(--s-300)"></div>
       </div>
+
+      <div id="rodinys-lentele" hidden></div>
     </div>
   </div>
 </main>
@@ -222,10 +241,10 @@ async function ikelk(arTreneris) {
   }
 
   $('#kraunasi').hidden = true;
-  paruoskRodinius(dienos || [], pratimai || [], irasai || []);
+  paruoskRodinius(dienos || [], pratimai || [], irasai || [], arTreneris);
 }
 
-function paruoskRodinius(dienos, pratimai, irasai) {
+function paruoskRodinius(dienos, pratimai, irasai, arTreneris) {
   if (!irasai.length) {
     $('#pranesimas').hidden = true;
     $('#skydelis').hidden = true;
@@ -240,6 +259,14 @@ function paruoskRodinius(dienos, pratimai, irasai) {
   piesPagalDiena(dienos, pratimai, irasai, pratimoInfo);
   piesPagalPratima(pratimoInfo, irasai);
 
+  // Lentelės rodinys — pratimas × data tinklelis, skirtas tik treneriui:
+  // klientui tai per daug skaičių vienu metu, o treneriui tai tiksliausias
+  // būdas palyginti kelias savaites iš karto.
+  if (arTreneris) {
+    $('#lenteles-mygtukas').hidden = false;
+    piesLentele(dienos, irasai, pratimoInfo);
+  }
+
   for (const t of $$('#rodinio-tabs .tab')) {
     t.addEventListener('click', () => perjunkRodini(t.dataset.rodinys));
   }
@@ -249,6 +276,7 @@ function perjunkRodini(vardas) {
   for (const t of $$('#rodinio-tabs .tab')) t.setAttribute('aria-selected', String(t.dataset.rodinys === vardas));
   $('#rodinys-diena').hidden = vardas !== 'diena';
   $('#rodinys-pratimas').hidden = vardas !== 'pratimas';
+  $('#rodinys-lentele').hidden = vardas !== 'lentele';
 }
 
 // =============================================================================
@@ -551,6 +579,64 @@ function vienoSetoTekstas(s) {
 
 function pastabosTekstas(setai) {
   return setai.map((s) => s.notes).find(Boolean) || '';
+}
+
+// =============================================================================
+//  LENTELĖ — pratimas × data tinklelis, treniruočių dienai. Tik treneriui:
+//  tiksliausias būdas palyginti kelias savaites iš karto, bet per daug
+//  skaičių vienu metu klientui, kuriam skirtas Pagal datą / Pagal pratimą
+//  rodinys su diagrama.
+// =============================================================================
+function piesLentele(dienos, irasai, pratimoInfo) {
+  const vieta = $('#rodinys-lentele');
+  const dienosSuIrasais = dienos.filter((d) => irasai.some((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id));
+
+  vieta.innerHTML = dienosSuIrasais.length
+    ? dienosSuIrasais.map((d) => lentelesDienai(d, irasai, pratimoInfo)).join('')
+    : '<p class="muted">Kol kas tuščia.</p>';
+}
+
+function lentelesDienai(d, visiIrasai, pratimoInfo) {
+  const dIrasai = visiIrasai.filter((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id);
+
+  // ymd -> { pavyzdys: tikras logged_at (antraštei formatuoti), langeliai: pratimoId -> setai[] }
+  const pagalData = new Map();
+  for (const i of dIrasai) {
+    const ymd = new Date(i.logged_at).toISOString().slice(0, 10);
+    if (!pagalData.has(ymd)) pagalData.set(ymd, { pavyzdys: i.logged_at, langeliai: new Map() });
+    const langeliai = pagalData.get(ymd).langeliai;
+    if (!langeliai.has(i.client_exercise_id)) langeliai.set(i.client_exercise_id, []);
+    langeliai.get(i.client_exercise_id).push(i);
+  }
+
+  // Seniausia data kairėje, naujausia dešinėje — ta pati kryptis kaip
+  // progreso grafike, kad progresas skaitytųsi natūraliai iš kairės.
+  const datos = Array.from(pagalData.keys()).sort();
+
+  const dPratimai = Array.from(pratimoInfo.entries())
+    .filter(([, info]) => info.dienaId === d.id)
+    .sort((a, b) => (a[1].pozicija ?? Infinity) - (b[1].pozicija ?? Infinity));
+
+  const antrastes = datos.map((ymd) => `<th>${esc(data(pagalData.get(ymd).pavyzdys))}</th>`).join('');
+
+  const eilutes = dPratimai.map(([pratimoId, info]) => {
+    const langeliai = datos.map((ymd) => {
+      const setai = pagalData.get(ymd).langeliai.get(pratimoId);
+      return `<td>${setai ? esc(setuTekstas(setai)) : '<span class="muted">—</span>'}</td>`;
+    }).join('');
+    return `<tr><th scope="row">${esc(info.pavadinimas)}</th>${langeliai}</tr>`;
+  }).join('');
+
+  return `
+    <section class="lenteles-diena">
+      <h2 class="lenteles-diena-antraste">${esc(d.title)}</h2>
+      <div class="table-wrap lentele-wrap">
+        <table class="istorija lentele">
+          <thead><tr><th></th>${antrastes}</tr></thead>
+          <tbody>${eilutes}</tbody>
+        </table>
+      </div>
+    </section>`;
 }
 </script>
 </body>
