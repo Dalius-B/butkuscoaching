@@ -323,6 +323,7 @@ function piesKlientus() {
   const eilutes = klientai.map((k) => {
     const savos = priskyrimai.filter((a) => a.client_id === k.id && a.status === 'active');
     const pavadinimai = savos.map((a) => a.title).filter(Boolean);
+    const paskutinis = klientoPatikrinimai(k)[0];
 
     return `
       <tr>
@@ -333,14 +334,11 @@ function piesKlientus() {
         </td>
         <td data-label="Būsena"><span class="chip ${k.status === 'active' ? 'chip-ok' : k.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[k.status] || k.status)}</span></td>
         <td data-label="Paketas"><span class="chip chip-quiet">${paketoText(k.plan_type)}</span></td>
-        <td data-label="Užduotys">${k.uzduotys_ijungtos ? '<span class="chip chip-ok">Įjungtos</span>' : '<span class="chip chip-quiet">Išjungtos</span>'}</td>
         <td data-label="Programos">${pavadinimai.length ? pavadinimai.map((t) => `<div>${esc(t)}</div>`).join('') : '<span class="muted">nėra</span>'}</td>
-        <td data-label="Užsiregistravo">${esc(data(k.created_at))}</td>
+        <td data-label="Paskutinis įrašas">${paskutinis ? esc(data(paskutinis.created_at)) : '<span class="muted">nėra</span>'}</td>
         <td data-label="">
           <div class="row">
             <a class="btn btn-primary btn-sm" href="klientas.html?id=${esc(k.id)}">Profilis</a>
-            <button class="btn btn-ghost btn-sm uzd-jungiklis" type="button" data-id="${esc(k.id)}" data-ijungta="${k.uzduotys_ijungtos ? '0' : '1'}">${k.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
-            <button class="btn btn-ghost btn-sm zr-programos" type="button" data-id="${esc(k.id)}"${priskyrimai.some((a) => a.client_id === k.id) ? '' : ' disabled'}>Programos</button>
             ${k.status === 'blocked'
               ? `<button class="btn btn-ghost btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="active">Grąžinti prieigą</button>`
               : `<button class="btn btn-danger btn-sm busena" type="button" data-id="${esc(k.id)}" data-busena="blocked">Sustabdyti</button>`}
@@ -356,12 +354,13 @@ function piesKlientus() {
         <span class="row-end muted">${klientai.length}</span>
       </div>
       <p class="muted" style="margin-bottom:var(--s-200)">
-        Programos priskiriamos programos redagavimo lange, skiltyje Priskyrimai.
+        Programos priskiriamos programos redagavimo lange, skiltyje Priskyrimai. Užduotys ir programų
+        tvarkymas — kliento profilyje.
       </p>
       ${klientai.length ? `
         <div class="table-wrap table-kortelese">
           <table>
-            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Užduotys</th><th>Programos</th><th>Užsiregistravo</th><th></th></tr></thead>
+            <thead><tr><th>Žmogus</th><th>Būsena</th><th>Paketas</th><th>Programos</th><th>Paskutinis įrašas</th><th></th></tr></thead>
             <tbody>${eilutes}</tbody>
           </table>
         </div>` : '<p class="muted">Klientų dar nėra. Sukurk kvietimą skiltyje Kvietimai.</p>'}
@@ -380,12 +379,6 @@ function piesKlientus() {
   for (const b of $$('.busena')) {
     b.addEventListener('click', () => keiskBusena(b.dataset.id, b.dataset.busena));
   }
-  for (const b of $$('.uzd-jungiklis')) {
-    b.addEventListener('click', () => keiskUzduotis(b.dataset.id, b.dataset.ijungta === '1'));
-  }
-  for (const b of $$('.zr-programos')) {
-    b.addEventListener('click', () => rodykKlientoProgramas(b.dataset.id));
-  }
 }
 
 async function keiskBusena(id, busena) {
@@ -397,16 +390,6 @@ async function keiskBusena(id, busena) {
     return;
   }
   pranesk($('#pranesimas'), busena === 'blocked' ? 'Prieiga sustabdyta.' : 'Prieiga grąžinta.', 'ok');
-  await perkrauk();
-}
-
-async function keiskUzduotis(id, ijungta) {
-  const { error } = await db.rpc('admin_set_uzduotys', { p_client: id, p_ijungta: ijungta });
-  if (error) {
-    pranesk($('#pranesimas'), klaidaLT(error), 'error');
-    return;
-  }
-  pranesk($('#pranesimas'), ijungta ? 'Užduotys klientui įjungtos.' : 'Užduotys klientui išjungtos.', 'ok');
   await perkrauk();
 }
 

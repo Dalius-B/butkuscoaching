@@ -57,6 +57,17 @@
 
   #rodinys-pratimas .field { max-width: 360px; }
 
+  /* Progreso grafikas — vieno pratimo geriausias kiekvienos sesijos
+     rezultatas (svoris, trukmė arba kartai, priklausomai nuo pratimo tipo)
+     per laiką, kad progresas matytųsi iš karto, o ne reikėtų lyginti
+     skaičius per kelias dešimtis lentelės eilučių. */
+  .progreso-grafikas { width: 100%; height: auto; margin: var(--s-300) 0; }
+  .progreso-grafikas .pg-linija { fill: none; stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .progreso-grafikas .pg-taskas { fill: var(--white); stroke: var(--ink); stroke-width: 2; }
+  .progreso-grafikas .pg-gardele { stroke: var(--hair-ink); stroke-width: 1; }
+  .progreso-grafikas .pg-asies-tekstas { font-size: 11px; fill: var(--ink-soft); font-family: var(--display); }
+  .progreso-grafikas .pg-verte-tekstas { font-size: 12px; font-weight: 700; fill: var(--ink); font-family: var(--display); }
+
   /* Asmeniniai rekordai — du kompaktiški skaitliukai virš istorijos
      lentelės, kad klientas iš karto matytų savo geriausią rezultatą, o ne
      turėtų ieškoti jo pats per visą lentelę. */
@@ -380,12 +391,94 @@ function piesPratimoProgresa(pagalPavadinima, raktas) {
 
   vieta.innerHTML = `
     ${pbBlokas(grupe.irasai)}
+    <div id="grafiko-vieta"></div>
     <div class="table-wrap">
       <table class="istorija">
         <thead><tr><th>Data</th><th>Setai</th><th>Pastaba</th></tr></thead>
         <tbody>${eilutesHtml}</tbody>
       </table>
     </div>`;
+
+  // Seniausia sesija kairėje, naujausia dešinėje — kryptis, kuria progresas
+  // iš tikrųjų juda, o ne lentelės "naujausia viršuje" tvarka.
+  const taskai = Array.from(sesijos.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([, setai]) => ({ data: setai[0].logged_at, ...sesijosGrafikoReiksme(setai) }))
+    .filter((t) => t.reiksme != null);
+
+  if (taskai.length > 1) piesProgresoGrafika(taskai);
+}
+
+/** Vienos sesijos geriausias rezultatas tam pratimui — sunkiausias svoris tą
+ * dieną, arba (jei pratimas be svorio) ilgiausia trukmė, arba daugiausiai
+ * kartų. Ta pati pirmenybės tvarka kaip pbSantrauka(), tik vienai dienai. */
+function sesijosGrafikoReiksme(setai) {
+  const suSvoriu = setai.filter((s) => s.weight_kg != null);
+  if (suSvoriu.length) {
+    const geriausias = suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg
+      || (b.weight_kg === a.weight_kg && (b.reps ?? 0) > (a.reps ?? 0))) ? b : a);
+    return { reiksme: geriausias.weight_kg, vienetas: 'kg' };
+  }
+  const suTrukme = setai.filter((s) => s.duration_seconds != null);
+  if (suTrukme.length) {
+    const geriausias = suTrukme.reduce((a, b) => (b.duration_seconds > a.duration_seconds) ? b : a);
+    return { reiksme: geriausias.duration_seconds, vienetas: 's' };
+  }
+  const suKartais = setai.filter((s) => s.reps != null);
+  if (suKartais.length) {
+    const geriausias = suKartais.reduce((a, b) => (b.reps > a.reps) ? b : a);
+    return { reiksme: geriausias.reps, vienetas: 'k.' };
+  }
+  return { reiksme: null, vienetas: '' };
+}
+
+function piesProgresoGrafika(taskai) {
+  const plotis = 640;
+  const aukstis = 180;
+  const paraste = { k: 36, d: 20, v: 16, a: 20 };
+  const vienetas = taskai[0].vienetas;
+
+  const reiksmes = taskai.map((t) => t.reiksme);
+  let min = Math.min(...reiksmes);
+  let max = Math.max(...reiksmes);
+  if (min === max) { min -= 1; max += 1; }
+  // Šiek tiek vietos virš/po duomenų, kad taškai nelimptų prie pat krašto.
+  const uzpildas = (max - min) * 0.12;
+  min -= uzpildas;
+  max += uzpildas;
+
+  const vidX = (plotis - paraste.k - paraste.d);
+  const vidY = (aukstis - paraste.v - paraste.a);
+  const x = (i) => paraste.k + (taskai.length > 1 ? (i / (taskai.length - 1)) * vidX : vidX / 2);
+  const y = (r) => paraste.v + vidY - ((r - min) / (max - min)) * vidY;
+
+  const linija = taskai.map((t, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(t.reiksme).toFixed(1)}`).join(' ');
+
+  // Trys horizontalios gardelės: min, vidurys, max — pakanka orientacijai,
+  // be reikalo neperkraunant grafiko skaičiais.
+  const gardeles = [min + (max - min), min + (max - min) / 2, min]
+    .map((r) => `
+      <line class="pg-gardele" x1="${paraste.k}" x2="${plotis - paraste.d}" y1="${y(r).toFixed(1)}" y2="${y(r).toFixed(1)}"></line>
+      <text class="pg-asies-tekstas" x="${paraste.k - 8}" y="${(y(r) + 4).toFixed(1)}" text-anchor="end">${r.toFixed(0)}</text>`)
+    .join('');
+
+  const taskaiSvg = taskai.map((t, i) => `<circle class="pg-taskas" cx="${x(i).toFixed(1)}" cy="${y(t.reiksme).toFixed(1)}" r="3.5"><title>${esc(data(t.data))}: ${t.reiksme}${vienetas}</title></circle>`).join('');
+
+  // Tiesioginiai užrašai tik pirmam ir paskutiniam taškui — tarpiniai jau
+  // pasiekiami per pelės užvedimą (title), skaičiais neperkraunant vaizdo.
+  const pirmasLabel = `<text class="pg-verte-tekstas" x="${x(0).toFixed(1)}" y="${(y(taskai[0].reiksme) - 10).toFixed(1)}" text-anchor="start">${taskai[0].reiksme}${vienetas}</text>`;
+  const paskutinisLabel = `<text class="pg-verte-tekstas" x="${x(taskai.length - 1).toFixed(1)}" y="${(y(taskai[taskai.length - 1].reiksme) - 10).toFixed(1)}" text-anchor="end">${taskai[taskai.length - 1].reiksme}${vienetas}</text>`;
+
+  $('#grafiko-vieta').innerHTML = `
+    <svg class="progreso-grafikas" viewBox="0 0 ${plotis} ${aukstis}" role="img" aria-label="Progresas nuo ${esc(data(taskai[0].data))} iki ${esc(data(taskai[taskai.length - 1].data))}">
+      ${gardeles}
+      <path class="pg-linija" d="${linija}"></path>
+      ${taskaiSvg}
+      ${pirmasLabel}
+      ${paskutinisLabel}
+      <text class="pg-asies-tekstas" x="${paraste.k}" y="${aukstis - 4}" text-anchor="start">${esc(data(taskai[0].data))}</text>
+      <text class="pg-asies-tekstas" x="${plotis - paraste.d}" y="${aukstis - 4}" text-anchor="end">${esc(data(taskai[taskai.length - 1].data))}</text>
+    </svg>`;
 }
 
 /** Sunkiausias kada nors pakeltas svoris ir daugiausiai kada nors padarytų
