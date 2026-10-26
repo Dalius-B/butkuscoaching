@@ -208,13 +208,6 @@ function piesTurini(savaite) {
             <label for="f-steps">Kiek vidutiniškai žingsnių padarei per dieną <span class="hint" style="display:inline">(neprivaloma)</span></label>
             <input id="f-steps" name="avg_daily_steps" type="number" min="0" step="1" inputmode="numeric" placeholder="Pvz., 8000">
           </div>
-          <div class="field">
-            <label for="f-nuotraukos">Progreso nuotraukos <span class="hint" style="display:inline">(neprivaloma)</span></label>
-            <p class="hint">Iki ${NUOTRAUKU_LIMITAS} nuotraukų, kiekviena iki ${NUOTRAUKOS_MAX_MB} MB. Matys tik Dalius.</p>
-            <input id="f-nuotraukos" name="photos" type="file" accept="image/*" multiple>
-            <div class="nuotrauku-perziura" id="nuotrauku-perziura"></div>
-            <p class="note" id="nuotrauku-klaida" hidden></p>
-          </div>
         </fieldset>
 
         <fieldset style="border:0;margin-top:var(--s-400)">
@@ -264,6 +257,17 @@ function piesTurini(savaite) {
           <div class="field">
             <label for="f-adjust">Ar jauti, kad programoje ką nors reikėtų pakoreguoti <span class="hint" style="display:inline">(neprivaloma)</span></label>
             <textarea id="f-adjust" name="program_adjustment"></textarea>
+          </div>
+        </fieldset>
+
+        <fieldset style="border:0;margin-top:var(--s-400)">
+          <legend class="sr-only">Nuotraukos</legend>
+          <div class="field">
+            <label for="f-nuotraukos">Progreso nuotraukos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <p class="hint">Iki ${NUOTRAUKU_LIMITAS} nuotraukų, kiekviena iki ${NUOTRAUKOS_MAX_MB} MB. Matys tik Dalius.</p>
+            <input id="f-nuotraukos" name="photos" type="file" accept="image/*" multiple>
+            <div class="nuotrauku-perziura" id="nuotrauku-perziura"></div>
+            <p class="note" id="nuotrauku-klaida" hidden></p>
           </div>
         </fieldset>
 
