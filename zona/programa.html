@@ -248,35 +248,49 @@ async function ikelk() {
     ? await db.from('exercise_logs').select('client_exercise_id, weight_kg, reps, duration_seconds, notes, logged_at')
         .eq('client_id', vartotojas.id).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
     : { data: [] };
-  paskutineSesija = apskaiciuokPaskutinesSesijas(irasai || []);
+  paskutineSesija = apskaiciuokPaskutinesSesijas(irasai || [], pratimai);
 
   $('#kraunasi').hidden = true;
   piesTurini();
 }
 
-/** pratimoId -> paskutinės sesijos {data, weight_kg, reps, duration_seconds}
- * (geriausias tos dienos setas — sunkiausias svoris, arba kai jo nėra,
- * ilgiausia trukmė, arba daugiausia kartų). Kadangi irasai jau surikiuoti
- * nuo naujausios datos, pirmas kiekvieno pratimo pasirodymas visada
- * priklauso jo naujausiai sesijai. */
-function apskaiciuokPaskutinesSesijas(irasai) {
+/** Tas pats pratimas (pvz. "Bench Press") dažnai pasikartoja keliose skirtingose
+ * dienose su savo client_exercise_id eilute kiekvienai — bet klientui tai vis
+ * tiek tas pats pratimas, tad "praėjusi sesija" turi reikšti paskutinį kartą,
+ * kai jis buvo atliktas BET KURIĄ dieną, o ne tik toje konkrečioje dienos
+ * eilutėje. Raktas todėl yra normalizuotas pavadinimas, ne client_exercise_id —
+ * ta pati logika, kaip istorija.html grupuoja pagal pratimą. */
+function pavadinimoRaktas(pavadinimas) {
+  return (pavadinimas || '').trim().toLowerCase();
+}
+
+/** normalizuotas pavadinimas -> paskutinės sesijos {data, weight_kg, reps,
+ * duration_seconds} (geriausias tos dienos setas — sunkiausias svoris, arba
+ * kai jo nėra, ilgiausia trukmė, arba daugiausia kartų). Kadangi irasai jau
+ * surikiuoti nuo naujausios datos, pirmas kiekvieno pavadinimo pasirodymas
+ * visada priklauso jo naujausiai sesijai. */
+function apskaiciuokPaskutinesSesijas(irasai, pratimai) {
+  const pavadinimaiPagalId = new Map(pratimai.map((p) => [p.id, pavadinimoRaktas(p.title)]));
+
   const grupes = new Map();
   for (const i of irasai) {
-    const raktas = new Date(i.logged_at).toISOString().slice(0, 10);
-    const esama = grupes.get(i.client_exercise_id);
-    if (!esama) grupes.set(i.client_exercise_id, { data: raktas, irasai: [i] });
-    else if (raktas === esama.data) esama.irasai.push(i);
+    const raktas = pavadinimaiPagalId.get(i.client_exercise_id);
+    if (!raktas) continue;
+    const data = new Date(i.logged_at).toISOString().slice(0, 10);
+    const esama = grupes.get(raktas);
+    if (!esama) grupes.set(raktas, { data, irasai: [i] });
+    else if (data === esama.data) esama.irasai.push(i);
   }
 
   const rezultatas = new Map();
-  for (const [pratimoId, grupe] of grupes) {
+  for (const [raktas, grupe] of grupes) {
     const suSvoriu = grupe.irasai.filter((i) => i.weight_kg != null);
     const suTrukme = grupe.irasai.filter((i) => i.duration_seconds != null);
     const suKartais = grupe.irasai.filter((i) => i.reps != null);
     const sunkiausias = suSvoriu.length ? suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a)) : null;
     const ilgiausias  = suTrukme.length ? suTrukme.reduce((a, b) => (b.duration_seconds > a.duration_seconds ? b : a)) : null;
     const daugiausiai = suKartais.length ? suKartais.reduce((a, b) => (b.reps > a.reps ? b : a)) : null;
-    rezultatas.set(pratimoId, {
+    rezultatas.set(raktas, {
       data: grupe.data,
       weight_kg: sunkiausias ? sunkiausias.weight_kg : null,
       reps: sunkiausias ? sunkiausias.reps : (daugiausiai ? daugiausiai.reps : null),
@@ -296,7 +310,10 @@ function piesTurini() {
   }
 
   vieta.innerHTML = dienos.map((d) => {
-    const savi = pratimai.filter((p) => p.client_day_id === d.id);
+    // Paslėpti pratimai (žr. valdymas.html "Paslėpti") čia neberodomi, bet jų
+    // exercise_logs lieka — paskutineSesija žemiau juos vis tiek naudoja, kad
+    // ta pati pratimo rūšis kitoje dienoje matytų tą patį rezultatą.
+    const savi = pratimai.filter((p) => p.client_day_id === d.id && !p.is_hidden);
     const supersetuZenklai = apskaiciuokSupersetuZenklus(savi);
     return `
       <details class="card diena-kortele">
@@ -388,7 +405,7 @@ function tiksloEilute(p) {
  * pasiūlymas rodomas kaip įvesties lauko placeholder (žr. pratimoKortele),
  * ne atskira eilute — čia liekame tik tiems tipams, kur svorio nėra. */
 function paskutinesSesijosEilute(p) {
-  const s = paskutineSesija.get(p.id);
+  const s = paskutineSesija.get(pavadinimoRaktas(p.title));
   if (!s) return '';
   const tipas = p.log_type || 'svoris';
 
@@ -408,7 +425,7 @@ function pratimoKortele(p, supersetoZenklas) {
   const kiekSetu = p.target_sets && p.target_sets > 0 ? p.target_sets : 3;
   const tikslas = tiksloEilute(p);
   const draftas = atstatytasDraftas(p.id);
-  const s = paskutineSesija.get(p.id);
+  const s = paskutineSesija.get(pavadinimoRaktas(p.title));
   const tipas = p.log_type || 'svoris';
   const numeriai = Array.from({ length: kiekSetu }, (_, i) => i + 1);
 
@@ -554,23 +571,32 @@ async function issaugokDiena(dienaId) {
       gerinusias = suSvoriu.length ? suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a)) : null;
     }
 
+    if (!pratimas) continue;
+    const raktas = pavadinimoRaktas(pratimas.title);
+
     if (gerinusias) {
-      paskutineSesija.set(pratimoId, {
+      paskutineSesija.set(raktas, {
         data: new Date().toISOString().slice(0, 10),
         weight_kg: gerinusias.weight_kg,
         reps: gerinusias.reps,
         duration_seconds: gerinusias.duration_seconds,
         notes: gerinusias.notes,
       });
-    } else if (!paskutineSesija.has(pratimoId)) {
-      paskutineSesija.set(pratimoId, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null, duration_seconds: null, notes: null });
+    } else if (!paskutineSesija.has(raktas)) {
+      paskutineSesija.set(raktas, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null, duration_seconds: null, notes: null });
     }
 
-    // Atnaujiname tik šio pratimo užuominą, o ne visą dienos turinį — kitaip
-    // ką tik parodytas "Treniruotė išsaugota" pranešimas ir išvalyti laukai
-    // iškart dingtų perpiešiant visą kortelę.
-    const paskutineEl = $('#paskutine-' + pratimoId);
-    if (paskutineEl && pratimas) paskutineEl.innerHTML = paskutinesSesijosEilute(pratimas);
+    // Atnaujiname tik tekstinę "praėjusi sesija" eilutę, o ne visą dienos
+    // turinį — kitaip ką tik parodytas "Treniruotė išsaugota" pranešimas ir
+    // išvalyti laukai iškart dingtų perpiešiant visą kortelę. Atnaujiname
+    // VISAS to paties pavadinimo korteles (ne tik ką tik išsaugotą), nes jos
+    // dabar dalijasi ta pačia "praėjusi sesija" reikšme — pvz. jei "Bench
+    // Press" yra ir 1, ir 2 dienoje, abi turi parodyti naujausią rezultatą.
+    for (const kitas of pratimai) {
+      if (pavadinimoRaktas(kitas.title) !== raktas) continue;
+      const paskutineEl = $('#paskutine-' + kitas.id);
+      if (paskutineEl) paskutineEl.innerHTML = paskutinesSesijosEilute(kitas);
+    }
   }
 }
 </script>

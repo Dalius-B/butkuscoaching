@@ -51,6 +51,7 @@
   .tvarkos-mygtukai button:hover:not(:disabled) { border-color: rgba(16,16,16,0.42); }
   .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
   .pratimo-eilute.supersete { border-left: 3px solid var(--volt); padding-left: var(--s-100); margin-left: -1px; }
+  .pratimo-eilute.paslepta { opacity: .55; }
   .superseto-zenklas {
     display: inline-block; font-size: .6875rem; font-weight: 700; letter-spacing: .04em;
     color: var(--ink); background: var(--volt); border-radius: var(--r-sm); padding: 1px 6px; margin-left: 4px;
@@ -590,6 +591,24 @@ function piesKlientoPratimus() {
   for (const b of $$('.kelk-kliento-pratima')) {
     b.addEventListener('click', () => perkelkKlientoPratima(b.dataset.id, Number(b.dataset.kryptis)));
   }
+  for (const b of $$('.slepk-kliento-pratima')) {
+    b.addEventListener('click', () => keiskKlientoPratimoMatoma(b.dataset.id, b.dataset.slepti === '1'));
+  }
+}
+
+/** Paslepia arba vėl parodo klientui vieną jo programos pratimą, nieko
+ * netrindama — eilutė ir visa jos exercise_logs istorija lieka, tik
+ * programa.html jos nebeberodo kaip einamo pratimo. Žr. supabase/
+ * pratimo-slepimas.sql. */
+async function keiskKlientoPratimoMatoma(id, slepti) {
+  const { error } = await db.from('client_exercises').update({ is_hidden: slepti }).eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  const p = klientoPratimai.find((x) => x.id === id);
+  if (p) p.is_hidden = slepti;
+  piesKlientoPratimus();
 }
 
 function klientoDienosRedagavimoForma(d) {
@@ -640,13 +659,13 @@ async function issaugokKlientoDienosRedagavima(ev) {
 
 function klientoPratimoEilute(p, zenklas, i, kiek) {
   return `
-    <div class="pratimo-eilute${zenklas ? ' supersete' : ''}" data-id="${esc(p.id)}">
+    <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${p.is_hidden ? ' paslepta' : ''}" data-id="${esc(p.id)}">
       <div class="tvarkos-mygtukai">
         <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
         <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === kiek - 1 ? ' disabled' : ''}>&#9660;</button>
       </div>
       <div class="pratimo-eilute-info">
-        <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
+        <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}${p.is_hidden ? ' <span class="chip chip-quiet">Paslėpta</span>' : ''}
         <div class="pratimo-meta muted" style="font-size:.8125rem">
           ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
           ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
@@ -659,7 +678,8 @@ function klientoPratimoEilute(p, zenklas, i, kiek) {
       </div>
       <div class="pratimo-eilute-valdymas">
         <button class="btn btn-ghost btn-sm redaguoti-kliento-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
-        <button class="btn btn-ghost btn-sm trinti-kliento-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+        <button class="btn btn-ghost btn-sm slepk-kliento-pratima" type="button" data-id="${esc(p.id)}" data-slepti="${p.is_hidden ? '0' : '1'}">${p.is_hidden ? 'Rodyti klientui' : 'Paslėpti'}</button>
+        <button class="btn btn-danger btn-sm trinti-kliento-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
       </div>
     </div>`;
 }

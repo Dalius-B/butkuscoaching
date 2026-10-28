@@ -158,7 +158,7 @@ async function rodykProgramas(vartotojoId, arTreneris) {
 
   const dienuId = (dienos || []).map((d) => d.id);
   const { data: pratimai } = dienuId.length
-    ? await db.from('client_exercises').select('id, client_day_id').in('client_day_id', dienuId)
+    ? await db.from('client_exercises').select('id, client_day_id').in('client_day_id', dienuId).eq('is_hidden', false)
     : { data: [] };
 
   const dienuSkaicius = new Map();
