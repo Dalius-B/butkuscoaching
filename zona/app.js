@@ -172,7 +172,40 @@ export function apskaiciuokSupersetuZenklus(pratimai) {
 // -----------------------------------------------------------------------------
 
 export function pratimoBibliotekosRaktas(pavadinimas) {
-  return (pavadinimas || '').trim().toLowerCase();
+  return (pavadinimas || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Levenshtein redagavimo atstumas: kiek simbolių reikia įterpti, pašalinti
+ * ar pakeisti, kad viena eilutė taptų kita. */
+function redagavimoAtstumas(a, b) {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i += 1) {
+    const dabar = [i];
+    for (let j = 1; j <= n; j += 1) {
+      const kaina = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+      dabar[j] = Math.min(prev[j] + 1, dabar[j - 1] + 1, prev[j - 1] + kaina);
+    }
+    prev = dabar;
+  }
+  return prev[n];
+}
+
+/** Ar du pavadinimai, labai tikėtina, yra tas pats pratimas — skiriasi tik
+ * rašybos klaida ar vienaskaita/daugiskaita (pvz. "Belt Squat" / "Belt
+ * squats", "BB Bench Press" / "BB Bech press"), o ne iš tikrųjų skirtingas
+ * pratimas. Riba (redagavimo atstumas <= 2) parinkta siaura tyčia: ji gaudo
+ * rašybos klaidas, bet nesulydo pavadinimų, kurie tiesiog panašūs, bet
+ * reiškia skirtingus pratimus (pvz. "Tūptas" ir "Pritūpimas su štanga", arba
+ * "Spaudimas" ir "Pritraukimas"). */
+export function tasPatsPratimas(a, b) {
+  const x = pratimoBibliotekosRaktas(a);
+  const y = pratimoBibliotekosRaktas(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  return redagavimoAtstumas(x, y) <= 2;
 }
 
 /** Visa biblioteka, surikiuota pagal pavadinimą. Jei migracija
@@ -184,12 +217,18 @@ export async function ikelkPratimuBiblioteka() {
   return irasai || [];
 }
 
-/** Įrašo naują pratimą į biblioteką, jei tokio pavadinimo joje dar nėra —
- * esamo įrašo niekada neperrašo, kad kanoninės reikšmės liktų stabilios,
- * net jei kitas klientas tą patį pratimą gavo su kitokiais setais/kartais. */
-export async function issaugokBibliotekoje(laukai) {
+/** Įrašo naują pratimą į biblioteką, jei joje dar nėra nei tiksliai tokio
+ * pavadinimo, nei labai panašaus (žr. tasPatsPratimas) — esamo įrašo
+ * niekada neperrašo, kad kanoninės reikšmės liktų stabilios, net jei kitas
+ * klientas tą patį pratimą gavo su kitokiais setais/kartais.
+ *
+ * zinomaBiblioteka — jau užkrautas bibliotekos sąrašas (puslapis jį visada
+ * turi po ikelkPratimuBiblioteka() iškvietimo atidarant), kad šiai patikrai
+ * nereikėtų papildomos užklausos. */
+export async function issaugokBibliotekoje(laukai, zinomaBiblioteka) {
   const pavadinimas = (laukai.title || '').trim();
   if (!pavadinimas) return;
+  if ((zinomaBiblioteka || []).some((p) => tasPatsPratimas(p.title, pavadinimas))) return;
   try {
     await db.from('exercise_library').upsert({
       title: pavadinimas,
@@ -208,17 +247,16 @@ export async function issaugokBibliotekoje(laukai) {
 }
 
 /** Prijungia klausytoją prie "Pridėti pratimą" formos pavadinimo lauko: kai
- * įrašytas pavadinimas tiksliai (be skirtumo tarp didžiųjų/mažųjų, be tarpų
- * kraštuose) sutampa su bibliotekos įrašu, tuščius formos laukus užpildo jo
+ * įrašytas pavadinimas sutampa (arba yra tasPatsPratimas() prasme labai
+ * panašus) su bibliotekos įrašu, tuščius formos laukus užpildo jo
  * numatytosiomis reikšmėmis. Jau turinčio reikšmę lauko neperrašo, tad
  * treneris gali iš anksto įrašyti kitokį skaičių ir biblioteka jo nepakeis. */
 export function prijunkBibliotekosUzpildyma(forma, gaukBiblioteka) {
   const pavadinimoLaukas = forma.querySelector('[name="title"]');
   if (!pavadinimoLaukas) return;
   pavadinimoLaukas.addEventListener('input', () => {
-    const raktas = pratimoBibliotekosRaktas(pavadinimoLaukas.value);
-    if (!raktas) return;
-    const rastas = gaukBiblioteka().find((p) => pratimoBibliotekosRaktas(p.title) === raktas);
+    if (!pavadinimoLaukas.value.trim()) return;
+    const rastas = gaukBiblioteka().find((p) => tasPatsPratimas(p.title, pavadinimoLaukas.value));
     if (!rastas) return;
 
     const uzpildyk = (vardas, reiksme) => {

@@ -86,6 +86,7 @@
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
         <button class="tab" role="tab" type="button" data-kortele="uzduotys" aria-selected="false">Užduotys</button>
+        <button class="tab" role="tab" type="button" data-kortele="pratimu-sarasas" aria-selected="false">Pratimų sąrašas</button>
         <button class="tab" role="tab" type="button" data-kortele="biblioteka" aria-selected="false">Biblioteka</button>
         <button class="tab" role="tab" type="button" data-kortele="atsiliepimai" aria-selected="false">Atsiliepimai</button>
       </div>
@@ -97,6 +98,7 @@
       <section id="kortele-kvietimai" hidden></section>
       <section id="kortele-patikrinimai" hidden></section>
       <section id="kortele-uzduotys" hidden></section>
+      <section id="kortele-pratimu-sarasas" hidden></section>
       <section id="kortele-biblioteka" hidden></section>
       <section id="kortele-atsiliepimai" hidden></section>
     </div>
@@ -116,8 +118,8 @@ import {
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
-  ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma,
-} from './app.js?v=20261031b';
+  ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma, tasPatsPratimas,
+} from './app.js?v=20261031c';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
 
 let profiliai = [];
@@ -133,8 +135,10 @@ let atsiliepimai = [];
 
 // Pratimų biblioteka (exercise_library) — ta pati, kuria naudojasi
 // redaguoti.html. Naudojama pre-pildyti "Pridėti pratimą" formą, kai
-// treneris čia prideda pratimą tiesiai į kliento jau priskirtą kopiją.
+// treneris čia prideda pratimą tiesiai į kliento jau priskirtą kopiją, ir
+// rodoma "Pratimų sąrašas" skiltyje, kur ją galima peržiūrėti/sutvarkyti.
 let bibliotekosPratimai = [];
+let redaguojamoBibliotekosPratimoId = null;
 
 // Kliento priskirtos programos kopijos redagavimo būsena.
 let redaguojamosKlientoProgramosId = null;
@@ -193,6 +197,7 @@ async function ikelkIrPiesPratimuBiblioteka() {
   bibliotekosPratimai = await ikelkPratimuBiblioteka();
   $('#pratimu-biblioteka-sarasas').innerHTML = bibliotekosPratimai
     .map((p) => `<option value="${esc(p.title)}">`).join('');
+  piesPratimuSarasa();
 }
 
 async function perkrauk() {
@@ -237,7 +242,7 @@ function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'biblioteka', 'atsiliepimai']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'pratimu-sarasas', 'biblioteka', 'atsiliepimai']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }
@@ -910,7 +915,7 @@ async function pridekKlientoPratima(ev) {
   }
   pridedamosKlientoDienosId = null;
   pranesk($('#pranesimas'), 'Pratimas pridėtas.', 'ok');
-  await issaugokBibliotekoje(laukai);
+  await issaugokBibliotekoje(laukai, bibliotekosPratimai);
   await ikelkIrPiesPratimuBiblioteka();
   await ikelkIrPiesKlientoPratimus();
 }
@@ -1304,6 +1309,194 @@ async function rodykKlientoPatikrinimus(clientId) {
     ${kortos || '<p class="muted">Ataskaitų nėra.</p>'}`;
 
   $('#patikrinimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// =============================================================================
+//  PRATIMŲ SĄRAŠAS — exercise_library peržiūra ir tvarkymas. Pratimas čia
+//  patenka savaime, pridėjus jį bet kurioje programoje (žr.
+//  issaugokBibliotekoje() app.js), tad šioje skiltyje tik peržiūrima,
+//  pataisoma arba ištrinama — naujo įrašo rankiniu būdu pridėti nereikia.
+// =============================================================================
+
+/** Poros pavadinimų, kurie pagal tasPatsPratimas() (žr. app.js) yra
+ * labai tikėtina tas pats pratimas, bet duomenų bazėje liko kaip du atskiri
+ * įrašai — pvz. rašybos klaida vienoje iš jų ("BB Bech press" / "BB Bench
+ * Press") arba vienaskaita/daugiskaita ("Belt Squat" / "Belt squats"). Jos
+ * atsiranda, kai įrašas sukurtas prieš šią patikrą pradedant veikti, arba kai
+ * du pavadinimai sutampa tik iš dalies (patikra naujo įrašo nekuria, bet
+ * esami du niekada automatiškai nesuliejami — tam reikia trenerio sprendimo).
+ * Pažymimi "Galimas dublikatas" žyma, kad treneris juos lengvai rastų ir
+ * ištrintų arba pataisytų patį nereikalingą. */
+function rastiGalimusDublikatus(sarasas) {
+  const pazymeti = new Set();
+  for (let i = 0; i < sarasas.length; i += 1) {
+    for (let j = i + 1; j < sarasas.length; j += 1) {
+      if (tasPatsPratimas(sarasas[i].title, sarasas[j].title)) {
+        pazymeti.add(sarasas[i].id);
+        pazymeti.add(sarasas[j].id);
+      }
+    }
+  }
+  return pazymeti;
+}
+
+function piesPratimuSarasa() {
+  const vieta = $('#kortele-pratimu-sarasas');
+  if (!vieta) return;
+
+  const surikiuota = [...bibliotekosPratimai].sort((a, b) => a.title.localeCompare(b.title, 'lt'));
+  const galimiDublikatai = rastiGalimusDublikatus(surikiuota);
+
+  const eilutes = surikiuota.map((p) => {
+    if (p.id === redaguojamoBibliotekosPratimoId) return bibliotekosPratimoRedagavimoForma(p);
+    return `
+      <div class="pratimo-eilute" data-id="${esc(p.id)}">
+        <div class="pratimo-eilute-info">
+          <strong>${esc(p.title)}</strong>
+          ${galimiDublikatai.has(p.id) ? ' <span class="chip chip-danger">Galimas dublikatas</span>' : ''}
+          <div class="pratimo-meta muted" style="font-size:.8125rem">
+            ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
+            ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
+            ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
+            ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
+            ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
+          </div>
+          ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+          ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
+        </div>
+        <div class="pratimo-eilute-valdymas">
+          <button class="btn btn-ghost btn-sm redaguoti-biblioteka-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
+          <button class="btn btn-danger btn-sm trinti-biblioteka-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  vieta.innerHTML = `
+    <div class="card">
+      <div class="card-head">
+        <h2>Pratimų sąrašas</h2>
+        <span class="row-end muted">${surikiuota.length}</span>
+      </div>
+      <p class="muted" style="margin-bottom:var(--s-200)">
+        Čia patenka kiekvienas naujas pratimo pavadinimas, kurį prideda bet kurioje programoje ar kliento kopijoje —
+        kitą kartą tą patį pavadinimą pasirinkus, setai, kartai, svoris, poilsis, pastabos ir vaizdo nuoroda užsipildo patys.
+        Jau esamo pavadinimo arba labai panašaus (rašybos klaida, vienaskaita/daugiskaita) pridėti antrą kartą negalima —
+        tokie, kurie vis tiek liko du, pažymėti "Galimas dublikatas": ištrink nereikalingą arba pataisyk jo pavadinimą.
+      </p>
+      ${surikiuota.length ? eilutes : '<p class="muted">Kol kas tuščia — pratimas čia atsiras, kai jį pridėsi bet kurioje programoje.</p>'}
+    </div>`;
+
+  for (const b of $$('.redaguoti-biblioteka-pratima')) {
+    b.addEventListener('click', () => { redaguojamoBibliotekosPratimoId = b.dataset.id; piesPratimuSarasa(); });
+  }
+  for (const b of $$('.atsaukti-biblioteka-pratima')) {
+    b.addEventListener('click', () => { redaguojamoBibliotekosPratimoId = null; piesPratimuSarasa(); });
+  }
+  for (const f of $$('.forma-redaguoti-biblioteka-pratima')) f.addEventListener('submit', issaugokBibliotekosPratimoRedagavima);
+  for (const b of $$('.trinti-biblioteka-pratima')) {
+    b.addEventListener('click', () => trinkBibliotekosPratima(b.dataset.id, b.dataset.vardas));
+  }
+}
+
+function bibliotekosPratimoRedagavimoForma(p) {
+  return `
+    <form class="pratimo-eilute forma-redaguoti-biblioteka-pratima" data-id="${esc(p.id)}" novalidate style="flex-direction:column;align-items:stretch;gap:var(--s-200)">
+      <div class="field-row">
+        <div class="field">
+          <label for="bp-pavadinimas-${esc(p.id)}">Pratimo pavadinimas</label>
+          <input id="bp-pavadinimas-${esc(p.id)}" name="title" type="text" required value="${esc(p.title)}">
+        </div>
+        <div class="field">
+          <label for="bp-setai-${esc(p.id)}">Setai</label>
+          <input id="bp-setai-${esc(p.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric" value="${p.target_sets ?? ''}">
+        </div>
+        <div class="field">
+          <label for="bp-kartai-${esc(p.id)}">Kartai</label>
+          <input id="bp-kartai-${esc(p.id)}" name="reps" type="text" value="${esc(p.target_reps || '')}">
+        </div>
+        <div class="field">
+          <label for="bp-svoris-${esc(p.id)}">Svoris / intensyvumas</label>
+          <input id="bp-svoris-${esc(p.id)}" name="load" type="text" value="${esc(p.target_load || '')}">
+        </div>
+        <div class="field">
+          <label for="bp-poilsis-${esc(p.id)}">Poilsis, sek</label>
+          <input id="bp-poilsis-${esc(p.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric" value="${p.rest_seconds ?? ''}">
+        </div>
+        <div class="field">
+          <label for="bp-tipas-${esc(p.id)}">Įrašymo tipas</label>
+          <select id="bp-tipas-${esc(p.id)}" name="log_type">
+            <option value="svoris"${p.log_type === 'svoris' ? ' selected' : ''}>Svoris ir kartai</option>
+            <option value="kartai"${p.log_type === 'kartai' ? ' selected' : ''}>Tik kartai (be svorio)</option>
+            <option value="laikas"${p.log_type === 'laikas' ? ' selected' : ''}>Laikas (sekundėmis)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="bp-pastabos-${esc(p.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="bp-pastabos-${esc(p.id)}" name="notes" type="text" value="${esc(p.notes || '')}">
+        </div>
+        <div class="field">
+          <label for="bp-video-${esc(p.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="bp-video-${esc(p.id)}" name="video" type="url" value="${esc(p.video_url || '')}">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Išsaugoti</button>
+        <button class="btn btn-ghost btn-sm atsaukti-biblioteka-pratima" type="button">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function issaugokBibliotekosPratimoRedagavima(ev) {
+  ev.preventDefault();
+  const forma = ev.currentTarget;
+  const id = forma.dataset.id;
+  const fd = new FormData(forma);
+  const pavadinimas = String(fd.get('title') || '').trim();
+
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk pratimo pavadinimą.', 'error');
+    return;
+  }
+
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
+  const { error } = await db.from('exercise_library').update({
+    title: pavadinimas,
+    target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
+    target_reps: String(fd.get('reps') || '').trim() || null,
+    target_load: String(fd.get('load') || '').trim() || null,
+    rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
+    notes: String(fd.get('notes') || '').trim(),
+    video_url: String(fd.get('video') || '').trim() || null,
+    log_type: String(fd.get('log_type') || 'svoris'),
+  }).eq('id', id);
+
+  if (error) {
+    // Dažniausia priežastis: pavadinimas pakeistas į tokį, koks jau yra kitame
+    // įraše (duomenų bazės unikalumo apribojimas) — klaidaLT() tai paverčia
+    // suprantamu "Toks įrašas jau yra." pranešimu.
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  redaguojamoBibliotekosPratimoId = null;
+  pranesk($('#pranesimas'), 'Įrašas atnaujintas.', 'ok');
+  await ikelkIrPiesPratimuBiblioteka();
+}
+
+async function trinkBibliotekosPratima(id, vardas) {
+  if (!confirm(`Ištrinti "${vardas}" iš pratimų sąrašo?\n\nJau esamiems pratimams programose tai įtakos neturi — dings tik galimybė jį pasirinkti iš sąrašo kuriant naują.`)) return;
+  const { error } = await db.from('exercise_library').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Įrašas ištrintas.', 'ok');
+  await ikelkIrPiesPratimuBiblioteka();
 }
 
 // =============================================================================
