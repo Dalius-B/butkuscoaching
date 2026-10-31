@@ -72,6 +72,11 @@
   table.lentele tbody th, table.lentele thead th:first-child {
     position: sticky; left: 0; background: var(--paper); z-index: 1;
   }
+  /* Pastabos ženkliukas lentelėje — tilptų ir svoris, ir pastaba kiekvienam
+     langeliui, tad pastaba lieka paslėpta už title patarimo, o ne užima vietą. */
+  .lentele-pastaba { cursor: help; font-size: .8125rem; }
+  .lentele-redaguoti { text-decoration: none; opacity: .6; }
+  .lentele-redaguoti:hover { opacity: 1; }
 
   /* Progreso grafikas — vieno pratimo geriausias kiekvienos sesijos
      rezultatas (svoris, trukmė arba kartai, priklausomai nuo pratimo tipo)
@@ -241,10 +246,10 @@ async function ikelk(arTreneris) {
   }
 
   $('#kraunasi').hidden = true;
-  paruoskRodinius(dienos || [], pratimai || [], irasai || [], arTreneris);
+  paruoskRodinius(dienos || [], pratimai || [], irasai || [], arTreneris, programa.client_id);
 }
 
-function paruoskRodinius(dienos, pratimai, irasai, arTreneris) {
+function paruoskRodinius(dienos, pratimai, irasai, arTreneris, klientoId) {
   if (!irasai.length) {
     $('#pranesimas').hidden = true;
     $('#skydelis').hidden = true;
@@ -264,7 +269,7 @@ function paruoskRodinius(dienos, pratimai, irasai, arTreneris) {
   // būdas palyginti kelias savaites iš karto.
   if (arTreneris) {
     $('#lenteles-mygtukas').hidden = false;
-    piesLentele(dienos, irasai, pratimoInfo);
+    piesLentele(dienos, irasai, pratimoInfo, klientoId);
   }
 
   for (const t of $$('#rodinio-tabs .tab')) {
@@ -587,16 +592,16 @@ function pastabosTekstas(setai) {
 //  skaičių vienu metu klientui, kuriam skirtas Pagal datą / Pagal pratimą
 //  rodinys su diagrama.
 // =============================================================================
-function piesLentele(dienos, irasai, pratimoInfo) {
+function piesLentele(dienos, irasai, pratimoInfo, klientoId) {
   const vieta = $('#rodinys-lentele');
   const dienosSuIrasais = dienos.filter((d) => irasai.some((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id));
 
   vieta.innerHTML = dienosSuIrasais.length
-    ? dienosSuIrasais.map((d) => lentelesDienai(d, irasai, pratimoInfo)).join('')
+    ? dienosSuIrasais.map((d) => lentelesDienai(d, irasai, pratimoInfo, klientoId)).join('')
     : '<p class="muted">Kol kas tuščia.</p>';
 }
 
-function lentelesDienai(d, visiIrasai, pratimoInfo) {
+function lentelesDienai(d, visiIrasai, pratimoInfo, klientoId) {
   const dIrasai = visiIrasai.filter((i) => pratimoInfo.get(i.client_exercise_id)?.dienaId === d.id);
 
   // ymd -> { pavyzdys: tikras logged_at (antraštei formatuoti), langeliai: pratimoId -> setai[] }
@@ -622,9 +627,12 @@ function lentelesDienai(d, visiIrasai, pratimoInfo) {
   const eilutes = dPratimai.map(([pratimoId, info]) => {
     const langeliai = datos.map((ymd) => {
       const setai = pagalData.get(ymd).langeliai.get(pratimoId);
-      return `<td>${setai ? esc(setuTekstas(setai)) : '<span class="muted">—</span>'}</td>`;
+      if (!setai) return '<td><span class="muted">—</span></td>';
+      const pastaba = pastabosTekstas(setai);
+      return `<td>${esc(setuTekstas(setai))}${pastaba ? ` <span class="lentele-pastaba" title="${esc(pastaba)}">&#128172;</span>` : ''}</td>`;
     }).join('');
-    return `<tr><th scope="row">${esc(info.pavadinimas)}</th>${langeliai}</tr>`;
+    const redagavimoNuoroda = `valdymas.html?klientas=${encodeURIComponent(klientoId)}&programa=${encodeURIComponent(programId)}&pratimas=${encodeURIComponent(pratimoId)}`;
+    return `<tr><th scope="row">${esc(info.pavadinimas)} <a class="lentele-redaguoti" href="${redagavimoNuoroda}" title="Redaguoti pratimą">&#9998;</a></th>${langeliai}</tr>`;
   }).join('');
 
   return `

@@ -154,11 +154,25 @@ async function paleisk() {
 
   // Atėjus iš kliento profilio (klientas.html) nuorodos "Tvarkyti" — iškart
   // atidaro Klientai skiltį ir to kliento programų sąrašą, kad nereikėtų
-  // ieškoti jo iš naujo lentelėje.
-  const atidarytiKlienta = new URLSearchParams(location.search).get('klientas');
+  // ieškoti jo iš naujo lentelėje. Atėjus iš istorija.html lentelės rodinio
+  // "Redaguoti" nuorodos — dar giliau, iškart atidaro konkretaus pratimo
+  // redagavimo formą, kad nereikėtų jos ieškoti dar kartą programos sąraše.
+  const paieska = new URLSearchParams(location.search);
+  const atidarytiKlienta = paieska.get('klientas');
   if (atidarytiKlienta) {
     rodykKortele('klientai');
     rodykKlientoProgramas(atidarytiKlienta);
+
+    const atidarytiPrograma = paieska.get('programa');
+    const atidarytiPratima = paieska.get('pratimas');
+    if (atidarytiPrograma) {
+      await redaguokKlientoPratimus(atidarytiPrograma);
+      if (atidarytiPratima) {
+        redaguojamoKlientoPratimoId = atidarytiPratima;
+        piesKlientoPratimus();
+        $('#klientu-pratimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
   }
 
   $('#kraunasi').hidden = true;
