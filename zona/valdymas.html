@@ -79,6 +79,7 @@
     <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
 
     <div id="skydelis" hidden>
+      <datalist id="pratimu-biblioteka-sarasas"></datalist>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" type="button" data-kortele="programos" aria-selected="true">Programos</button>
         <button class="tab" role="tab" type="button" data-kortele="klientai"  aria-selected="false">Klientai</button>
@@ -115,7 +116,8 @@ import {
   atsitiktinis, absoliutus, BUSENOS, zodis, nuotraukuNuorodos, apskaiciuokSupersetuZenklus,
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
-} from './app.js?v=20261031';
+  ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma,
+} from './app.js?v=20261031b';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
 
 let profiliai = [];
@@ -128,6 +130,11 @@ let treniruociuIrasai = [];
 let biblioteka = [];
 let redaguojamoBibliotekosIrasoId = null;
 let atsiliepimai = [];
+
+// Pratimų biblioteka (exercise_library) — ta pati, kuria naudojasi
+// redaguoti.html. Naudojama pre-pildyti "Pridėti pratimą" formą, kai
+// treneris čia prideda pratimą tiesiai į kliento jau priskirtą kopiją.
+let bibliotekosPratimai = [];
 
 // Kliento priskirtos programos kopijos redagavimo būsena.
 let redaguojamosKlientoProgramosId = null;
@@ -150,6 +157,7 @@ async function paleisk() {
     t.addEventListener('click', () => rodykKortele(t.dataset.kortele));
   }
 
+  await ikelkIrPiesPratimuBiblioteka();
   await perkrauk();
 
   // Atėjus iš kliento profilio (klientas.html) nuorodos "Tvarkyti" — iškart
@@ -177,6 +185,14 @@ async function paleisk() {
 
   $('#kraunasi').hidden = true;
   $('#skydelis').hidden = false;
+}
+
+/** Atnaujinama kaskart pridėjus naują pratimą (čia arba redaguoti.html), kad
+ * ta pati sesija iškart matytų naują biblioteką. */
+async function ikelkIrPiesPratimuBiblioteka() {
+  bibliotekosPratimai = await ikelkPratimuBiblioteka();
+  $('#pratimu-biblioteka-sarasas').innerHTML = bibliotekosPratimai
+    .map((p) => `<option value="${esc(p.title)}">`).join('');
 }
 
 async function perkrauk() {
@@ -583,7 +599,10 @@ function piesKlientoPratimus() {
   });
   for (const f of $$('.forma-kliento-pratimas')) f.addEventListener('submit', issaugokKlientoPratimoRedagavima);
   for (const f of $$('.forma-redaguoti-kliento-diena')) f.addEventListener('submit', issaugokKlientoDienosRedagavima);
-  for (const f of $$('.forma-prideti-kliento-pratima')) f.addEventListener('submit', pridekKlientoPratima);
+  for (const f of $$('.forma-prideti-kliento-pratima')) {
+    f.addEventListener('submit', pridekKlientoPratima);
+    prijunkBibliotekosUzpildyma(f, () => bibliotekosPratimai);
+  }
   for (const b of $$('.redaguoti-kliento-diena')) {
     b.addEventListener('click', () => { redaguojamosKlientoDienosId = b.dataset.id; piesKlientoPratimus(); });
   }
@@ -797,7 +816,8 @@ function klientoPridejimoForma(dienaId) {
       <div class="field-row">
         <div class="field">
           <label for="np-pavadinimas-${esc(dienaId)}">Pratimo pavadinimas</label>
-          <input id="np-pavadinimas-${esc(dienaId)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint">
+          <input id="np-pavadinimas-${esc(dienaId)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint" list="pratimu-biblioteka-sarasas" autocomplete="off">
+          <p class="hint">Jau žinomą pavadinimą įrašius ar pasirinkus iš sąrašo, setai, kartai, svoris, poilsis, pastabos ir vaizdo nuoroda užsipildys patys.</p>
         </div>
         <div class="field">
           <label for="np-setai-${esc(dienaId)}">Setai</label>
@@ -866,8 +886,7 @@ async function pridekKlientoPratima(ev) {
   const siejePratimai = klientoPratimai.filter((p) => p.client_day_id === dienaId);
   const naujaPozicija = siejePratimai.length ? Math.max(...siejePratimai.map((p) => p.position)) + 1 : 0;
 
-  const { error } = await db.from('client_exercises').insert({
-    client_day_id: dienaId,
+  const laukai = {
     title: pavadinimas,
     target_sets: fd.get('sets') ? Number(fd.get('sets')) : null,
     target_reps: String(fd.get('reps') || '').trim() || null,
@@ -875,8 +894,13 @@ async function pridekKlientoPratima(ev) {
     rest_seconds: fd.get('rest') ? Number(fd.get('rest')) : null,
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
-    superset_with_previous: fd.get('superset') === 'on',
     log_type: String(fd.get('log_type') || 'svoris'),
+  };
+
+  const { error } = await db.from('client_exercises').insert({
+    ...laukai,
+    client_day_id: dienaId,
+    superset_with_previous: fd.get('superset') === 'on',
     position: naujaPozicija,
   });
 
@@ -886,6 +910,8 @@ async function pridekKlientoPratima(ev) {
   }
   pridedamosKlientoDienosId = null;
   pranesk($('#pranesimas'), 'Pratimas pridėtas.', 'ok');
+  await issaugokBibliotekoje(laukai);
+  await ikelkIrPiesPratimuBiblioteka();
   await ikelkIrPiesKlientoPratimus();
 }
 

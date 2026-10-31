@@ -163,6 +163,81 @@ export function apskaiciuokSupersetuZenklus(pratimai) {
 }
 
 // -----------------------------------------------------------------------------
+//  Pratimų biblioteka
+//  Vienas kanoninis įrašas kiekvienam pratimo pavadinimui (exercise_library),
+//  kad trenerias, pridėdamas pratimą naujam klientui, nerašytų iš naujo to,
+//  ką jau yra aprašęs kituose. Dublikatų nėra tyčia: title_key stulpelis
+//  (pavadinimas apkarpytas ir sumažintas) turi unikalumo apribojimą duomenų
+//  bazėje, tad tas pats pavadinimas niekada negali turėti dviejų įrašų.
+// -----------------------------------------------------------------------------
+
+export function pratimoBibliotekosRaktas(pavadinimas) {
+  return (pavadinimas || '').trim().toLowerCase();
+}
+
+/** Visa biblioteka, surikiuota pagal pavadinimą. Jei migracija
+ * (supabase/pratimu-biblioteka.sql) dar nepaleista, lentelės dar nėra —
+ * grąžinamas tuščias sąrašas, o ne klaida, kad puslapis veiktų toliau. */
+export async function ikelkPratimuBiblioteka() {
+  const { data: irasai, error } = await db.from('exercise_library').select('*').order('title', { ascending: true });
+  if (error) return [];
+  return irasai || [];
+}
+
+/** Įrašo naują pratimą į biblioteką, jei tokio pavadinimo joje dar nėra —
+ * esamo įrašo niekada neperrašo, kad kanoninės reikšmės liktų stabilios,
+ * net jei kitas klientas tą patį pratimą gavo su kitokiais setais/kartais. */
+export async function issaugokBibliotekoje(laukai) {
+  const pavadinimas = (laukai.title || '').trim();
+  if (!pavadinimas) return;
+  try {
+    await db.from('exercise_library').upsert({
+      title: pavadinimas,
+      target_sets: laukai.target_sets ?? null,
+      target_reps: laukai.target_reps ?? null,
+      target_load: laukai.target_load ?? null,
+      rest_seconds: laukai.rest_seconds ?? null,
+      notes: laukai.notes || '',
+      video_url: laukai.video_url ?? null,
+      log_type: laukai.log_type || 'svoris',
+    }, { onConflict: 'title_key', ignoreDuplicates: true });
+  } catch {
+    // Migracija dar nepaleista arba laikinas tinklo trikis — pats pratimas
+    // jau sėkmingai įrašytas prieš šį kvietimą, tad tylime ir tęsiame.
+  }
+}
+
+/** Prijungia klausytoją prie "Pridėti pratimą" formos pavadinimo lauko: kai
+ * įrašytas pavadinimas tiksliai (be skirtumo tarp didžiųjų/mažųjų, be tarpų
+ * kraštuose) sutampa su bibliotekos įrašu, tuščius formos laukus užpildo jo
+ * numatytosiomis reikšmėmis. Jau turinčio reikšmę lauko neperrašo, tad
+ * treneris gali iš anksto įrašyti kitokį skaičių ir biblioteka jo nepakeis. */
+export function prijunkBibliotekosUzpildyma(forma, gaukBiblioteka) {
+  const pavadinimoLaukas = forma.querySelector('[name="title"]');
+  if (!pavadinimoLaukas) return;
+  pavadinimoLaukas.addEventListener('input', () => {
+    const raktas = pratimoBibliotekosRaktas(pavadinimoLaukas.value);
+    if (!raktas) return;
+    const rastas = gaukBiblioteka().find((p) => pratimoBibliotekosRaktas(p.title) === raktas);
+    if (!rastas) return;
+
+    const uzpildyk = (vardas, reiksme) => {
+      const laukas = forma.querySelector(`[name="${vardas}"]`);
+      if (laukas && !laukas.value && reiksme != null && reiksme !== '') laukas.value = reiksme;
+    };
+    uzpildyk('sets', rastas.target_sets);
+    uzpildyk('reps', rastas.target_reps);
+    uzpildyk('load', rastas.target_load);
+    uzpildyk('rest', rastas.rest_seconds);
+    uzpildyk('notes', rastas.notes);
+    uzpildyk('video', rastas.video_url);
+
+    const tipoLaukas = forma.querySelector('[name="log_type"]');
+    if (tipoLaukas && rastas.log_type) tipoLaukas.value = rastas.log_type;
+  });
+}
+
+// -----------------------------------------------------------------------------
 //  Progreso nuotraukos (savaitinė ataskaita)
 //  Kibirys privatus — nuorodos niekada nesaugomos, tik keliai. Rodymo metu
 //  nuoroda sugeneruojama laikinai per nuotraukuNuorodos().
