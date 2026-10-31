@@ -176,12 +176,6 @@ async function ikelk() {
   piesPatikrinimus();
 }
 
-function paketoText(planType) {
-  if (planType === 'tik_programa') return 'Tik programa';
-  if (planType === 'tik_uzduotys') return 'Tik užduotys';
-  return 'Pilnas';
-}
-
 // =============================================================================
 //  ANTRAŠTĖ: vardas, būsena, greiti veiksmai
 // =============================================================================
@@ -192,9 +186,13 @@ function piesAntraste() {
       ${esc(klientas.email || '')}${klientas.phone ? ' &middot; ' + esc(klientas.phone) : ''}
       &middot; Užsiregistravo ${esc(data(klientas.created_at))}
     </p>
-    <div class="row" style="margin-top:var(--s-200)">
+    <div class="row" style="margin-top:var(--s-200);align-items:center">
       <span class="chip ${klientas.status === 'active' ? 'chip-ok' : klientas.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[klientas.status] || klientas.status)}</span>
-      <span class="chip chip-quiet">${esc(paketoText(klientas.plan_type))}</span>
+      <select id="paketo-pasirinkimas" style="min-height:40px;width:auto">
+        <option value="pilnas"${klientas.plan_type === 'pilnas' || !klientas.plan_type ? ' selected' : ''}>Pilnas</option>
+        <option value="tik_programa"${klientas.plan_type === 'tik_programa' ? ' selected' : ''}>Tik programa</option>
+        <option value="tik_uzduotys"${klientas.plan_type === 'tik_uzduotys' ? ' selected' : ''}>Tik užduotys</option>
+      </select>
       <span class="chip ${klientas.uzduotys_ijungtos ? 'chip-ok' : 'chip-quiet'}">${klientas.uzduotys_ijungtos ? 'Užduotys įjungtos' : 'Užduotys išjungtos'}</span>
       <button class="btn btn-ghost btn-sm" type="button" id="uzd-jungiklis">${klientas.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
       ${klientas.status === 'blocked'
@@ -204,6 +202,7 @@ function piesAntraste() {
 
   $('#uzd-jungiklis').addEventListener('click', () => keiskUzduotis(!klientas.uzduotys_ijungtos));
   $('#busenos-mygtukas').addEventListener('click', (ev) => keiskBusena(ev.currentTarget.dataset.busena));
+  $('#paketo-pasirinkimas').addEventListener('change', (ev) => keiskPaketa(ev.currentTarget.value));
 }
 
 async function keiskBusena(busena) {
@@ -223,6 +222,20 @@ async function keiskUzduotis(ijungta) {
     return;
   }
   pranesk($('#pranesimas'), ijungta ? 'Užduotys klientui įjungtos.' : 'Užduotys klientui išjungtos.', 'ok');
+  await ikelk();
+}
+
+/** Paketo keitimas nieko iš kliento neištrina — jau priskirtos programos ir
+ * istorija lieka, tiesiog zona pradeda/nustoja rodžiusi ekranus, kurių tas
+ * paketas nebeapima (žr. supabase/kliento-paketo-keitimas.sql). */
+async function keiskPaketa(planType) {
+  const { error } = await db.rpc('admin_set_plan_type', { p_client: clientId, p_plan_type: planType });
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    await ikelk();
+    return;
+  }
+  pranesk($('#pranesimas'), 'Paketas pakeistas.', 'ok');
   await ikelk();
 }
 
