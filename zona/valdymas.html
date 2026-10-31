@@ -52,6 +52,8 @@
   .tvarkos-mygtukai button:disabled { opacity: .3; cursor: default; }
   .pratimo-eilute.supersete { border-left: 3px solid var(--volt); padding-left: var(--s-100); margin-left: -1px; }
   .pratimo-eilute.paslepta { opacity: .55; }
+  .pratimo-eilute[draggable="true"] { cursor: grab; }
+  .pratimo-eilute.velkama { opacity: .35; }
   .superseto-zenklas {
     display: inline-block; font-size: .6875rem; font-weight: 700; letter-spacing: .04em;
     color: var(--ink); background: var(--volt); border-radius: var(--r-sm); padding: 1px 6px; margin-left: 4px;
@@ -134,6 +136,7 @@ let klientoPratimai = [];
 let redaguojamosKlientoDienosId = null;
 let redaguojamoKlientoPratimoId = null;
 let pridedamosKlientoDienosId = null;
+let velkamaKlientoEilute = null;
 
 paleisk();
 
@@ -594,6 +597,7 @@ function piesKlientoPratimus() {
   for (const b of $$('.slepk-kliento-pratima')) {
     b.addEventListener('click', () => keiskKlientoPratimoMatoma(b.dataset.id, b.dataset.slepti === '1'));
   }
+  for (const konteineris of $$('div[data-diena]')) prijunkKlientoPratimuTempima(konteineris);
 }
 
 /** Paslepia arba vėl parodo klientui vieną jo programos pratimą, nieko
@@ -659,7 +663,7 @@ async function issaugokKlientoDienosRedagavima(ev) {
 
 function klientoPratimoEilute(p, zenklas, i, kiek) {
   return `
-    <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${p.is_hidden ? ' paslepta' : ''}" data-id="${esc(p.id)}">
+    <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${p.is_hidden ? ' paslepta' : ''}" draggable="true" data-id="${esc(p.id)}">
       <div class="tvarkos-mygtukai">
         <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
         <button type="button" class="kelk-kliento-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === kiek - 1 ? ' disabled' : ''}>&#9660;</button>
@@ -883,6 +887,28 @@ async function trinkKlientoPratima(id, vardas) {
   await ikelkIrPiesKlientoPratimus();
 }
 
+/** Išsaugo naują pratimų tvarką (masyvas id, nurodyta tvarka = nauja position).
+ * Naudoja ir rodyklių mygtukai, ir tempimas pele — abu tik sudaro tvarkaId
+ * skirtingai, patį išsaugojimą atlieka vienodai. */
+async function issaugokKlientoPratimuTvarka(tvarkaId) {
+  const atnaujinimai = tvarkaId.map((id, idx) => db.from('client_exercises').update({ position: idx }).eq('id', id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return false;
+  }
+  tvarkaId.forEach((id, idx) => {
+    const x = klientoPratimai.find((y) => y.id === id);
+    if (x) x.position = idx;
+  });
+  // Pačių .position reikšmių pakeitimo neužtenka — piešimas filtruoja
+  // masyvą jo DABARTINE tvarka, ne pagal position, tad be perrikiavimo
+  // tvarka atnaujintų duomenų bazę, bet ekranas liktų nepasikeitęs.
+  klientoPratimai.sort((a, b) => a.position - b.position);
+  return true;
+}
+
 async function perkelkKlientoPratima(pratimoId, kryptis) {
   const p = klientoPratimai.find((x) => x.id === pratimoId);
   if (!p) return;
@@ -892,24 +918,43 @@ async function perkelkKlientoPratima(pratimoId, kryptis) {
   if (j < 0 || j >= savi.length) return;
 
   [savi[i], savi[j]] = [savi[j], savi[i]];
-  const tvarkaId = savi.map((x) => x.id);
+  const sekme = await issaugokKlientoPratimuTvarka(savi.map((x) => x.id));
+  if (sekme) piesKlientoPratimus();
+}
 
-  const atnaujinimai = tvarkaId.map((id, idx) => db.from('client_exercises').update({ position: idx }).eq('id', id));
-  const rezultatai = await Promise.all(atnaujinimai);
-  const klaida = rezultatai.find((r) => r.error)?.error;
-  if (klaida) {
-    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
-    return;
-  }
-  tvarkaId.forEach((id, idx) => {
-    const x = klientoPratimai.find((y) => y.id === id);
-    if (x) x.position = idx;
+/** Tempimas pele, kaip redaguoti.html šablono sąraše — bet čia saugo
+ * client_exercises, ne exercises, ir konteinerio data-diena, ne data-sekcija. */
+function prijunkKlientoPratimuTempima(konteineris) {
+  konteineris.addEventListener('dragstart', (ev) => {
+    const eilute = ev.target.closest('.pratimo-eilute');
+    if (!eilute || !eilute.dataset.id) return;
+    velkamaKlientoEilute = eilute;
+    eilute.classList.add('velkama');
+    ev.dataTransfer.effectAllowed = 'move';
   });
-  // Pačių .position reikšmių pakeitimo neužtenka — piešimas filtruoja
-  // masyvą jo DABARTINE tvarka, ne pagal position, tad be perrikiavimo
-  // mygtukai atnaujintų duomenų bazę, bet ekranas liktų nepasikeitęs.
-  klientoPratimai.sort((a, b) => a.position - b.position);
-  piesKlientoPratimus();
+
+  konteineris.addEventListener('dragend', () => {
+    velkamaKlientoEilute?.classList.remove('velkama');
+    velkamaKlientoEilute = null;
+  });
+
+  konteineris.addEventListener('dragover', (ev) => {
+    if (!velkamaKlientoEilute) return;
+    ev.preventDefault();
+    const virsEilutes = ev.target.closest('.pratimo-eilute');
+    if (!virsEilutes || virsEilutes === velkamaKlientoEilute) return;
+    const stacija = virsEilutes.getBoundingClientRect();
+    const dedamPo = (ev.clientY - stacija.top) / stacija.height > 0.5;
+    konteineris.insertBefore(velkamaKlientoEilute, dedamPo ? virsEilutes.nextSibling : virsEilutes);
+  });
+
+  konteineris.addEventListener('drop', async (ev) => {
+    if (!velkamaKlientoEilute) return;
+    ev.preventDefault();
+    const tvarkaId = $$('.pratimo-eilute', konteineris).map((el) => el.dataset.id).filter(Boolean);
+    const sekme = await issaugokKlientoPratimuTvarka(tvarkaId);
+    if (sekme) piesKlientoPratimus();
+  });
 }
 
 async function trinkKlientoPrograma(id, vardas, clientId) {
