@@ -248,20 +248,30 @@ export async function issaugokBibliotekoje(laukai, zinomaBiblioteka) {
 
 /** Prijungia klausytoją prie "Pridėti pratimą" formos pavadinimo lauko: kai
  * įrašytas pavadinimas sutampa (arba yra tasPatsPratimas() prasme labai
- * panašus) su bibliotekos įrašu, tuščius formos laukus užpildo jo
- * numatytosiomis reikšmėmis. Jau turinčio reikšmę lauko neperrašo, tad
- * treneris gali iš anksto įrašyti kitokį skaičių ir biblioteka jo nepakeis. */
+ * panašus) su bibliotekos įrašu, formos laukus užpildo jo numatytosiomis
+ * reikšmėmis. Užpildo VISADA, net jei laukas jau turėjo kitą reikšmę — kitaip
+ * pasirinkus vieną pratimą, o paskui pakeitus pavadinimą į kitą, senos
+ * reikšmės liktų kabėti nepasikeitusios. Kol pavadinimas nesutampa su jokiu
+ * bibliotekos įrašu, laukų neliečia, tad ranka įrašytos naujo (bibliotekoje
+ * dar nesančio) pratimo reikšmės išlieka. */
 export function prijunkBibliotekosUzpildyma(forma, gaukBiblioteka) {
   const pavadinimoLaukas = forma.querySelector('[name="title"]');
   if (!pavadinimoLaukas) return;
   pavadinimoLaukas.addEventListener('input', () => {
     if (!pavadinimoLaukas.value.trim()) return;
-    const rastas = gaukBiblioteka().find((p) => tasPatsPratimas(p.title, pavadinimoLaukas.value));
+    const biblioteka = gaukBiblioteka();
+    // Pirma ieškoma tikslaus sutapimo, ir tik jo neradus — panašaus. Be šios
+    // tvarkos, kai biblioteka turi du beveik vienodus įrašus (pvz. rašybos
+    // klaidos variantą), įrašius lygiai teisingą pavadinimą galėjo netyčia
+    // užsipildyti NETEISINGO (klaidingo) įrašo reikšmės, jei jis sąraše
+    // atsitiktinai pasitaikė pirmiau.
+    const rastas = biblioteka.find((p) => pratimoBibliotekosRaktas(p.title) === pratimoBibliotekosRaktas(pavadinimoLaukas.value))
+      || biblioteka.find((p) => tasPatsPratimas(p.title, pavadinimoLaukas.value));
     if (!rastas) return;
 
     const uzpildyk = (vardas, reiksme) => {
       const laukas = forma.querySelector(`[name="${vardas}"]`);
-      if (laukas && !laukas.value && reiksme != null && reiksme !== '') laukas.value = reiksme;
+      if (laukas) laukas.value = reiksme ?? '';
     };
     uzpildyk('sets', rastas.target_sets);
     uzpildyk('reps', rastas.target_reps);
@@ -271,7 +281,7 @@ export function prijunkBibliotekosUzpildyma(forma, gaukBiblioteka) {
     uzpildyk('video', rastas.video_url);
 
     const tipoLaukas = forma.querySelector('[name="log_type"]');
-    if (tipoLaukas && rastas.log_type) tipoLaukas.value = rastas.log_type;
+    if (tipoLaukas) tipoLaukas.value = rastas.log_type || 'svoris';
   });
 }
 
