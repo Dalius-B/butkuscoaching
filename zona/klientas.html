@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261024">
+<link rel="stylesheet" href="stilius.css?v=20261031">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -125,7 +125,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   BUSENOS, zodis, nuotraukuNuorodos,
-} from './app.js?v=20261024';
+} from './app.js?v=20261031';
 
 const clientId = new URLSearchParams(location.search).get('id');
 
@@ -188,7 +188,7 @@ function piesAntraste() {
     </p>
     <div class="row" style="margin-top:var(--s-200);align-items:center">
       <span class="chip ${klientas.status === 'active' ? 'chip-ok' : klientas.status === 'blocked' ? 'chip-danger' : 'chip-quiet'}">${esc(BUSENOS[klientas.status] || klientas.status)}</span>
-      <select id="paketo-pasirinkimas" style="min-height:40px;width:auto">
+      <select id="paketo-pasirinkimas" class="chip-select">
         <option value="pilnas"${klientas.plan_type === 'pilnas' || !klientas.plan_type ? ' selected' : ''}>Pilnas</option>
         <option value="tik_programa"${klientas.plan_type === 'tik_programa' ? ' selected' : ''}>Tik programa</option>
         <option value="tik_uzduotys"${klientas.plan_type === 'tik_uzduotys' ? ' selected' : ''}>Tik užduotys</option>
