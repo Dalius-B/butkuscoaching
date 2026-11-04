@@ -169,7 +169,7 @@
 <script type="module">
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav, programosSavaite,
-  apskaiciuokSupersetuZenklus, formatuokTrukme,
+  apskaiciuokSupersetuZenklus,
 } from './app.js?v=20261031d';
 
 const programId = new URLSearchParams(location.search).get('id');
@@ -245,7 +245,7 @@ async function ikelk() {
   // klientas matytų, kokį sunkiausią svorį naudojo praėjusį kartą.
   const pratimuId = pratimai.map((x) => x.id);
   const { data: irasai } = pratimuId.length
-    ? await db.from('exercise_logs').select('client_exercise_id, weight_kg, reps, duration_seconds, notes, logged_at')
+    ? await db.from('exercise_logs').select('client_exercise_id, set_index, weight_kg, reps, duration_seconds, notes, logged_at')
         .eq('client_id', vartotojas.id).in('client_exercise_id', pratimuId).order('logged_at', { ascending: false })
     : { data: [] };
   paskutineSesija = apskaiciuokPaskutinesSesijas(irasai || [], pratimai);
@@ -264,9 +264,10 @@ function pavadinimoRaktas(pavadinimas) {
   return (pavadinimas || '').trim().toLowerCase();
 }
 
-/** normalizuotas pavadinimas -> paskutinės sesijos {data, weight_kg, reps,
- * duration_seconds} (geriausias tos dienos setas — sunkiausias svoris, arba
- * kai jo nėra, ilgiausia trukmė, arba daugiausia kartų). Kadangi irasai jau
+/** normalizuotas pavadinimas -> paskutinės sesijos {data, pagalSeta, notes},
+ * kur pagalSeta yra set_index -> {weight_kg, reps, duration_seconds} —
+ * TIKSLIAI tai, kas buvo įrašyta kiekviename konkrečiame sete, o ne vienas
+ * "geriausias" skaičius pakartotas visuose laukuose. Kadangi irasai jau
  * surikiuoti nuo naujausios datos, pirmas kiekvieno pavadinimo pasirodymas
  * visada priklauso jo naujausiai sesijai. */
 function apskaiciuokPaskutinesSesijas(irasai, pratimai) {
@@ -284,17 +285,15 @@ function apskaiciuokPaskutinesSesijas(irasai, pratimai) {
 
   const rezultatas = new Map();
   for (const [raktas, grupe] of grupes) {
-    const suSvoriu = grupe.irasai.filter((i) => i.weight_kg != null);
-    const suTrukme = grupe.irasai.filter((i) => i.duration_seconds != null);
-    const suKartais = grupe.irasai.filter((i) => i.reps != null);
-    const sunkiausias = suSvoriu.length ? suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a)) : null;
-    const ilgiausias  = suTrukme.length ? suTrukme.reduce((a, b) => (b.duration_seconds > a.duration_seconds ? b : a)) : null;
-    const daugiausiai = suKartais.length ? suKartais.reduce((a, b) => (b.reps > a.reps ? b : a)) : null;
+    const pagalSeta = new Map();
+    for (const i of grupe.irasai) {
+      if (!pagalSeta.has(i.set_index) && (i.weight_kg != null || i.reps != null || i.duration_seconds != null)) {
+        pagalSeta.set(i.set_index, { weight_kg: i.weight_kg, reps: i.reps, duration_seconds: i.duration_seconds });
+      }
+    }
     rezultatas.set(raktas, {
       data: grupe.data,
-      weight_kg: sunkiausias ? sunkiausias.weight_kg : null,
-      reps: sunkiausias ? sunkiausias.reps : (daugiausiai ? daugiausiai.reps : null),
-      duration_seconds: ilgiausias ? ilgiausias.duration_seconds : null,
+      pagalSeta,
       notes: grupe.irasai.find((i) => i.notes)?.notes || null,
     });
   }
@@ -401,22 +400,18 @@ function tiksloEilute(p) {
   return dalys.map((d) => `<span class="dalis">${d}</span>`).join('');
 }
 
-/** Rodoma, kai pratimas jau turi bent vieną įrašą. Svorio tipo pratimams
- * pasiūlymas rodomas kaip įvesties lauko placeholder (žr. pratimoKortele),
- * ne atskira eilute — čia liekame tik tiems tipams, kur svorio nėra. */
+/** Rodoma, kai pratimas jau turi bent vieną įrašą. Pati paskutinės sesijos
+ * svorio/kartų/trukmės reikšmė rodoma kiekvieno seto įvesties lauko
+ * placeholder'yje (žr. pratimoKortele), ne čia — ši eilutė tik pasako, KADA
+ * tai buvo ir ką klientas tada parašė, tad rodoma vienodai visų tipų
+ * pratimams. */
 function paskutinesSesijosEilute(p) {
   const s = paskutineSesija.get(pavadinimoRaktas(p.title));
   if (!s) return '';
-  const tipas = p.log_type || 'svoris';
 
-  let eilute = '';
-  if (tipas === 'kartai' && s.reps != null) {
-    eilute = `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${s.reps} kartai</strong> (${esc(data(s.data))})</p>`;
-  } else if (tipas === 'laikas' && s.duration_seconds != null) {
-    eilute = `<p class="paskutine-sesija">Praėjusią treniruotę: <strong>${esc(formatuokTrukme(s.duration_seconds))}</strong> (${esc(data(s.data))})</p>`;
-  }
+  let eilute = `<p class="paskutine-sesija">Praėjusi sesija: <strong>${esc(data(s.data))}</strong></p>`;
   if (s.notes) {
-    eilute += `<p class="paskutine-pastaba">Praėjusios sesijos pastaba: <em>${esc(s.notes)}</em></p>`;
+    eilute += `<p class="paskutine-pastaba">Pastaba: <em>${esc(s.notes)}</em></p>`;
   }
   return eilute;
 }
@@ -434,26 +429,35 @@ function pratimoKortele(p, supersetoZenklas) {
 
   if (tipas === 'kartai') {
     setuAntraste = '<span></span><span>Kartai</span>';
-    setuEilutes = numeriai.map((n) => `
+    setuEilutes = numeriai.map((n) => {
+      const setas = s?.pagalSeta?.get(n);
+      return `
       <div class="setu-eilute viena-reiksme">
         <span>${n}.</span>
-        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${s?.reps != null ? ` placeholder="${s.reps}"` : ''}${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
-      </div>`).join('');
+        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${setas?.reps != null ? ` placeholder="${setas.reps}"` : ''}${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
+      </div>`;
+    }).join('');
   } else if (tipas === 'laikas') {
     setuAntraste = '<span></span><span>Trukmė, sek</span>';
-    setuEilutes = numeriai.map((n) => `
+    setuEilutes = numeriai.map((n) => {
+      const setas = s?.pagalSeta?.get(n);
+      return `
       <div class="setu-eilute viena-reiksme">
         <span>${n}.</span>
-        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto trukmė, sek" name="trukme-${n}"${s?.duration_seconds != null ? ` placeholder="${s.duration_seconds}"` : ''}${draftas[`trukme-${n}`] ? ` value="${esc(draftas[`trukme-${n}`])}"` : ''}>
-      </div>`).join('');
+        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto trukmė, sek" name="trukme-${n}"${setas?.duration_seconds != null ? ` placeholder="${setas.duration_seconds}"` : ''}${draftas[`trukme-${n}`] ? ` value="${esc(draftas[`trukme-${n}`])}"` : ''}>
+      </div>`;
+    }).join('');
   } else {
     setuAntraste = '<span></span><span>Svoris, kg</span><span>Kartai</span>';
-    setuEilutes = numeriai.map((n) => `
+    setuEilutes = numeriai.map((n) => {
+      const setas = s?.pagalSeta?.get(n);
+      return `
       <div class="setu-eilute">
         <span>${n}.</span>
-        <input type="text" inputmode="decimal" pattern="[0-9]{1,3}([.,][0-9]{1,2})?" aria-label="${n} seto svoris, kg" name="svoris-${n}"${s?.weight_kg != null ? ` placeholder="${s.weight_kg}"` : ''}${draftas[`svoris-${n}`] ? ` value="${esc(draftas[`svoris-${n}`])}"` : ''}>
-        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${s?.reps != null ? ` placeholder="${s.reps}"` : ''}${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
-      </div>`).join('');
+        <input type="text" inputmode="decimal" pattern="[0-9]{1,3}([.,][0-9]{1,2})?" aria-label="${n} seto svoris, kg" name="svoris-${n}"${setas?.weight_kg != null ? ` placeholder="${setas.weight_kg}"` : ''}${draftas[`svoris-${n}`] ? ` value="${esc(draftas[`svoris-${n}`])}"` : ''}>
+        <input type="number" step="1" min="0" inputmode="numeric" aria-label="${n} seto kartai" name="kartai-${n}"${setas?.reps != null ? ` placeholder="${setas.reps}"` : ''}${draftas[`kartai-${n}`] ? ` value="${esc(draftas[`kartai-${n}`])}"` : ''}>
+      </div>`;
+    }).join('');
   }
 
   return `
@@ -529,6 +533,21 @@ async function issaugokDiena(dienaId) {
     if (savieIrasai.length) {
       perPratima.set(pratimoId, { irasai: savieIrasai, konteineris: kont });
       irasai.push(...savieIrasai);
+    } else if (pastaba) {
+      // Klientas įrašė tik pastabą, be jokių setų reikšmių. Be šios šakos ji
+      // tiesiog dingtų neišsaugota, nes toliau niekas nesukuria įrašo, kol
+      // nėra bent vieno seto skaičiaus.
+      const tikPastabosIrasas = {
+        client_exercise_id: pratimoId,
+        client_id: vartotojas.id,
+        set_index: 1,
+        weight_kg: null,
+        reps: null,
+        duration_seconds: null,
+        notes: pastaba,
+      };
+      perPratima.set(pratimoId, { irasai: [tikPastabosIrasas], konteineris: kont });
+      irasai.push(tikPastabosIrasas);
     }
   }
 
@@ -557,46 +576,60 @@ async function issaugokDiena(dienaId) {
     for (const laukas of konteineris.querySelectorAll('input, textarea')) laukas.value = '';
 
     const pratimas = pratimai.find((x) => x.id === pratimoId);
-    const tipas = pratimas?.log_type || 'svoris';
-
-    let gerinusias = null;
-    if (tipas === 'kartai') {
-      const suKartais = savieIrasai.filter((i) => i.reps != null);
-      gerinusias = suKartais.length ? suKartais.reduce((a, b) => (b.reps > a.reps ? b : a)) : null;
-    } else if (tipas === 'laikas') {
-      const suTrukme = savieIrasai.filter((i) => i.duration_seconds != null);
-      gerinusias = suTrukme.length ? suTrukme.reduce((a, b) => (b.duration_seconds > a.duration_seconds ? b : a)) : null;
-    } else {
-      const suSvoriu = savieIrasai.filter((i) => i.weight_kg != null);
-      gerinusias = suSvoriu.length ? suSvoriu.reduce((a, b) => (b.weight_kg > a.weight_kg ? b : a)) : null;
-    }
-
     if (!pratimas) continue;
     const raktas = pavadinimoRaktas(pratimas.title);
 
-    if (gerinusias) {
-      paskutineSesija.set(raktas, {
-        data: new Date().toISOString().slice(0, 10),
-        weight_kg: gerinusias.weight_kg,
-        reps: gerinusias.reps,
-        duration_seconds: gerinusias.duration_seconds,
-        notes: gerinusias.notes,
-      });
-    } else if (!paskutineSesija.has(raktas)) {
-      paskutineSesija.set(raktas, { data: new Date().toISOString().slice(0, 10), weight_kg: null, reps: null, duration_seconds: null, notes: null });
+    // Ką tik išsaugota sesija tampa nauja "paskutinė sesija" — pagalSeta
+    // laikoma per setą, kad kito karto placeholder'iai rodytų TIKSLIAI tai,
+    // kas čia buvo įrašyta kiekviename sete, o ne vieną "geriausią" skaičių.
+    const naujasPagalSeta = new Map();
+    for (const i of savieIrasai) {
+      if (i.weight_kg != null || i.reps != null || i.duration_seconds != null) {
+        naujasPagalSeta.set(i.set_index, { weight_kg: i.weight_kg, reps: i.reps, duration_seconds: i.duration_seconds });
+      }
     }
 
-    // Atnaujiname tik tekstinę "praėjusi sesija" eilutę, o ne visą dienos
-    // turinį — kitaip ką tik parodytas "Treniruotė išsaugota" pranešimas ir
-    // išvalyti laukai iškart dingtų perpiešiant visą kortelę. Atnaujiname
-    // VISAS to paties pavadinimo korteles (ne tik ką tik išsaugotą), nes jos
-    // dabar dalijasi ta pačia "praėjusi sesija" reikšme — pvz. jei "Bench
-    // Press" yra ir 1, ir 2 dienoje, abi turi parodyti naujausią rezultatą.
+    // Laukai jau išvalyti aukščiau — placeholder'ius atnaujiname į ką tik
+    // įrašytas reikšmes, kad kitą kartą atidarius šią kortelę (be puslapio
+    // perkrovimo) jau matytųsi šios, o ne senesnės sesijos pasiūlymas.
+    atnaujinkSetuPlaceholderius(konteineris, naujasPagalSeta);
+
+    paskutineSesija.set(raktas, {
+      data: new Date().toISOString().slice(0, 10),
+      pagalSeta: naujasPagalSeta,
+      notes: savieIrasai.find((i) => i.notes)?.notes || null,
+    });
+
+    // Atnaujiname tik tekstinę "praėjusi sesija" eilutę ir setų placeholder'ius,
+    // o ne visą dienos turinį — kitaip ką tik parodytas "Treniruotė išsaugota"
+    // pranešimas ir išvalyti laukai iškart dingtų perpiešiant visą kortelę.
+    // Atnaujiname VISAS to paties pavadinimo korteles (ne tik ką tik
+    // išsaugotą), nes jos dabar dalijasi ta pačia "praėjusi sesija" reikšme —
+    // pvz. jei "Bench Press" yra ir 1, ir 2 dienoje, abi turi parodyti
+    // naujausią rezultatą, net jei išsaugota buvo tik vienoje iš jų.
     for (const kitas of pratimai) {
       if (pavadinimoRaktas(kitas.title) !== raktas) continue;
       const paskutineEl = $('#paskutine-' + kitas.id);
       if (paskutineEl) paskutineEl.innerHTML = paskutinesSesijosEilute(kitas);
+      if (kitas.id !== pratimoId) {
+        const kitasKonteineris = $(`.pratimo-setai[data-pratimas="${esc(kitas.id)}"]`);
+        if (kitasKonteineris) atnaujinkSetuPlaceholderius(kitasKonteineris, naujasPagalSeta);
+      }
     }
+  }
+}
+
+/** Nustato kiekvieno seto įvesties lauko placeholder'į pagal pagalSeta (žr.
+ * apskaiciuokPaskutinesSesijas) — naudojama ir ką tik įrašytai kortelei po
+ * išsaugojimo, ir bet kuriai kitai tos pačios pratimo pavadinimo kortelei. */
+function atnaujinkSetuPlaceholderius(konteineris, pagalSeta) {
+  for (const [setoNr, setas] of pagalSeta) {
+    const svorisEl = konteineris.querySelector(`input[name="svoris-${setoNr}"]`);
+    const kartaiEl = konteineris.querySelector(`input[name="kartai-${setoNr}"]`);
+    const trukmeEl = konteineris.querySelector(`input[name="trukme-${setoNr}"]`);
+    if (svorisEl && setas.weight_kg != null) svorisEl.placeholder = String(setas.weight_kg);
+    if (kartaiEl && setas.reps != null) kartaiEl.placeholder = String(setas.reps);
+    if (trukmeEl && setas.duration_seconds != null) trukmeEl.placeholder = String(setas.duration_seconds);
   }
 }
 </script>
