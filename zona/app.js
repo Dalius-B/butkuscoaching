@@ -217,6 +217,93 @@ export async function ikelkPratimuBiblioteka() {
   return irasai || [];
 }
 
+// Raktažodžiai kūno srities atspėjimui iš pavadinimo — tvarka tikrinant
+// TYČIA kernas -> kojos -> virsus (žr. spekKategorija()), nes virsaus
+// raktažodžiai (pvz. "press", "raise") yra bendriausi ir kitaip perimtų
+// frazes, priklausančias siauresnei kategorijai ("leg press", "knee raise").
+const KATEGORIJU_RAKTAZODZIAI = {
+  kernas: [
+    'crunch', 'plank', 'lenta', 'susiriet', 'pilvo', 'pilvas', 'dead bug',
+    'ab wheel', 'knee raise', 'kelių kėlim', 'keliu kelim', 'leg raise',
+    'kojų kėlim', 'koju kelim', 'russian twist', 'woodchop', 'side bend',
+    'core', ' abs', 'abs ',
+  ],
+  kojos: [
+    'squat', 'tūpt', 'tupt', 'pritūpim', 'pritupim', 'lunge', 'žingsn',
+    'zingsn', 'leg press', 'leg curl', 'leg extension', 'kojų', 'koju',
+    'kojos', 'šlaun', 'slaun', 'calf', 'blauzd', 'hip thrust', 'hip raise',
+    'glute raise', 'glute bridge', 'glute', 'sėdmen', 'sedmen', 'romanian',
+    'hamstring', 'quad', 'deadlift', 'mirtin',
+  ],
+  virsus: [
+    'bench', 'press', 'spaudim', 'chest', 'pec', 'krūtin', 'krutin', 'fly',
+    'flye', 'dip', 'atsispaud', 'row', 'trauk', 'pulldown', 'pull-down',
+    'pull down', 'lat ', '(lat', 'back', 'nugar', 'chin', 'pull-up',
+    'pullup', 'prisitrauk', 'shoulder', 'delt', 'peči', 'peciu', 'raise',
+    'kėlim', 'kelim', 'ohp', 'shrug', 'bicep', 'tricep', 'curl', 'extension',
+    'rank', 'arm', 'kūno viršus', 'kuno virsus', 'upper body', 'atsilenk',
+    'face pull',
+  ],
+};
+
+export const KATEGORIJU_PAVADINIMAI = {
+  virsus: 'Viršutinė kūno dalis',
+  kojos: 'Kojos',
+  kernas: 'Kernas / pilvas',
+  kita: 'Kita',
+};
+
+/** Atspėja kūno sritį iš pavadinimo raktažodžių. Grąžina null, kai nė vienas
+ * raktažodis neatpažįstamas — tokiu atveju treneris kategoriją priskiria pats
+ * "Pratimų sąrašas" skiltyje (žr. valdymas.html). Vien atspėjimas, ne
+ * garantija — pavadinimai, kurie nesiremia įprastais raktažodžiais (pvz.
+ * pratimo kodiniu pavadinimu), liks nepriskirti. */
+export function spekKategorija(pavadinimas) {
+  const t = (pavadinimas || '').toLowerCase();
+  for (const kategorija of ['kernas', 'kojos', 'virsus']) {
+    if (KATEGORIJU_RAKTAZODZIAI[kategorija].some((kw) => t.includes(kw))) return kategorija;
+  }
+  return null;
+}
+
+/** Bibliotekos <optgroup> blokai pagal kategoriją — naudojama "Pasirink iš
+ * bibliotekos" sąraše, kad pratimus būtų galima naršyti pagal kūno sritį, o
+ * ne vien ieškoti abėcėlinio sąrašo ar rinktis pavadinimo lauko pasiūlymus.
+ * Įrašai be kategorijos (category = null) patenka į "Kita" kartu su tyčia
+ * taip pažymėtais. */
+export function bibliotekosOptGrupes(biblioteka) {
+  const tvarka = ['virsus', 'kojos', 'kernas', 'kita'];
+  const grupes = new Map(tvarka.map((k) => [k, []]));
+  for (const p of biblioteka) {
+    const raktas = tvarka.includes(p.category) ? p.category : 'kita';
+    grupes.get(raktas).push(p);
+  }
+  return tvarka
+    .filter((k) => grupes.get(k).length)
+    .map((k) => {
+      const nariai = grupes.get(k).slice().sort((a, b) => a.title.localeCompare(b.title, 'lt'));
+      return `<optgroup label="${esc(KATEGORIJU_PAVADINIMAI[k])}">${nariai.map((p) => `<option value="${esc(p.title)}">${esc(p.title)}</option>`).join('')}</optgroup>`;
+    }).join('');
+}
+
+/** Prijungia klausytoją "Pasirink iš bibliotekos" sąrašui: pasirinkus
+ * pratimą, įrašo jo pavadinimą į formos pavadinimo lauką ir paleidžia to
+ * lauko 'input' įvykį, kad suveiktų prijunkBibliotekosUzpildyma() ir
+ * užsipildytų setai/kartai/svoris/poilsis/pastabos/vaizdo nuoroda — be šio
+ * dirbtinio įvykio tos reikšmės neatsirastų, nes klausosi tik paties
+ * pavadinimo lauko rašymo. Sąrašas po pasirinkimo grąžinamas į pradinę
+ * reikšmę, kad liktų paruoštas naudoti dar kartą. */
+export function prijunkBibliotekosPasirinkima(sarasoLaukas, pavadinimoLaukas) {
+  if (!sarasoLaukas || !pavadinimoLaukas) return;
+  sarasoLaukas.addEventListener('change', () => {
+    if (!sarasoLaukas.value) return;
+    pavadinimoLaukas.value = sarasoLaukas.value;
+    pavadinimoLaukas.dispatchEvent(new Event('input', { bubbles: true }));
+    sarasoLaukas.value = '';
+    pavadinimoLaukas.focus();
+  });
+}
+
 /** Įrašo naują pratimą į biblioteką, jei joje dar nėra nei tiksliai tokio
  * pavadinimo, nei labai panašaus (žr. tasPatsPratimas) — esamo įrašo
  * niekada neperrašo, kad kanoninės reikšmės liktų stabilios, net jei kitas
@@ -239,6 +326,7 @@ export async function issaugokBibliotekoje(laukai, zinomaBiblioteka) {
       notes: laukai.notes || '',
       video_url: laukai.video_url ?? null,
       log_type: laukai.log_type || 'svoris',
+      category: spekKategorija(pavadinimas),
     }, { onConflict: 'title_key', ignoreDuplicates: true });
   } catch {
     // Migracija dar nepaleista arba laikinas tinklo trikis — pats pratimas

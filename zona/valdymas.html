@@ -119,7 +119,8 @@ import {
   ikelkBibliotekosFaila, trinkBibliotekosFaila, BIBLIOTEKOS_KIBIRAS, BIBLIOTEKOS_MAX_MB,
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
   ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma, tasPatsPratimas,
-} from './app.js?v=20261031d';
+  bibliotekosOptGrupes, prijunkBibliotekosPasirinkima, KATEGORIJU_PAVADINIMAI,
+} from './app.js?v=20261031e';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
 
 let profiliai = [];
@@ -607,6 +608,7 @@ function piesKlientoPratimus() {
   for (const f of $$('.forma-prideti-kliento-pratima')) {
     f.addEventListener('submit', pridekKlientoPratima);
     prijunkBibliotekosUzpildyma(f, () => bibliotekosPratimai);
+    prijunkBibliotekosPasirinkima(f.querySelector('.bib-pasirinkimas'), f.querySelector('[name="title"]'));
   }
   for (const b of $$('.redaguoti-kliento-diena')) {
     b.addEventListener('click', () => { redaguojamosKlientoDienosId = b.dataset.id; piesKlientoPratimus(); });
@@ -818,6 +820,14 @@ async function issaugokKlientoPratimoRedagavima(ev) {
 function klientoPridejimoForma(dienaId) {
   return `
     <form class="forma-prideti-kliento-pratima" data-diena="${esc(dienaId)}" novalidate style="margin-top:var(--s-200);padding-top:var(--s-200);border-top:1px solid var(--hair-ink)">
+      ${bibliotekosPratimai.length ? `
+      <div class="field" style="margin-bottom:var(--s-200)">
+        <label for="np-bib-${esc(dienaId)}">Pasirink iš bibliotekos pagal kūno sritį <span class="hint" style="display:inline">(neprivaloma)</span></label>
+        <select id="np-bib-${esc(dienaId)}" class="bib-pasirinkimas">
+          <option value="">— pasirink pratimą —</option>
+          ${bibliotekosOptGrupes(bibliotekosPratimai)}
+        </select>
+      </div>` : ''}
       <div class="field-row">
         <div class="field">
           <label for="np-pavadinimas-${esc(dienaId)}">Pratimo pavadinimas</label>
@@ -1344,10 +1354,10 @@ function piesPratimuSarasa() {
   const vieta = $('#kortele-pratimu-sarasas');
   if (!vieta) return;
 
-  const surikiuota = [...bibliotekosPratimai].sort((a, b) => a.title.localeCompare(b.title, 'lt'));
-  const galimiDublikatai = rastiGalimusDublikatus(surikiuota);
+  const visi = [...bibliotekosPratimai].sort((a, b) => a.title.localeCompare(b.title, 'lt'));
+  const galimiDublikatai = rastiGalimusDublikatus(visi);
 
-  const eilutes = surikiuota.map((p) => {
+  const eilute = (p) => {
     if (p.id === redaguojamoBibliotekosPratimoId) return bibliotekosPratimoRedagavimoForma(p);
     return `
       <div class="pratimo-eilute" data-id="${esc(p.id)}">
@@ -1369,21 +1379,40 @@ function piesPratimuSarasa() {
           <button class="btn btn-danger btn-sm trinti-biblioteka-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
         </div>
       </div>`;
-  }).join('');
+  };
+
+  // Tas pats grupavimas kaip "Pasirink iš bibliotekos" sąraše (bibliotekosOptGrupes),
+  // kad valdymo rodinys atrodytų taip pat, kaip pats pasirinkimas — pagal
+  // kūno sritį, o ne vienas ilgas abėcėlinis sąrašas.
+  const tvarka = ['virsus', 'kojos', 'kernas', 'kita'];
+  const grupes = new Map(tvarka.map((k) => [k, []]));
+  for (const p of visi) {
+    const raktas = tvarka.includes(p.category) ? p.category : 'kita';
+    grupes.get(raktas).push(p);
+  }
+  const grupesHtml = tvarka
+    .filter((k) => grupes.get(k).length)
+    .map((k) => `
+      <div style="margin-top:var(--s-300)">
+        <h3 style="font-size:1rem;margin-bottom:var(--s-100)">${esc(KATEGORIJU_PAVADINIMAI[k])} <span class="muted" style="font-weight:400">(${grupes.get(k).length})</span></h3>
+        ${grupes.get(k).map(eilute).join('')}
+      </div>`)
+    .join('');
 
   vieta.innerHTML = `
     <div class="card">
       <div class="card-head">
         <h2>Pratimų sąrašas</h2>
-        <span class="row-end muted">${surikiuota.length}</span>
+        <span class="row-end muted">${visi.length}</span>
       </div>
       <p class="muted" style="margin-bottom:var(--s-200)">
         Čia patenka kiekvienas naujas pratimo pavadinimas, kurį prideda bet kurioje programoje ar kliento kopijoje —
         kitą kartą tą patį pavadinimą pasirinkus, setai, kartai, svoris, poilsis, pastabos ir vaizdo nuoroda užsipildo patys.
         Jau esamo pavadinimo arba labai panašaus (rašybos klaida, vienaskaita/daugiskaita) pridėti antrą kartą negalima —
         tokie, kurie vis tiek liko du, pažymėti "Galimas dublikatas": ištrink nereikalingą arba pataisyk jo pavadinimą.
+        Kūno sritis naujam pratimui atspėjama iš pavadinimo — jei atspėta klaidingai arba visai neatspėta ("Kita"), pataisyk per "Redaguoti".
       </p>
-      ${surikiuota.length ? eilutes : '<p class="muted">Kol kas tuščia — pratimas čia atsiras, kai jį pridėsi bet kurioje programoje.</p>'}
+      ${visi.length ? grupesHtml : '<p class="muted">Kol kas tuščia — pratimas čia atsiras, kai jį pridėsi bet kurioje programoje.</p>'}
     </div>`;
 
   for (const b of $$('.redaguoti-biblioteka-pratima')) {
@@ -1430,6 +1459,16 @@ function bibliotekosPratimoRedagavimoForma(p) {
             <option value="laikas"${p.log_type === 'laikas' ? ' selected' : ''}>Laikas (sekundėmis)</option>
           </select>
         </div>
+        <div class="field">
+          <label for="bp-kategorija-${esc(p.id)}">Kūno sritis</label>
+          <select id="bp-kategorija-${esc(p.id)}" name="category">
+            <option value=""${!p.category ? ' selected' : ''}>— neatspėta —</option>
+            <option value="virsus"${p.category === 'virsus' ? ' selected' : ''}>${esc(KATEGORIJU_PAVADINIMAI.virsus)}</option>
+            <option value="kojos"${p.category === 'kojos' ? ' selected' : ''}>${esc(KATEGORIJU_PAVADINIMAI.kojos)}</option>
+            <option value="kernas"${p.category === 'kernas' ? ' selected' : ''}>${esc(KATEGORIJU_PAVADINIMAI.kernas)}</option>
+            <option value="kita"${p.category === 'kita' ? ' selected' : ''}>${esc(KATEGORIJU_PAVADINIMAI.kita)}</option>
+          </select>
+        </div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -1473,6 +1512,7 @@ async function issaugokBibliotekosPratimoRedagavima(ev) {
     notes: String(fd.get('notes') || '').trim(),
     video_url: String(fd.get('video') || '').trim() || null,
     log_type: String(fd.get('log_type') || 'svoris'),
+    category: String(fd.get('category') || '').trim() || null,
   }).eq('id', id);
 
   if (error) {
