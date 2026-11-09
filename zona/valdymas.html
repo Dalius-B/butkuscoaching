@@ -120,7 +120,8 @@ import {
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
   ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma, tasPatsPratimas,
   bibliotekosOptGrupes, prijunkBibliotekosPasirinkima, KATEGORIJU_PAVADINIMAI,
-} from './app.js?v=20261031e';
+  ikelkKlientoPastaba, issaugokKlientoPastaba,
+} from './app.js?v=20261031f';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
 
 let profiliai = [];
@@ -1311,12 +1312,41 @@ async function rodykKlientoPatikrinimus(clientId) {
       </details>
     </div>`).join('');
 
+  const esamaPastaba = await ikelkKlientoPastaba(clientId);
+
   $('#patikrinimu-detale').innerHTML = `
     <div class="page-head" style="margin-top:var(--s-300);margin-bottom:0">
       <h2>${esc(klientas.full_name || klientas.email)}</h2>
       <p>${savi.length} ${zodis(savi.length, 'ataskaita', 'ataskaitos', 'ataskaitų')}.</p>
     </div>
+    <form id="forma-trenerio-pastaba" class="card" style="margin-top:var(--s-200)" novalidate>
+      <div class="field">
+        <label for="trenerio-pastaba">Trenerio pastaba apie klientą <span class="hint" style="display:inline">(matai tik tu — ta pati pastaba, kaip ir jo treniruočių istorijoje)</span></label>
+        <textarea id="trenerio-pastaba" name="pastaba" placeholder="Pvz., skundėsi keliu spalio mėn., verta sekti progresą">${esc(esamaPastaba)}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti pastabą</button>
+        <span class="note" id="pastabos-statusas" hidden></span>
+      </div>
+    </form>
     ${kortos || '<p class="muted">Ataskaitų nėra.</p>'}`;
+
+  $('#forma-trenerio-pastaba').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = ev.submitter;
+    const busena = $('#pastabos-statusas');
+    const tekstas = $('#trenerio-pastaba').value;
+    if (btn) btn.disabled = true;
+    const { error } = await issaugokKlientoPastaba(clientId, tekstas);
+    if (btn) btn.disabled = false;
+    if (error) {
+      pranesk(busena, klaidaLT(error), 'error');
+      return;
+    }
+    pranesk(busena, 'Pastaba išsaugota ✓', 'ok');
+    clearTimeout(rodykKlientoPatikrinimus._laikmatis);
+    rodykKlientoPatikrinimus._laikmatis = setTimeout(() => { busena.hidden = true; }, 3000);
+  });
 
   $('#patikrinimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

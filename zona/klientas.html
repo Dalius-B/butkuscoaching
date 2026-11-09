@@ -125,7 +125,7 @@
 import {
   db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
   BUSENOS, zodis, nuotraukuNuorodos,
-} from './app.js?v=20261031e';
+} from './app.js?v=20261031f';
 
 const clientId = new URLSearchParams(location.search).get('id');
 
@@ -154,7 +154,7 @@ async function paleisk() {
 
 async function ikelk() {
   const [p1, p2, p3] = await Promise.all([
-    db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at').eq('id', clientId).maybeSingle(),
+    db.from('profiles').select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, patikrinimas_ijungtas, created_at').eq('id', clientId).maybeSingle(),
     db.from('checkins').select('*').eq('user_id', clientId).order('created_at', { ascending: true }),
     db.from('client_programs').select('id, program_id, title, status, starts_on, assigned_at').eq('client_id', clientId).order('assigned_at', { ascending: false }),
   ]);
@@ -195,12 +195,17 @@ function piesAntraste() {
       </select>
       <span class="chip ${klientas.uzduotys_ijungtos ? 'chip-ok' : 'chip-quiet'}">${klientas.uzduotys_ijungtos ? 'Užduotys įjungtos' : 'Užduotys išjungtos'}</span>
       <button class="btn btn-ghost btn-sm" type="button" id="uzd-jungiklis">${klientas.uzduotys_ijungtos ? 'Išjungti užduotis' : 'Įjungti užduotis'}</button>
+      ${klientas.plan_type !== 'pilnas' ? `
+        <span class="chip ${klientas.patikrinimas_ijungtas ? 'chip-ok' : 'chip-quiet'}">${klientas.patikrinimas_ijungtas ? 'Ataskaita įjungta' : 'Ataskaita išjungta'}</span>
+        <button class="btn btn-ghost btn-sm" type="button" id="ataskaitos-jungiklis">${klientas.patikrinimas_ijungtas ? 'Išjungti ataskaitą' : 'Įjungti ataskaitą'}</button>
+      ` : ''}
       ${klientas.status === 'blocked'
         ? '<button class="btn btn-ghost btn-sm" type="button" id="busenos-mygtukas" data-busena="active">Grąžinti prieigą</button>'
         : '<button class="btn btn-danger btn-sm" type="button" id="busenos-mygtukas" data-busena="blocked">Sustabdyti</button>'}
     </div>`;
 
   $('#uzd-jungiklis').addEventListener('click', () => keiskUzduotis(!klientas.uzduotys_ijungtos));
+  $('#ataskaitos-jungiklis')?.addEventListener('click', () => keiskAtaskaita(!klientas.patikrinimas_ijungtas));
   $('#busenos-mygtukas').addEventListener('click', (ev) => keiskBusena(ev.currentTarget.dataset.busena));
   $('#paketo-pasirinkimas').addEventListener('change', (ev) => keiskPaketa(ev.currentTarget.value));
 }
@@ -222,6 +227,19 @@ async function keiskUzduotis(ijungta) {
     return;
   }
   pranesk($('#pranesimas'), ijungta ? 'Užduotys klientui įjungtos.' : 'Užduotys klientui išjungtos.', 'ok');
+  await ikelk();
+}
+
+/** Savaitinės ataskaitos prieigos įjungimas/išjungimas ŠIAM klientui, be viso
+ * jo paketo keitimo — "pilnas" paketas ataskaitą turi visada, tad šis
+ * jungiklis rodomas tik kitų paketų klientams (žr. piesAntraste()). */
+async function keiskAtaskaita(ijungta) {
+  const { error } = await db.rpc('admin_set_patikrinimas', { p_client: clientId, p_ijungta: ijungta });
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), ijungta ? 'Savaitinė ataskaita klientui įjungta.' : 'Savaitinė ataskaita klientui išjungta.', 'ok');
   await ikelk();
 }
 

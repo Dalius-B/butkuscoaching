@@ -73,8 +73,28 @@
     position: sticky; left: 0; background: var(--paper); z-index: 1;
   }
   /* Pastabos ženkliukas lentelėje — tilptų ir svoris, ir pastaba kiekvienam
-     langeliui, tad pastaba lieka paslėpta už title patarimo, o ne užima vietą. */
-  .lentele-pastaba { cursor: help; font-size: .8125rem; }
+     langeliui, tad pastaba lieka paslėpta už mygtuko, o ne užima vietą.
+     Savas burbulas vietoj naršyklės title — tam, kad pasirodytų iš karto
+     (title turi ilgą, nevaldomą uždelsimą), ir kad veiktų palietus pirštu,
+     ne vien laikant pelę, nes treneris šią lentelę dažnai žiūri telefonu. */
+  .lentele-pastaba {
+    position: relative; cursor: pointer; font-size: .8125rem;
+    border: 0; background: none; padding: 0; line-height: 1; vertical-align: middle;
+  }
+  .lentele-pastaba-burbulas {
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    width: max-content; max-width: 220px; text-align: left; white-space: normal;
+    background: var(--ink); color: var(--paper); font-size: .8125rem; font-weight: 400;
+    line-height: 1.4; padding: var(--s-75) var(--s-100); border-radius: var(--r-sm);
+    box-shadow: 0 4px 16px rgba(16,16,16,0.25); z-index: 5;
+    opacity: 0; visibility: hidden; transition: opacity 80ms var(--ease-out);
+    pointer-events: none;
+  }
+  .lentele-pastaba:hover .lentele-pastaba-burbulas,
+  .lentele-pastaba:focus-visible .lentele-pastaba-burbulas,
+  .lentele-pastaba.rodoma .lentele-pastaba-burbulas {
+    opacity: 1; visibility: visible;
+  }
   .lentele-redaguoti { text-decoration: none; opacity: .6; }
   .lentele-redaguoti:hover { opacity: 1; }
 
@@ -124,6 +144,7 @@
     </div>
     <div id="kraunasi" class="loading"><span class="spinner" aria-hidden="true"></span><span>Kraunama</span></div>
     <p class="note" id="pranesimas" hidden></p>
+    <div id="trenerio-pastaba-vieta"></div>
 
     <div id="skydelis" hidden>
       <div class="tabs" role="tablist" id="rodinio-tabs">
@@ -158,7 +179,10 @@
 </footer>
 
 <script type="module">
-import { db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, formatuokTrukme } from './app.js?v=20261031e';
+import {
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, formatuokTrukme,
+  ikelkKlientoPastaba, issaugokKlientoPastaba,
+} from './app.js?v=20261031f';
 
 const programId = new URLSearchParams(location.search).get('id');
 
@@ -205,6 +229,7 @@ async function ikelk(arTreneris) {
     antrastesTekstas = `${programa.title} — ${vardas}`;
     $('#atgal-nuoroda').href = 'klientas.html?id=' + encodeURIComponent(programa.client_id);
     $('#atgal-nuoroda').textContent = '← ' + vardas;
+    piesTrenerioPastaba(programa.client_id);
   }
   $('#paantraste').textContent = antrastesTekstas;
   document.title = 'Istorija: ' + programa.title + ' | Butkus Coaching';
@@ -247,6 +272,44 @@ async function ikelk(arTreneris) {
 
   $('#kraunasi').hidden = true;
   paruoskRodinius(dienos || [], pratimai || [], irasai || [], arTreneris, programa.client_id);
+}
+
+/** Trenerio privati pastaba apie klientą — ta pati, redaguojama ir
+ * valdymas.html peržiūrint ataskaitas (žr. rodykKlientoPatikrinimus()).
+ * Kraunama atskirai nuo likusio puslapio turinio ir niekada nerodoma
+ * klientui (ši funkcija kviečiama tik kai arTreneris). */
+async function piesTrenerioPastaba(clientId) {
+  const vieta = $('#trenerio-pastaba-vieta');
+  const esama = await ikelkKlientoPastaba(clientId);
+
+  vieta.innerHTML = `
+    <form id="forma-trenerio-pastaba" class="card" style="margin-bottom:var(--s-300)" novalidate>
+      <div class="field">
+        <label for="trenerio-pastaba">Trenerio pastaba apie klientą <span class="hint" style="display:inline">(matai tik tu)</span></label>
+        <textarea id="trenerio-pastaba" name="pastaba" placeholder="Pvz., skundėsi keliu spalio mėn., verta sekti progresą">${esc(esama)}</textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti pastabą</button>
+        <span class="note" id="pastabos-statusas" hidden></span>
+      </div>
+    </form>`;
+
+  $('#forma-trenerio-pastaba').addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const btn = ev.submitter;
+    const busena = $('#pastabos-statusas');
+    const tekstas = $('#trenerio-pastaba').value;
+    if (btn) btn.disabled = true;
+    const { error } = await issaugokKlientoPastaba(clientId, tekstas);
+    if (btn) btn.disabled = false;
+    if (error) {
+      pranesk(busena, klaidaLT(error), 'error');
+      return;
+    }
+    pranesk(busena, 'Pastaba išsaugota ✓', 'ok');
+    clearTimeout(piesTrenerioPastaba._laikmatis);
+    piesTrenerioPastaba._laikmatis = setTimeout(() => { busena.hidden = true; }, 3000);
+  });
 }
 
 function paruoskRodinius(dienos, pratimai, irasai, arTreneris, klientoId) {
@@ -599,6 +662,38 @@ function piesLentele(dienos, irasai, pratimoInfo, klientoId) {
   vieta.innerHTML = dienosSuIrasais.length
     ? dienosSuIrasais.map((d) => lentelesDienai(d, irasai, pratimoInfo, klientoId)).join('')
     : '<p class="muted">Kol kas tuščia.</p>';
+
+  prijunkPastabuMygtukus(vieta);
+}
+
+/** Pastabos burbulas rodomas spustelėjus mygtuką, ne laikant pelę ant jo —
+ * naršyklės title turi ilgą, nevaldomą uždelsimą, o telefone laikymas iš
+ * viso neveikia. Vienas klausytojas visai lentelei (veikia po bet kurio
+ * perpiešimo, nes niekada neatjungiamas), vietoj atskiro kiekvienam
+ * mygtukui. Spustelėjus kitur, atviras burbulas užsidaro. */
+let pastabuDokumentoKlausytojasPrijungtas = false;
+function prijunkPastabuMygtukus(vieta) {
+  // dataset žyma apsaugo nuo dvigubo prijungimo, jei piesLentele() kada nors
+  // būtų iškviesta pakartotinai tam pačiam elementui (šiandien taip
+  // neatsitinka, bet klausytojas liktų ant vieta amžinai, jei atsitiktų).
+  if (!vieta.dataset.pastabosPrijungtos) {
+    vieta.dataset.pastabosPrijungtos = '1';
+    vieta.addEventListener('click', (ev) => {
+      const mygtukas = ev.target.closest('.lentele-pastaba');
+      for (const b of $$('.lentele-pastaba.rodoma', vieta)) {
+        if (b !== mygtukas) b.classList.remove('rodoma');
+      }
+      if (mygtukas) mygtukas.classList.toggle('rodoma');
+    });
+  }
+
+  if (!pastabuDokumentoKlausytojasPrijungtas) {
+    pastabuDokumentoKlausytojasPrijungtas = true;
+    document.addEventListener('click', (ev) => {
+      if (ev.target.closest('.lentele-pastaba')) return;
+      for (const b of $$('.lentele-pastaba.rodoma')) b.classList.remove('rodoma');
+    });
+  }
 }
 
 function lentelesDienai(d, visiIrasai, pratimoInfo, klientoId) {
@@ -629,7 +724,7 @@ function lentelesDienai(d, visiIrasai, pratimoInfo, klientoId) {
       const setai = pagalData.get(ymd).langeliai.get(pratimoId);
       if (!setai) return '<td><span class="muted">—</span></td>';
       const pastaba = pastabosTekstas(setai);
-      return `<td>${esc(setuTekstas(setai))}${pastaba ? ` <span class="lentele-pastaba" title="${esc(pastaba)}">&#128172;</span>` : ''}</td>`;
+      return `<td>${esc(setuTekstas(setai))}${pastaba ? ` <button type="button" class="lentele-pastaba" aria-label="Pastaba">&#128172;<span class="lentele-pastaba-burbulas" role="tooltip">${esc(pastaba)}</span></button>` : ''}</td>`;
     }).join('');
     const redagavimoNuoroda = `valdymas.html?klientas=${encodeURIComponent(klientoId)}&programa=${encodeURIComponent(programId)}&pratimas=${encodeURIComponent(pratimoId)}`;
     return `<tr><th scope="row">${esc(info.pavadinimas)} <a class="lentele-redaguoti" href="${redagavimoNuoroda}" title="Redaguoti pratimą">&#9998;</a></th>${langeliai}</tr>`;

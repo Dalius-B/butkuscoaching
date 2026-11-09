@@ -374,6 +374,28 @@ export function prijunkBibliotekosUzpildyma(forma, gaukBiblioteka) {
 }
 
 // -----------------------------------------------------------------------------
+//  Trenerio privati pastaba apie klientą
+//  Viena pastaba per klientą (profiles.note), ne atskira kiekvienai sesijai
+//  ar ataskaitai — ta pati pastaba redaguojama ir istorija.html (peržiūrint
+//  treniruočių istoriją), ir valdymas.html (peržiūrint savaitines
+//  ataskaitas), kad trenerio įrašytos mintys apie klientą liktų vienoje
+//  vietoje, o ne išbarstytos. Niekada neskaitoma/nerašoma tiesiai per
+//  profiles lentelę — tik per šias RPC funkcijas (admin_get_note/
+//  admin_set_note, žr. supabase/kliento-pastaba.sql), kad klientas pastabos
+//  niekada nematytų, net tiesiogiai užklausęs API.
+// -----------------------------------------------------------------------------
+
+export async function ikelkKlientoPastaba(clientId) {
+  const { data: tekstas, error } = await db.rpc('admin_get_note', { p_client: clientId });
+  if (error) return '';
+  return tekstas || '';
+}
+
+export async function issaugokKlientoPastaba(clientId, tekstas) {
+  return db.rpc('admin_set_note', { p_client: clientId, p_note: tekstas });
+}
+
+// -----------------------------------------------------------------------------
 //  Progreso nuotraukos (savaitinė ataskaita)
 //  Kibirys privatus — nuorodos niekada nesaugomos, tik keliai. Rodymo metu
 //  nuoroda sugeneruojama laikinai per nuotraukuNuorodos().
@@ -627,7 +649,7 @@ export async function reikiaSesijos({ tikTreneriui = false } = {}) {
   // puslapio atidarymas sutaupo vieną kelionę į serverį.
   const [profilioAtsakas, trenerioAtsakas] = await Promise.all([
     db.from('profiles')
-      .select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at')
+      .select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, patikrinimas_ijungtas, created_at')
       .eq('id', vartotojas.id)
       .maybeSingle(),
     db.rpc('ar_treneris'),
@@ -751,9 +773,11 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
     nuorodos.push({ href: 'mano.html', tekstas: 'Mano programa' });
   }
   // Savaitinė ataskaita yra kliento savaitinis pildomas dalykas — treneriui
-  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. Tik
-  // "pilnas" paketas apima savaitinį patikrinimą.
-  if (!treneris && profilis?.plan_type === 'pilnas') {
+  // savęs tikrinti nereikia, tad jam šios nuorodos meniu nerodome. "Pilnas"
+  // paketas apima savaitinį patikrinimą visada, o kitų paketų klientui
+  // Dalius gali ją įjungti atskirai (žr. patikrinimas_ijungtas), nekeisdamas
+  // viso jo paketo.
+  if (!treneris && (profilis?.plan_type === 'pilnas' || profilis?.patikrinimas_ijungtas)) {
     nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
   }
   // Užduotys — privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.

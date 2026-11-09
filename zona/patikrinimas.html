@@ -72,7 +72,7 @@ import {
   db, $, $$, esc, data, klaidaLT, pranesk, valyk, reikiaSesijos, rodykNav,
   panaudokLaukiantiKvietima, programosSavaite,
   ikelkNuotraukas, nuotraukuNuorodos, NUOTRAUKU_LIMITAS, NUOTRAUKOS_MAX_MB,
-} from './app.js?v=20261031e';
+} from './app.js?v=20261031f';
 
 const vieta      = $('#turinio-vieta');
 const paantraste = $('#paantraste');
@@ -100,7 +100,7 @@ async function paleisk() {
   if (await panaudokLaukiantiKvietima(profilis)) {
     const { data: naujas } = await db
       .from('profiles')
-      .select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, created_at')
+      .select('id, email, full_name, phone, status, plan_type, uzduotys_ijungtos, patikrinimas_ijungtas, created_at')
       .eq('id', vartotojas.id)
       .maybeSingle();
     if (naujas) profilis = naujas;
@@ -119,9 +119,11 @@ async function paleisk() {
     return;
   }
 
-  // "Tik užduotys" paketo klientas neturi nei programos, nei ataskaitos —
-  // jam čia nėra ko veikti, tiesiog grąžiname į jo vienintelę skiltį.
-  if (!s.arTreneris && profilis?.plan_type === 'tik_uzduotys') {
+  // "Tik užduotys" paketo klientas pagal nutylėjimą neturi nei programos,
+  // nei ataskaitos — jam čia nėra ko veikti, tiesiog grąžiname į jo
+  // vienintelę skiltį. Jei Dalius jam atskirai įjungė ataskaitą
+  // (patikrinimas_ijungtas), ji lieka pasiekiama ir šiam paketui.
+  if (!s.arTreneris && profilis?.plan_type === 'tik_uzduotys' && !profilis?.patikrinimas_ijungtas) {
     location.replace('uzduotys.html');
     return;
   }
@@ -129,8 +131,10 @@ async function paleisk() {
   // Rodymo lygmuo (rodykNav) meniu punktą jau paslėpė, bet tai tik
   // patogumas — tikra apsauga yra duomenų bazės taisyklėse. Čia rodome
   // aiškų paaiškinimą, o ne tiesiog leidžiame pildyti formą, kurios
-  // išsaugoti vis tiek nepavyktų.
-  if (!s.arTreneris && profilis?.plan_type === 'tik_programa') {
+  // išsaugoti vis tiek nepavyktų. "Pilnas" paketas visada turi prieigą, o
+  // kitiems Dalius ją gali įjungti atskirai konkrečiam klientui
+  // (patikrinimas_ijungtas), nekeisdamas viso jo paketo.
+  if (!s.arTreneris && profilis?.plan_type !== 'pilnas' && !profilis?.patikrinimas_ijungtas) {
     paantraste.textContent = '';
     vieta.innerHTML = `
       <div class="empty">
