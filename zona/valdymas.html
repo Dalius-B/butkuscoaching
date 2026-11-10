@@ -120,8 +120,8 @@ import {
   atsiliepimoNuotraukuUrl, trinkAtsiliepimoNuotrauka,
   ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma, tasPatsPratimas,
   bibliotekosOptGrupes, prijunkBibliotekosPasirinkima, KATEGORIJU_PAVADINIMAI,
-  ikelkKlientoPastaba, issaugokKlientoPastaba,
-} from './app.js?v=20261031f';
+  ikelkKlientoPastaba, issaugokKlientoPastaba, naujausiaPrograma,
+} from './app.js?v=20261031g';
 import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
 
 let profiliai = [];
@@ -1224,16 +1224,8 @@ function klientoPatikrinimai(klientas) {
   return patikrinimai.filter((c) => c.user_id === klientas.id);
 }
 
-/** Kurią kliento programą rodyti greitos nuorodos "Istorija" mygtuke —
- * pirmenybė aktyviai (jei kelios aktyvios, naujausiai priskirtai), o jei
- * nė vienos aktyvios nėra, tiesiog naujausiai priskirtai bet kurios
- * būsenos programai. Grąžina null, jei klientas dar neturi nė vienos. */
 function naujausiaKlientoPrograma(clientId) {
-  const savos = priskyrimai.filter((a) => a.client_id === clientId);
-  if (!savos.length) return null;
-  const aktyvios = savos.filter((a) => a.status === 'active');
-  const sarasas = aktyvios.length ? aktyvios : savos;
-  return sarasas.slice().sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at))[0];
+  return naujausiaPrograma(priskyrimai.filter((a) => a.client_id === clientId));
 }
 
 function piesPatikrinimus() {

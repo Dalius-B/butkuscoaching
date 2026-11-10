@@ -162,6 +162,19 @@ export function apskaiciuokSupersetuZenklus(pratimai) {
   return zenklai;
 }
 
+/** Kurią kliento priskirtą programą rodyti greitos "Istorija" nuorodos
+ * mygtuke, kai klientas gali turėti kelias (aktyvią, baigtas, pristabdytas) —
+ * pirmenybė aktyviai (jei kelios, naujausiai priskirtai), o jei nė vienos
+ * aktyvios nėra, tiesiog naujausiai priskirtai bet kurios būsenos. Grąžina
+ * null, jei sąrašas tuščias. sarasas — jau TO VIENO kliento client_programs
+ * eilutės (su `status` ir `assigned_at`), ne visų klientų. */
+export function naujausiaPrograma(sarasas) {
+  if (!sarasas.length) return null;
+  const aktyvios = sarasas.filter((a) => a.status === 'active');
+  const naudoti = aktyvios.length ? aktyvios : sarasas;
+  return naudoti.slice().sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at))[0];
+}
+
 // -----------------------------------------------------------------------------
 //  Pratimų biblioteka
 //  Vienas kanoninis įrašas kiekvienam pratimo pavadinimui (exercise_library),
