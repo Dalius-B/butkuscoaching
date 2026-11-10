@@ -267,6 +267,7 @@ function piesProgramas() {
         <td data-label="">
           <div class="row">
             <a class="btn btn-ghost btn-sm" href="redaguoti.html?id=${encodeURIComponent(p.id)}">Redaguoti</a>
+            <button class="btn btn-ghost btn-sm dubliuoti-programa" type="button" data-id="${esc(p.id)}">Dubliuoti</button>
             <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
           </div>
         </td>
@@ -316,6 +317,22 @@ function piesProgramas() {
 
   $('#forma-programa').addEventListener('submit', sukurkPrograma);
   for (const b of $$('.trinti-programa')) b.addEventListener('click', () => trinkPrograma(b.dataset.id, b.dataset.vardas));
+  for (const b of $$('.dubliuoti-programa')) b.addEventListener('click', () => dubliuokPrograma(b.dataset.id, b));
+}
+
+/** Pilna, nepriklausoma programos kopija (visos dienos ir pratimai) nauju
+ * pavadinimu, visada kaip juodraštis — žr. supabase/programos-dubliavimas.sql.
+ * Iškart nuveda į naujos kopijos redagavimą, kad treneris galėtų ją pervadinti
+ * ir koreguoti, kol originalas ir visi jau priskirti klientai lieka nepaliesti. */
+async function dubliuokPrograma(id, mygtukas) {
+  mygtukas.disabled = true;
+  const { data: naujosId, error } = await db.rpc('duplicate_program', { p_program_id: id });
+  if (error) {
+    mygtukas.disabled = false;
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  location.href = 'redaguoti.html?id=' + encodeURIComponent(naujosId);
 }
 
 async function sukurkPrograma(ev) {

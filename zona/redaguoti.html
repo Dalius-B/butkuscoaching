@@ -107,7 +107,7 @@
 
 <script type="module">
 import {
-  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav,
+  db, $, $$, esc, data, klaidaLT, pranesk, reikiaSesijos, rodykNav, zodis,
   apskaiciuokSupersetuZenklus, ikelkPratimuBiblioteka, issaugokBibliotekoje,
   prijunkBibliotekosUzpildyma, bibliotekosOptGrupes, prijunkBibliotekosPasirinkima,
 } from './app.js?v=20261031g';
@@ -824,6 +824,12 @@ async function trinkPratima(id, vardas) {
 //  nepaliesti.
 // =============================================================================
 function piesPriskyrimus() {
+  // Tik nepriskirtą, programą galintį turėti klientą galima pažymėti
+  // masiniam priskyrimui — jau priskirtam reikia pirma "Atimti", kad
+  // nebūtų dviejų aktyvių kopijų tam pačiam klientui iš tos pačios programos.
+  const galimiMasiniam = klientai.filter((k) =>
+    k.plan_type !== 'tik_uzduotys' && !priskyrimai.some((a) => a.client_id === k.id && a.status !== 'finished'));
+
   const eilutes = klientai.map((k) => {
     // "Tik užduotys" paketo klientui programos neprisiskiriamos — tą pačią
     // taisyklę saugo ir assign_program() duomenų bazėje, čia tik nerodomas
@@ -831,6 +837,7 @@ function piesPriskyrimus() {
     if (k.plan_type === 'tik_uzduotys') {
       return `
         <tr>
+          <td></td>
           <td>
             <strong>${esc(k.full_name || 'Be vardo')}</strong>
             <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
@@ -843,6 +850,7 @@ function piesPriskyrimus() {
     const priskirtas = Boolean(esamas);
     return `
       <tr>
+        <td>${priskirtas ? '' : `<input type="checkbox" class="masinio-priskyrimo-zyma" value="${esc(k.id)}" aria-label="Pažymėti ${esc(k.full_name || k.email || 'klientą')} masiniam priskyrimui">`}</td>
         <td>
           <strong>${esc(k.full_name || 'Be vardo')}</strong>
           <div class="muted" style="font-size:.8125rem">${esc(k.email || '')}</div>
@@ -875,9 +883,17 @@ function piesPriskyrimus() {
         šablonas ir kitų klientų kopijos nesikeičia.
       </p>
       ${klientai.length ? `
+        ${galimiMasiniam.length > 1 ? `
+          <div class="form-actions" style="margin-bottom:var(--s-200)">
+            <button class="btn btn-primary btn-sm" type="button" id="masinio-priskyrimo-mygtukas" disabled>Priskirti pažymėtiems</button>
+            <span class="muted" id="masinio-priskyrimo-kiek" style="font-size:.8125rem"></span>
+          </div>` : ''}
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Klientas</th><th>Būsena</th><th></th></tr></thead>
+            <thead><tr>
+              <th>${galimiMasiniam.length > 1 ? '<input type="checkbox" id="masinio-priskyrimo-visi" aria-label="Pažymėti visus nepriskirtus">' : ''}</th>
+              <th>Klientas</th><th>Būsena</th><th></th>
+            </tr></thead>
             <tbody>${eilutes}</tbody>
           </table>
         </div>` : '<p class="muted">Klientų dar nėra.</p>'}
@@ -886,6 +902,52 @@ function piesPriskyrimus() {
   for (const b of $$('.keisk-priskyrima')) {
     b.addEventListener('click', () => keiskPriskyrima(b.dataset.client, b.dataset.veiksmas, b));
   }
+
+  const zymos = $$('.masinio-priskyrimo-zyma');
+  const masinioMygtukas = $('#masinio-priskyrimo-mygtukas');
+  const kiekEl = $('#masinio-priskyrimo-kiek');
+
+  const atnaujinkMasinioMygtuka = () => {
+    const pazymeta = zymos.filter((z) => z.checked).length;
+    if (masinioMygtukas) masinioMygtukas.disabled = pazymeta === 0;
+    if (kiekEl) kiekEl.textContent = pazymeta ? `Pažymėta: ${pazymeta}` : '';
+  };
+  for (const z of zymos) z.addEventListener('change', atnaujinkMasinioMygtuka);
+
+  $('#masinio-priskyrimo-visi')?.addEventListener('change', (ev) => {
+    for (const z of zymos) z.checked = ev.currentTarget.checked;
+    atnaujinkMasinioMygtuka();
+  });
+
+  masinioMygtukas?.addEventListener('click', () => {
+    const pazymetuId = zymos.filter((z) => z.checked).map((z) => z.value);
+    if (pazymetuId.length) priskirkMasiskai(pazymetuId, masinioMygtukas);
+  });
+}
+
+/** Priskiria tą pačią programos kopiją visiems pažymėtiems klientams vienu
+ * paspaudimu, vietoj "Priskirti kopiją" po vieną — assign_program() ir taip
+ * jau yra viena nepriklausoma užklausa vienam klientui, čia tik paleidžiamos
+ * visos lygiagrečiai ir susumuojamas rezultatas. Dalinė nesėkmė (pvz. vienas
+ * klientas tarp šio sąrašo įkėlimo ir paspaudimo jau gavo kitą priskyrimą)
+ * nesustabdo likusių — pasako, kiek pavyko, ir perkrauna sąrašą, kad būtų
+ * matyti tiksli dabartinė būsena. */
+async function priskirkMasiskai(clientIds, mygtukas) {
+  mygtukas.disabled = true;
+  const pradzia = $('#pr-pradzia')?.value || null;
+
+  const rezultatai = await Promise.all(clientIds.map((clientId) =>
+    db.rpc('assign_program', { p_program_id: programId, p_client_id: clientId, p_starts_on: pradzia })));
+
+  const nepavyko = rezultatai.filter((r) => r.error);
+  if (nepavyko.length === rezultatai.length) {
+    pranesk($('#pranesimas'), klaidaLT(nepavyko[0].error), 'error');
+  } else if (nepavyko.length) {
+    pranesk($('#pranesimas'), `Priskirta ${rezultatai.length - nepavyko.length} iš ${rezultatai.length}. Likusiems nepavyko — pabandyk dar kartą.`, 'error');
+  } else {
+    pranesk($('#pranesimas'), `Priskirta ${rezultatai.length} ${zodis(rezultatai.length, 'klientui', 'klientams', 'klientų')}.`, 'ok');
+  }
+  await perkrauk();
 }
 
 async function keiskPriskyrima(clientId, veiksmas, mygtukas) {
