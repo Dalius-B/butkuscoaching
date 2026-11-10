@@ -10,25 +10,20 @@ export const T = {
   kraunama: 'Kraunamos užduotys',
   labas: (vardas) => (vardas ? `Labas, ${vardas}` : 'Labas'),
 
-  siandien: 'Šiandien',
   siandienosUzduotys: 'Šiandienos užduotys',
   papildomosUzduotys: 'Papildomos užduotys',
-  papildomosPaaiskinimas: 'Neprivalomos, bet duoda papildomų taškų. Dienai baigti jų atlikti nereikia.',
+  papildomosPaaiskinimas: 'Neprivalomos. Jei turi jėgų, padaryk, jei ne, nieko tokio.',
   papildoma: 'Papildoma',
   atlikta: 'Atlikta ✓',
   pazymeti: 'Pažymėti kaip atliktą',
   atsaukti: 'Atšaukti žymėjimą',
   pazanga: 'Pažanga',
-  kalendorius: 'Kalendorius',
-  pasiekimai: 'Pasiekimai',
-  atrakinta: 'Atrakinta',
-  uzrakinta: 'Dar užrakinta',
 
   atlikoIs: (a, is) => `Atlikta ${a} iš ${is}`,
   darLiko: (n) => `Dar liko ${n} ${zodisUzduotis(n)}`,
   visosAtliktos: 'Puiku! Visos šiandienos užduotys atliktos.',
   dienaBaigta: 'Diena baigta!',
-  uzduotisAtlikta: (xp) => `Užduotis atlikta! +${taskai(xp)}`,
+  uzduotisAtlikta: 'Užduotis atlikta!',
   zymejimasAtsauktas: 'Žymėjimas atšauktas',
   pazymeta: 'Pažymėta',
   zidetiVideo: 'Žiūrėti video',
@@ -36,16 +31,33 @@ export const T = {
   videoNaujameLange: 'Atidaryti naujame lange',
   prideti: 'Pridėti',
   sumazinti: 'Sumažinti',
-  surinkai: (xp) => `Tu surinkai ${taskai(xp)}`,
-  siandienNieko: 'Šiandien dar nieko nesurinkai. Pradėk nuo pirmos užduoties.',
 
-  visoXp: 'Iš viso taškų',
-  pilnosDienos: 'Pilnos dienos',
-  atliktosUzduotys: 'Atliktos užduotys',
-  lygis: (n) => `${n} lygis`,
-  iki: (kiek, lygis) => `Dar ${taskai(kiek)} iki ${lygis} lygio`,
-  dienos: (n) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'diena' : (n % 10 === 0 || (n % 100 >= 11 && n % 100 <= 19)) ? 'dienų' : 'dienos'}`,
+  // Savaitės pažanga
+  sisSavaite: 'Ši savaitė',
+  savaiteProc: (p) => `${p}%`,
+  savaiteNauja: 'Nauja savaitė. Pirmas žingsnis šiandien.',
+  savaitesPaaiskinimas: 'Kiek planuotų užduočių jau atlikta šią savaitę. Dalinai atliktos skaičiuojasi dalimi.',
+  savaitesZodis: (p) => (p >= 80 ? 'Puikiai sekasi!' : p >= 50 ? 'Gerai, tęsk toliau.' : 'Svarbu, kad bandai. Kiekvienas žingsnis skaičiuojasi.'),
 
+  // Nuotaika
+  nuotaikaKlausimas: 'Kaip šiandien jautiesi?',
+  nuotaikos: [
+    { v: 1, ikona: '😞', pavadinimas: 'Labai sunku' },
+    { v: 2, ikona: '😕', pavadinimas: 'Sunkoka' },
+    { v: 3, ikona: '😐', pavadinimas: 'Šiaip sau' },
+    { v: 4, ikona: '🙂', pavadinimas: 'Gerai' },
+    { v: 5, ikona: '😄', pavadinimas: 'Puikiai' },
+  ],
+  nuotaikaTekstas: 'Parašyk, jei nori (neprivaloma). Tai matysime tik tu ir Dalius.',
+  nuotaikaIssaugoti: 'Išsaugoti',
+  nuotaikaIssaugota: 'Išsaugota ✓',
+  nuotaikaKlaida: 'Nepavyko išsaugoti. Pabandyk dar kartą.',
+  zinuteNuoDaliaus: 'Žinutė nuo Daliaus',
+
+  // Artimiausios dienos
+  artimiausiosDienos: 'Kas laukia artimiausiomis dienomis',
+  rytoj: 'Rytoj',
+  poilsisZodis: 'Poilsio diena',
 
   tuscia: 'Kol kas užduočių nėra',
   tusciaTekstas: 'Dalius netrukus paruoš tau užduotis. Kai tik jos atsiras, matysi jas čia.',
@@ -53,27 +65,11 @@ export const T = {
   poilsioTekstas: 'Šiai dienai privalomų užduočių nėra. Pailsėk, o rytoj vėl į darbą.',
   tikPapildomos: 'Šiandien privalomų užduočių nėra, bet gali atlikti papildomas.',
 
-  kalendoriausLegenda: {
-    pilna: 'Visos užduotys atliktos',
-    dalinai: 'Atlikta dalis',
-    siandien: 'Šiandien',
-  },
-  ankstesnisMenuo: 'Ankstesnis mėnuo',
-  kitasMenuo: 'Kitas mėnuo',
-
   klaidaIsaugoti: 'Nepavyko išsaugoti žymėjimo. Pabandyk dar kartą.',
   klaidaKrauti: 'Nepavyko įkelti užduočių.',
   neprieigos: 'Ši skiltis tau dar neįjungta. Jei manai, kad tai klaida, parašyk Daliui.',
   bandytiDarKarta: 'Bandyti dar kartą',
 };
-
-/** 1 taškas, 2 taškai, 10 taškų, 21 taškas. */
-export function taskai(n) {
-  const p = n % 10;
-  const pp = Math.floor(n / 10) % 10;
-  const forma = (pp === 1 || p === 0) ? 'taškų' : p === 1 ? 'taškas' : 'taškai';
-  return `${n} ${forma}`;
-}
 
 /** Užduotis / užduotys / užduočių. */
 export function zodisUzduotis(n) {
@@ -141,21 +137,6 @@ export function dienuSuvestine(dienos) {
   return d.map((x) => SAVAITES_DIENOS_TRUMPOS[x]).join(', ');
 }
 
-// -----------------------------------------------------------------------------
-//  Pasiekimai. "rodiklis" nurodo, kurį skaičių lyginti su "tikslas".
-// -----------------------------------------------------------------------------
-export const PASIEKIMAI = [
-  { id: 'pirmas',     ikona: '🌱', pavadinimas: 'Pirmas žingsnis',        aprasas: 'Atlik pirmą užduotį',                rodiklis: 'atliktaViso',      tikslas: 1 },
-  { id: 'diena',      ikona: '⭐', pavadinimas: 'Pirma pilna diena',      aprasas: 'Atlik visas vienos dienos užduotis', rodiklis: 'pilnosDienos',     tikslas: 1 },
-  { id: 'dienos3',    ikona: '🔥', pavadinimas: 'Trys pilnos dienos',     aprasas: 'Turėk 3 pilnas dienas',              rodiklis: 'pilnosDienos',     tikslas: 3 },
-  { id: 'dienos7',    ikona: '🚀', pavadinimas: 'Savaitė pilnų dienų',    aprasas: 'Turėk 7 pilnas dienas',              rodiklis: 'pilnosDienos',     tikslas: 7 },
-  { id: 'dienos14',   ikona: '💪', pavadinimas: 'Dvi savaitės',           aprasas: 'Turėk 14 pilnų dienų',               rodiklis: 'pilnosDienos',     tikslas: 14 },
-  { id: 'dienos30',   ikona: '🏆', pavadinimas: 'Mėnuo pilnų dienų',      aprasas: 'Turėk 30 pilnų dienų',               rodiklis: 'pilnosDienos',     tikslas: 30 },
-  { id: 'xp100',      ikona: '⚡', pavadinimas: 'Pirmi 100 taškų',        aprasas: 'Surink 100 taškų',                   rodiklis: 'visoXp',           tikslas: 100 },
-  { id: 'xp500',      ikona: '💎', pavadinimas: '500 taškų',              aprasas: 'Surink 500 taškų',                   rodiklis: 'visoXp',           tikslas: 500 },
-  { id: 'xp1000',     ikona: '👑', pavadinimas: '1000 taškų',             aprasas: 'Surink 1000 taškų',                  rodiklis: 'visoXp',           tikslas: 1000 },
-  { id: 'papildomos', ikona: '🎯', pavadinimas: 'Ekstra mylia',           aprasas: 'Atlik 10 papildomų užduočių',        rodiklis: 'papildomaAtlikta', tikslas: 10 },
-];
 
 // -----------------------------------------------------------------------------
 //  Trenerio pagalbinės šablonų užduotys (pasirenkamos kuriant klientui užduotį)

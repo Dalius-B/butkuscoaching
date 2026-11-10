@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261019';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261110';
 import {
-  KATEGORIJOS, SABLONAI, taskai, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261019';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas } from './uzduociu-logika.js?v=20261019';
+  T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
+} from './tekstai.js?v=20261110';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261110';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -31,6 +31,10 @@ let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
 let suvestineAtverta = false; // ar išskleista suvestinė "Pagal užduotį"
+import { gaukPaketus, PAKETAI_PASIKEITE, paketai } from './valdymas-paketai.js?v=20261110';
+let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
+let nuotaikaVeikia = true;
+let ipociuDienos = 14;     // kiek dienų rodo įpročių lentelė
 let savaitesPradzia = null; // rodomos savaitės pirmadienis (YYYY-MM-DD)
 
 export async function piesUzduotis(profiliai, savasId) {
@@ -65,16 +69,26 @@ export async function piesUzduotis(profiliai, savasId) {
     savaitesPradzia = null;
     ikelkKliento();
   });
+  await gaukPaketus();
+  if (!piesUzduotis.paketaiKlausomi) {
+    piesUzduotis.paketaiKlausomi = true;
+    document.addEventListener(PAKETAI_PASIKEITE, () => atnaujinkPaketuPasirinkima());
+  }
   await ikelkKliento();
 }
 
 async function ikelkKliento() {
-  const [u, a] = await Promise.all([
+  const [u, a, n] = await Promise.all([
     db.from('client_challenges').select('*').eq('client_id', pasirinktas)
       .order('position', { ascending: true }).order('created_at', { ascending: true }),
     db.from('challenge_completions').select('id, challenge_id, day, xp, amount').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
+    db.from('day_notes').select('id, day, mood, note, coach_reply, coach_replied_at').eq('client_id', pasirinktas)
+      .order('day', { ascending: true }),
   ]);
+  // Jei nuotaikos lentelės dar nėra (SQL nepaleistas), likusi dalis veikia kaip veikusi.
+  nuotaikaVeikia = !n.error;
+  uzrasai = n.data || [];
   if (u.error || a.error) {
     zinok(dbKlaida(u.error || a.error), 'error');
     $('#u-turinys').innerHTML = '';
@@ -97,7 +111,6 @@ function eilutesHtml(sarasas) {
           ${x.target > 1 ? `<div class="muted" style="font-size:.8125rem">Per dieną: ${esc(Number(x.target).toLocaleString('lt-LT'))}${x.unit ? ' ' + esc(x.unit) : ''}, vienas paspaudimas +${esc(Number(x.step).toLocaleString('lt-LT'))}</div>` : ''}
         </td>
         <td>${kat.ikona} ${esc(kat.pavadinimas)}</td>
-        <td>${esc(taskai(x.xp))}</td>
         <td>${esc(dienuSuvestine(x.weekdays))}</td>
         <td>
           <span class="chip ${x.is_bonus ? 'chip-volt' : 'chip-quiet'}">${x.is_bonus ? 'Papildoma' : 'Privaloma'}</span>
@@ -198,7 +211,7 @@ function pieskRezultatus() {
   }
   vieta.innerHTML = `
     <div class="table-wrap"><table>
-      <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Taškai</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
+      <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
       <tbody>${eilutesHtml(rodomos)}</tbody>
     </table></div>`;
   for (const b of $$('.u-red')) b.addEventListener('click', () => { redaguojama = b.dataset.id; pieskKliento(); $('#u-forma').scrollIntoView({ behavior: 'smooth', block: 'center' }); });
@@ -310,7 +323,8 @@ function pieskIstorija() {
     const reikia = eilutes.filter((e) => e.numatyta && !e.u.is_bonus);
     const reikiaPadaryta = reikia.filter((e) => e.atlikta).length;
     const pilna = reikia.length > 0 && reikiaPadaryta === reikia.length;
-    const taskuDiena = eilutes.reduce((n, e) => n + (e.irasas?.xp || 0), 0);
+    const uzrasas = uzrasai.find((n) => n.day === d);
+    const nuotaika = T.nuotaikos.find((n) => n.v === uzrasas?.mood);
     const nieko = !eilutes.length;
     let santrauka;
     if (nieko) santrauka = '<span class="chip chip-quiet">Poilsio diena</span>';
@@ -318,8 +332,8 @@ function pieskIstorija() {
     else if (reikia.length) santrauka = `<span class="chip chip-quiet">Atlikta ${reikiaPadaryta} iš ${reikia.length} ${uzduociu(reikia.length)}</span>`;
     else santrauka = '<span class="chip chip-quiet">Tik papildomos</span>';
     const jau = d === dabar;
-    const turinys = nieko ? '' : `
-      <ul class="u-ist-sarasas">
+    const turinys = `
+      ${nieko ? '' : `<ul class="u-ist-sarasas">
         ${eilutes.map((e) => {
           const dalinai = !e.atlikta && e.kiek > 0;
           let busena;
@@ -332,12 +346,13 @@ function pieskIstorija() {
             ${busena}
           </li>`;
         }).join('')}
-      </ul>`;
+      </ul>`}
+      ${uzrasoHtml(d, uzrasas)}`;
     return `
       <details class="u-ist-diena">
         <summary>
           <span class="u-ist-data">${esc(dataSuDiena(d))}${jau ? ' <span class="muted">(šiandien)</span>' : ''}</span>
-          <span class="u-ist-santrauka">${santrauka}${taskuDiena ? `<span class="muted">${esc(taskai(taskuDiena))}</span>` : ''}</span>
+          <span class="u-ist-santrauka">${nuotaika ? `<span class="u-nuotaika" title="${esc(nuotaika.pavadinimas)}">${nuotaika.ikona}</span>` : ''}${uzrasas?.note || uzrasas?.coach_reply ? '<span title="Yra žinutė">💬</span>' : ''}${santrauka}</span>
         </summary>
         ${turinys}
       </details>`;
@@ -358,6 +373,36 @@ function pieskIstorija() {
     <h3 style="margin:var(--s-300) 0 var(--s-100)">Diena po dienos</h3>
     <div class="u-ist-dienos">${dienuBlokai}</div>`;
   $('.u-ist-suvestine')?.addEventListener('toggle', (e) => { suvestineAtverta = e.target.open; });
+  for (const b of $$('.u-atsakyti')) b.addEventListener('click', () => issiuskAtsakyma(b.dataset.diena));
+}
+
+/** Kliento nuotaika, jo parašyta žinutė ir trenerio atsakymo laukas vienai dienai. */
+function uzrasoHtml(d, u) {
+  if (!nuotaikaVeikia) return '';
+  const n = T.nuotaikos.find((x) => x.v === u?.mood);
+  return `
+    <div class="u-uzrasas">
+      ${n ? `<p><span class="u-nuotaika">${n.ikona}</span> <strong>${esc(n.pavadinimas)}</strong></p>` : '<p class="muted">Nuotaikos klientas neįrašė.</p>'}
+      ${u?.note ? `<blockquote>${esc(u.note)}</blockquote>` : ''}
+      <label class="sr-only" for="atsakymas-${esc(d)}">Tavo žinutė klientui</label>
+      <textarea id="atsakymas-${esc(d)}" maxlength="300" rows="2" placeholder="Trumpa žinutė klientui (iki 300 simbolių)">${esc(u?.coach_reply || '')}</textarea>
+      <div class="row"><button class="btn btn-ghost btn-sm u-atsakyti" type="button" data-diena="${esc(d)}">${u?.coach_reply ? 'Atnaujinti žinutę' : 'Siųsti žinutę'}</button>
+      ${u?.coach_replied_at ? `<span class="muted" style="font-size:.8125rem">Išsiųsta ${esc(dataTrumpa(dataLT(u.coach_replied_at)))}</span>` : ''}</div>
+    </div>`;
+}
+
+async function issiuskAtsakyma(diena, tekstas) {
+  const laukas = $(`#atsakymas-${diena}`);
+  const zinute = (tekstas ?? laukas?.value ?? '').trim();
+  const { error } = await db.rpc('admin_atsakyti', { p_client: pasirinktas, p_day: diena, p_reply: zinute });
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  const esamas = uzrasai.find((n) => n.day === diena);
+  const laikas = zinute ? new Date().toISOString() : null;
+  if (esamas) { esamas.coach_reply = zinute; esamas.coach_replied_at = laikas; }
+  else uzrasai = [...uzrasai, { day: diena, mood: null, note: '', coach_reply: zinute, coach_replied_at: laikas }];
+  zinok(zinute ? 'Žinutė išsiųsta. Klientas ją pamatys savo puslapyje.' : 'Žinutė ištrinta.', 'ok');
+  pieskIstorija();
+  pieskZinute();
 }
 
 
@@ -459,37 +504,195 @@ async function issaugokDiena() {
   await ikelkKliento();
 }
 
-function pieskKliento() {
+
+// -----------------------------------------------------------------------------
+//  Įpročių vaizdas: kaip sekasi vienu žvilgsniu
+// -----------------------------------------------------------------------------
+const procTekstas = (p) => (p === null || p === undefined ? '—' : `${p}%`);
+const spalvaPagalProc = (p) => (p === null ? 'var(--hair-ink)' : p < 50 ? 'var(--danger)' : p < 80 ? 'var(--volt)' : 'var(--ok)');
+
+function ipociuKortele() {
   const dabar = siandienLT();
+  const sia = savaitesPazanga(uzduotys, atlikimai, savPirmadienis(dabar), dabar);
+  const praeita = savaitesPazanga(uzduotys, atlikimai, pridek(savPirmadienis(dabar), -7), dabar);
   const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, dabar);
-  // Paskutinių 14 dienų juosta: pilna / dalinė / praleista.
-  const dienos = [];
-  for (let i = 13; i >= 0; i -= 1) dienos.push(pridek(dabar, -i));
-  const juosta = dienos.map((d) => {
-    const reikia = privalomosDienai(uzduotys, d).length;
-    let klase = 'kal-diena';
-    if (st.pilnos.has(d)) klase += ' pilna';
-    else if (st.dalinos.has(d)) klase += ' dalinai';
-    else if (!reikia) klase += ' ateitis';
-    const wd = new Date(d + 'T00:00:00Z').getUTCDay() || 7;
-    return `<div style="text-align:center;min-width:0"><div class="kal-antraste">${SAVAITES_DIENOS_TRUMPOS[wd]}</div><span class="${klase}" title="${esc(dataTrumpa(d))}">${Number(d.slice(8))}</span></div>`;
+  const v = ipociuVaizdas(uzduotys, atlikimai, ipociuDienos, dabar);
+
+  if (!uzduotys.length) {
+    return `<div class="card"><div class="card-head"><h2>Kaip sekasi</h2></div><p class="muted">Kai klientas turės užduočių ir jas žymės, čia matysi, kas jam sekasi, o kas sunkiau.</p></div>`;
+  }
+
+  // Vidutinė nuotaika paskutinėms 7 dienoms.
+  const nuo = pridek(dabar, -6);
+  const nuotaikos = uzrasai.filter((n) => n.mood && n.day >= nuo && n.day <= dabar).map((n) => n.mood);
+  const vid = nuotaikos.length ? nuotaikos.reduce((a, b) => a + b, 0) / nuotaikos.length : null;
+  const vidIkona = vid ? T.nuotaikos[Math.min(4, Math.max(0, Math.round(vid) - 1))].ikona : '—';
+
+  const kat = v.kategorijos;
+  let isvada = '';
+  if (kat.length >= 2) {
+    const blogiausia = kat[0];
+    const geriausia = kat[kat.length - 1];
+    const vard = (k) => `${KATEGORIJOS[k.kat].ikona} ${KATEGORIJOS[k.kat].pavadinimas}`;
+    isvada = blogiausia.proc < 50
+      ? `Sunkiausiai sekasi: <strong>${esc(vard(blogiausia))}</strong> (${blogiausia.proc}%). Geriausiai: <strong>${esc(vard(geriausia))}</strong> (${geriausia.proc}%).`
+      : `Sekasi gerai. Silpniausia sritis: <strong>${esc(vard(blogiausia))}</strong> (${blogiausia.proc}%), stipriausia: <strong>${esc(vard(geriausia))}</strong> (${geriausia.proc}%).`;
+  } else if (kat.length === 1) {
+    isvada = `<strong>${esc(KATEGORIJOS[kat[0].kat].ikona + ' ' + KATEGORIJOS[kat[0].kat].pavadinimas)}</strong>: ${kat[0].proc}%.`;
+  }
+
+  const kategorijuEilutes = kat.map((k) => {
+    const info = KATEGORIJOS[k.kat] || KATEGORIJOS.iprociai;
+    const rodykle = k.kryptis > 0 ? '<span class="ip-rodykle gera" title="Pagerėjo, palyginti su ankstesne savaite">▲ geriau</span>'
+      : k.kryptis < 0 ? '<span class="ip-rodykle bloga" title="Pablogėjo, palyginti su ankstesne savaite">▼ prasčiau</span>' : '';
+    return `
+      <div class="ip-kat">
+        <span class="ip-kat-pav">${info.ikona} ${esc(info.pavadinimas)}</span>
+        <span class="uzd-juosta uzd-juosta-didele ip-juosta"><i style="width:${k.proc}%;background:${spalvaPagalProc(k.proc)}"></i></span>
+        <strong class="ip-kat-proc">${k.proc}%</strong>
+        ${rodykle}
+        ${k.proc < 50 ? '<span class="chip chip-danger">Reikia dėmesio</span>' : ''}
+      </div>`;
   }).join('');
 
+  const DIENU = ['Pr', 'An', 'Tr', 'Ke', 'Pe', 'Še', 'Se'];
+  const antraste = v.dienos.map((d) => `<span class="ip-d" title="${esc(dataTrumpa(d))}"><i>${DIENU[savaitesDiena(d) - 1]}</i>${Number(d.slice(8))}</span>`).join('');
+  const eilutes = v.eilutes.map((e) => {
+    const langeliai = e.langeliai.map((l) => {
+      const aprasas = { padaryta: 'atlikta', dalinai: 'atlikta dalis', praleista: 'neatlikta', laukia: 'dar neatlikta', nera: 'nenumatyta' }[l.busena];
+      return `<span class="ip-c ${l.busena}" style="--a:${l.dalis || 0}" title="${esc(dataTrumpa(l.d) + ': ' + aprasas)}"></span>`;
+    }).join('');
+    return `
+      <div class="ip-eil${e.u.is_bonus ? ' papildoma' : ''}">
+        <span class="ip-pav" title="${esc(e.u.title)}">${esc(e.u.title)}${e.u.is_bonus ? ' <em>(papild.)</em>' : ''}</span>
+        <span class="ip-proc" style="color:${!e.u.is_bonus && e.proc !== null && e.proc < 50 ? 'var(--danger)' : 'inherit'}">${procTekstas(e.proc)}</span>
+        ${langeliai}
+      </div>`;
+  }).join('');
+
+  const nuotaikuJuosta = nuotaikaVeikia ? `
+    <h3 class="ip-poantraste">Nuotaika</h3>
+    <div class="ip-nuotaikos" style="--n:${v.dienos.length}">
+      ${v.dienos.map((d) => {
+        const u = uzrasai.find((n) => n.day === d);
+        const m = T.nuotaikos.find((n) => n.v === u?.mood);
+        return `<span class="ip-nu" title="${esc(dataTrumpa(d) + (m ? ': ' + m.pavadinimas : ''))}"><b>${m ? m.ikona : '·'}</b>${u?.note ? '<i title="Yra užrašas">💬</i>' : ''}</span>`;
+      }).join('')}
+    </div>` : '<p class="muted" style="font-size:.8125rem;margin-top:var(--s-200)">Nuotaikos funkcija dar neįjungta: Supabase SQL Editor paleisk failą uzduotys-nuotaika-paketai.sql.</p>';
+
+  return `
+    <div class="card">
+      <div class="card-head">
+        <h2>Kaip sekasi</h2>
+        <div class="field row-end" style="min-width:140px">
+          <label for="u-ip-dienos" class="sr-only">Laikotarpis</label>
+          <select id="u-ip-dienos">
+            ${[14, 28].map((n) => `<option value="${n}"${n === ipociuDienos ? ' selected' : ''}>Paskutinės ${n} d.</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+        <div class="uzd-stat"><strong>${procTekstas(sia.proc)}</strong><span>Ši savaitė</span></div>
+        <div class="uzd-stat"><strong>${procTekstas(praeita.proc)}</strong><span>Praėjusi savaitė</span></div>
+        <div class="uzd-stat"><strong>${st.pilnosDienos}</strong><span>Pilnos dienos</span></div>
+        <div class="uzd-stat"><strong>${vidIkona}</strong><span>Nuotaika (7 d.)</span></div>
+      </div>
+      ${isvada ? `<p class="ip-isvada">${isvada}</p>` : ''}
+      ${kategorijuEilutes ? `<div class="ip-kategorijos">${kategorijuEilutes}</div>` : ''}
+      <h3 class="ip-poantraste">Kiekviena užduotis (sunkiausios viršuje)</h3>
+      <div class="ip-lentele-wrap">
+        <div class="ip-lentele" style="--n:${v.dienos.length}">
+          <div class="ip-eil ip-antraste"><span></span><span></span>${antraste}</div>
+          ${eilutes}
+        </div>
+      </div>
+      <div class="ip-legenda">
+        <span><i class="ip-c padaryta"></i> atlikta</span>
+        <span><i class="ip-c dalinai"></i> dalis</span>
+        <span><i class="ip-c praleista"></i> neatlikta</span>
+        <span><i class="ip-c laukia"></i> šiandien dar laukia</span>
+      </div>
+      ${nuotaikuJuosta}
+    </div>`;
+}
+
+// -----------------------------------------------------------------------------
+//  Žinutė klientui (rodoma jo puslapio viršuje)
+// -----------------------------------------------------------------------------
+function pieskZinute() {
+  const vieta = $('#u-zinute-vieta');
+  if (!vieta) return;
+  if (!nuotaikaVeikia) { vieta.innerHTML = ''; return; }
+  const paskutine = [...uzrasai].reverse().find((n) => n.coach_reply);
+  vieta.innerHTML = `
+    <div class="card">
+      <div class="card-head"><h2>Žinutė klientui</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-100);font-size:.875rem">Trumpa žinutė (iki 300 simbolių). Klientas ją mato savo puslapio viršuje septynias dienas. Į konkrečios dienos užrašą gali atsakyti ir žemiau, skiltyje „Ką klientas atliko“.</p>
+      <div class="field">
+        <label for="u-zinute" class="sr-only">Žinutė</label>
+        <textarea id="u-zinute" maxlength="300" rows="2" placeholder="Pavyzdžiui: Labai didžiuojuosi tavo žingsniais!"></textarea>
+      </div>
+      <div class="form-actions" style="margin-top:var(--s-100)">
+        <button class="btn btn-primary btn-sm" type="button" id="u-zinute-siusti">Siųsti</button>
+      </div>
+      ${paskutine ? `<p class="muted" style="margin-top:var(--s-200);font-size:.8125rem">Paskutinė žinutė (${esc(dataTrumpa(paskutine.day))}): „${esc(paskutine.coach_reply)}“</p>` : ''}
+    </div>`;
+  $('#u-zinute-siusti').addEventListener('click', () => {
+    const tekstas = $('#u-zinute').value.trim();
+    if (!tekstas) { zinok('Parašyk žinutę.', 'error'); return; }
+    issiuskAtsakyma(siandienLT(), tekstas);
+  });
+}
+
+// -----------------------------------------------------------------------------
+//  Paketai kliento skiltyje
+// -----------------------------------------------------------------------------
+function atnaujinkPaketuPasirinkima() {
+  const sel = $('#u-paketas');
+  if (!sel) return;
+  const buvo = sel.value;
+  sel.innerHTML = paketai.length
+    ? paketai.map((p) => `<option value="${esc(p.id)}">${esc(p.name)} (${p.items.length} ${uzduociuVard(p.items.length)})</option>`).join('')
+    : '<option value="">Paketų dar nėra</option>';
+  if (buvo && paketai.some((p) => p.id === buvo)) sel.value = buvo;
+  $('#u-paketas-prideti').disabled = !paketai.length;
+}
+
+async function priskirkPaketa() {
+  const id = $('#u-paketas').value;
+  const paketas = paketai.find((p) => p.id === id);
+  if (!paketas) return;
+  const { data: kiek, error } = await db.rpc('admin_priskirti_paketa', { p_client: pasirinktas, p_pack: id });
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  zinok(kiek > 0
+    ? `Paketas „${paketas.name}“ pridėtas: nauja užduočių ${kiek}.`
+    : `Visos paketo „${paketas.name}“ užduotys šiam klientui jau yra.`, 'ok');
+  await ikelkKliento();
+}
+
+async function issaugokKaipPaketa() {
+  const aktyvios = uzduotys.filter((x) => x.active).length;
+  if (!aktyvios) { zinok('Šis klientas neturi įjungtų užduočių, nėra ką išsaugoti.', 'error'); return; }
+  const vardas = (window.prompt(`Kaip pavadinti paketą? Bus išsaugota užduočių: ${aktyvios}.`) || '').trim();
+  if (!vardas) return;
+  const { error } = await db.rpc('admin_issaugoti_paketa', { p_client: pasirinktas, p_name: vardas, p_description: '' });
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  await gaukPaketus(true);
+  atnaujinkPaketuPasirinkima();
+  document.dispatchEvent(new CustomEvent(PAKETAI_PASIKEITE));
+  zinok(`Paketas „${vardas}“ išsaugotas. Jį galima redaguoti skiltyje „Paketai“.`, 'ok');
+}
+
+function pieskKliento() {
+  const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, siandienLT());
   const r = redaguojama ? uzduotys.find((x) => x.id === redaguojama) : null;
   const dienuPasirinkimas = [1, 2, 3, 4, 5, 6, 7].map((d) => `
     <label class="chip-opt"><input type="checkbox" name="u-diena" value="${d}"${(r ? r.weekdays.includes(d) : true) ? ' checked' : ''}><span>${SAVAITES_DIENOS_TRUMPOS[d]}</span></label>`).join('');
 
   $('#u-turinys').innerHTML = `
-    <div class="card">
-      <div class="card-head"><h2>Pažanga</h2></div>
-      <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
-        <div class="uzd-stat"><strong>${st.visoXp}</strong><span>Iš viso taškų</span></div>
-        <div class="uzd-stat"><strong>${st.pilnosDienos}</strong><span>Pilnos dienos</span></div>
-        <div class="uzd-stat"><strong>${st.atliktaViso}</strong><span>Atliktos užduotys</span></div>
-      </div>
-      <p class="muted" style="margin:var(--s-300) 0 var(--s-100);font-size:.8125rem">Paskutinės 14 dienų (geltona: visos užduotys atliktos, rėmelis: atlikta dalis)</p>
-      <div style="display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px">${juosta}</div>
-    </div>
+    ${ipociuKortele(st)}
+
+    <div id="u-zinute-vieta" style="margin-top:var(--s-300)"></div>
 
     <div class="card" style="margin-top:var(--s-300)">
       <div class="card-head"><h2>Savaitės planas</h2></div>
@@ -521,6 +724,19 @@ function pieskKliento() {
         </div>
       </div>
     </dialog>
+
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head"><h2>Užduočių paketai</h2></div>
+      <p class="muted" style="margin-bottom:var(--s-200);font-size:.875rem">Paruoštas užduočių rinkinys vienu paspaudimu. Esamos užduotys nekeičiamos, pridedamos tik tos, kurių kliento dar nėra. Pačius paketus redaguoji skiltyje „Paketai“.</p>
+      <div class="u-paketo-eilute">
+        <div class="field" style="flex:1 1 240px">
+          <label for="u-paketas" class="sr-only">Paketas</label>
+          <select id="u-paketas"></select>
+        </div>
+        <button class="btn btn-primary btn-sm" type="button" id="u-paketas-prideti">Pridėti klientui</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="u-paketas-issaugoti">Išsaugoti šias užduotis kaip paketą</button>
+      </div>
+    </div>
 
     <div class="card" style="margin-top:var(--s-300)">
       <div class="card-head"><h2>Užduotys</h2><span class="row-end muted" id="u-skaicius"></span></div>
@@ -558,10 +774,6 @@ function pieskKliento() {
             </select>
           </div>
           <div class="field">
-            <label for="u-xp">Taškai</label>
-            <input id="u-xp" type="number" min="1" max="500" value="${r?.xp ?? 10}">
-          </div>
-          <div class="field">
             <label for="u-tipas">Tipas</label>
             <select id="u-tipas">
               <option value="0"${r?.is_bonus ? '' : ' selected'}>Privaloma (reikia, kad diena būtų pilna)</option>
@@ -589,7 +801,7 @@ function pieskKliento() {
           </div>
         </div>
         <p class="muted" style="font-size:.8125rem;margin-top:var(--s-100)">
-          Pavyzdžiui, 10 stiklinių vandens: kiekis 10, vienetas „stiklinių“, žingsnis 1. Klientas gali pažymėti 2 stiklines iš ryto, o likusias vėliau. Taškai gaunami proporcingai.
+          Pavyzdžiui, 10 stiklinių vandens: kiekis 10, vienetas „stiklinių“, žingsnis 1. Klientas gali pažymėti 2 stiklines iš ryto, o likusias vėliau.
         </p>
         <div class="field">
           <span class="legend-inline">Kuriomis dienomis</span>
@@ -607,7 +819,6 @@ function pieskKliento() {
     if (!s) return;
     $('#u-pavadinimas').value = s.title;
     $('#u-kategorija').value = s.category;
-    $('#u-xp').value = s.xp;
     $('#u-kiekis').value = s.target || 1;
     $('#u-vienetas').value = s.unit || '';
     $('#u-zingsnis').value = s.step || 1;
@@ -618,6 +829,11 @@ function pieskKliento() {
   for (const b of $$('.u-plano-red')) b.addEventListener('click', () => atidarykDienosRedagavima(Number(b.dataset.diena)));
   $('#u-dienos-uzdaryti').addEventListener('click', () => $('#u-dienos-dialogas').close());
   $('#u-dienos-issaugoti').addEventListener('click', issaugokDiena);
+  atnaujinkPaketuPasirinkima();
+  $('#u-paketas-prideti').addEventListener('click', priskirkPaketa);
+  $('#u-paketas-issaugoti').addEventListener('click', issaugokKaipPaketa);
+  $('#u-ip-dienos')?.addEventListener('change', (e) => { ipociuDienos = Number(e.target.value); pieskKliento(); });
+  pieskZinute();
   prijunkFiltrus();
   pieskRezultatus();
   $('#sav-atgal').addEventListener('click', () => { savaitesPradzia = pridek(savaitesPradzia, -7); pieskIstorija(); });
@@ -629,12 +845,10 @@ async function issaugok(ev) {
   ev.preventDefault();
   const pavadinimas = $('#u-pavadinimas').value.trim();
   const dienos = $$('input[name="u-diena"]:checked').map((i) => Number(i.value));
-  const xp = Number($('#u-xp').value);
   const kiekis = Number($('#u-kiekis').value);
   const zingsnis = Number($('#u-zingsnis').value);
   if (!pavadinimas) { zinok('Įrašyk užduoties pavadinimą.', 'error'); return; }
   if (!dienos.length) { zinok('Pasirink bent vieną savaitės dieną.', 'error'); return; }
-  if (!Number.isInteger(xp) || xp < 1 || xp > 500) { zinok('Taškai turi būti skaičius nuo 1 iki 500.', 'error'); return; }
 
   if (!Number.isInteger(kiekis) || kiekis < 1 || kiekis > 100000) { zinok('Kiekis per dieną turi būti skaičius nuo 1 iki 100 000.', 'error'); return; }
   if (!Number.isInteger(zingsnis) || zingsnis < 1 || zingsnis > kiekis) { zinok('Žingsnis turi būti skaičius nuo 1 iki dienos kiekio.', 'error'); return; }
@@ -653,7 +867,6 @@ async function issaugok(ev) {
     title: pavadinimas,
     description: $('#u-aprasas').value.trim(),
     category: $('#u-kategorija').value,
-    xp,
     is_bonus: $('#u-tipas').value === '1',
     weekdays: dienos,
   };

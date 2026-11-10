@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261031">
+<link rel="stylesheet" href="stilius.css?v=20261110">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -86,6 +86,7 @@
         <button class="tab" role="tab" type="button" data-kortele="kvietimai" aria-selected="false">Kvietimai</button>
         <button class="tab" role="tab" type="button" data-kortele="patikrinimai" aria-selected="false">Patikrinimai</button>
         <button class="tab" role="tab" type="button" data-kortele="uzduotys" aria-selected="false">Užduotys</button>
+        <button class="tab" role="tab" type="button" data-kortele="paketai" aria-selected="false">Paketai</button>
         <button class="tab" role="tab" type="button" data-kortele="pratimu-sarasas" aria-selected="false">Pratimų sąrašas</button>
         <button class="tab" role="tab" type="button" data-kortele="biblioteka" aria-selected="false">Biblioteka</button>
         <button class="tab" role="tab" type="button" data-kortele="atsiliepimai" aria-selected="false">Atsiliepimai</button>
@@ -98,6 +99,7 @@
       <section id="kortele-kvietimai" hidden></section>
       <section id="kortele-patikrinimai" hidden></section>
       <section id="kortele-uzduotys" hidden></section>
+      <section id="kortele-paketai" hidden></section>
       <section id="kortele-pratimu-sarasas" hidden></section>
       <section id="kortele-biblioteka" hidden></section>
       <section id="kortele-atsiliepimai" hidden></section>
@@ -121,8 +123,9 @@ import {
   ikelkPratimuBiblioteka, issaugokBibliotekoje, prijunkBibliotekosUzpildyma, tasPatsPratimas,
   bibliotekosOptGrupes, prijunkBibliotekosPasirinkima, KATEGORIJU_PAVADINIMAI,
   ikelkKlientoPastaba, issaugokKlientoPastaba, naujausiaPrograma,
-} from './app.js?v=20261031g';
-import { piesUzduotis } from './valdymas-uzduotys.js?v=20261031';
+} from './app.js?v=20261110';
+import { piesUzduotis } from './valdymas-uzduotys.js?v=20261110';
+import { piesPaketus } from './valdymas-paketai.js?v=20261110';
 
 let profiliai = [];
 let savasId = null;
@@ -236,6 +239,7 @@ async function perkrauk() {
   piesKvietimus();
   piesPatikrinimus();
   piesUzduotis(profiliai, savasId);
+  piesPaketus();
   piesBiblioteka();
   piesAtsiliepimus();
 }
@@ -244,7 +248,7 @@ function rodykKortele(vardas) {
   for (const t of $$('.tab')) {
     t.setAttribute('aria-selected', String(t.dataset.kortele === vardas));
   }
-  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'pratimu-sarasas', 'biblioteka', 'atsiliepimai']) {
+  for (const k of ['programos', 'klientai', 'kvietimai', 'patikrinimai', 'uzduotys', 'paketai', 'pratimu-sarasas', 'biblioteka', 'atsiliepimai']) {
     $('#kortele-' + k).hidden = k !== vardas;
   }
 }

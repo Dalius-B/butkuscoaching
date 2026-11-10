@@ -784,3 +784,118 @@ dialog .video-wrap { margin-top: 0; }
 .u-dienos-sarasas li:last-child { border-bottom: 0; }
 .u-dienos-sarasas .check-opt { flex: 1 1 260px; }
 #u-dienos-dialogas { margin: auto; }
+
+/* =============================================================================
+   Supaprastintas Užduočių puslapis: savaitės procentas, nuotaika, artimiausios dienos
+   ============================================================================= */
+.uzd-hero, .uzd-baneris, .uzd-vienas { max-width: 720px; margin-inline: auto; }
+.uzd-vienas { display: flex; flex-direction: column; gap: var(--s-300); margin-top: var(--s-300); }
+
+.uzd-savaite { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-100); }
+.uzd-savaite-virsus { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-100); font-weight: 600; }
+.uzd-savaite-virsus strong { font-size: 2.25rem; line-height: 1; font-weight: 800; font-stretch: 108%; color: var(--volt); }
+.sav-juosta { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: var(--s-100); }
+.sav-diena { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--soft-paper); }
+.sav-zenklas {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(232,232,227,0.28); font-weight: 800; color: var(--ink);
+}
+.sav-diena.pilna .sav-zenklas { background: var(--volt); box-shadow: none; }
+.sav-diena.dalinai .sav-zenklas { box-shadow: inset 0 0 0 2px var(--volt); }
+.sav-diena.poilsis .sav-zenklas, .sav-diena.ateitis .sav-zenklas { opacity: 0.35; }
+.sav-diena.siandien .sav-zenklas { outline: 2px solid var(--paper); outline-offset: 2px; }
+
+.uzd-zinute {
+  display: flex; gap: var(--s-200); align-items: flex-start; padding: var(--s-200) var(--s-300);
+  background: var(--volt); color: var(--ink); border-radius: var(--r-lg);
+}
+.uzd-zinute-ikona { font-size: 1.5rem; line-height: 1.2; }
+.uzd-zinute strong { display: block; font-weight: 800; font-stretch: 106%; text-transform: uppercase; font-size: 0.8125rem; letter-spacing: 0.06em; }
+.uzd-zinute p { margin: var(--s-50) 0; font-size: 1.0625rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.uzd-zinute .muted { color: rgba(16,16,16,0.6); font-size: 0.8125rem; }
+
+.nuotaika h2 { font-size: 1.125rem; }
+.nuotaika-eilute { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-75); margin-top: var(--s-200); }
+.nuotaika-mygtukas {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px;
+  padding: var(--s-100) 2px; min-height: 76px; border-radius: var(--r-md); background: var(--white);
+  box-shadow: inset 0 0 0 1px var(--hair-ink);
+  transition: background-color 160ms var(--ease-out), scale 160ms var(--ease-out);
+}
+.nuotaika-mygtukas:active { scale: 0.96; }
+.nuotaika-mygtukas.pasirinkta { background: var(--volt); box-shadow: inset 0 0 0 2px var(--ink); }
+.nuotaika-ikona { font-size: 1.75rem; line-height: 1.1; }
+.nuotaika-pav { font-size: 0.6875rem; font-weight: 600; line-height: 1.15; text-align: center; color: var(--ink-soft); }
+.nuotaika-veiksmai { display: flex; align-items: center; gap: var(--s-100); margin-top: var(--s-100); }
+.nuotaika textarea { min-height: 84px; }
+
+.art-blokas summary { cursor: pointer; font-weight: 700; font-stretch: 100%; padding: var(--s-75) var(--s-50); min-height: 44px; display: flex; align-items: center; }
+.art-dienos { display: flex; flex-direction: column; gap: var(--s-200); padding: var(--s-100) var(--s-50) var(--s-100); border-top: 1px solid var(--hair-ink); margin-top: var(--s-75); }
+.art-diena h3 { font-size: 0.9375rem; text-transform: none; letter-spacing: 0; font-weight: 700; font-stretch: 100%; line-height: 1.3; }
+.art-diena h3 .muted { font-weight: 400; font-size: 0.8125rem; }
+.art-diena ul { margin-top: var(--s-50); display: flex; flex-direction: column; gap: 4px; }
+.art-diena li { font-size: 0.9375rem; line-height: 1.35; padding-left: var(--s-200); position: relative; }
+.art-diena li::before { content: '•'; position: absolute; left: 4px; color: var(--ink-soft); }
+.art-diena p { font-size: 0.875rem; margin-top: 2px; }
+
+@media (max-width: 420px) {
+  .nuotaika-pav { font-size: 0.625rem; }
+}
+
+/* =============================================================================
+   Trenerio skydelis: įpročių vaizdas, nuotaika, paketai
+   ============================================================================= */
+.ip-isvada { margin: var(--s-200) 0 var(--s-100); font-size: 1rem; line-height: 1.5; }
+.ip-kategorijos { display: flex; flex-direction: column; gap: var(--s-100); margin-top: var(--s-100); }
+.ip-kat { display: grid; grid-template-columns: minmax(120px, 170px) 1fr 52px 84px 132px; align-items: center; gap: var(--s-100); }
+.ip-kat-pav { font-weight: 600; }
+.ip-juosta { display: block; height: 14px; background: rgba(16,16,16,0.1); }
+.ip-juosta i { display: block; height: 100%; border-radius: var(--r-pill); }
+.ip-kat-proc { text-align: right; font-variant-numeric: tabular-nums; }
+.ip-rodykle { font-size: 0.75rem; font-weight: 700; white-space: nowrap; }
+.ip-rodykle.gera { color: var(--ok); }
+.ip-rodykle.bloga { color: var(--danger); }
+.ip-poantraste { margin: var(--s-300) 0 var(--s-100); font-size: 0.9375rem; text-transform: none; letter-spacing: 0; font-weight: 700; font-stretch: 100%; }
+
+.ip-lentele-wrap { overflow-x: auto; padding-bottom: var(--s-50); }
+.ip-lentele { min-width: max-content; display: flex; flex-direction: column; gap: 4px; }
+.ip-eil { display: grid; grid-template-columns: minmax(170px, 260px) 44px repeat(var(--n), 22px); gap: 4px; align-items: center; }
+.ip-pav { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; }
+.ip-pav em { font-style: normal; color: var(--ink-soft); font-size: 0.75rem; }
+.ip-eil.papildoma .ip-pav { color: var(--ink-soft); }
+.ip-proc { text-align: right; font-weight: 700; font-size: 0.8125rem; font-variant-numeric: tabular-nums; padding-right: 4px; }
+.ip-antraste { font-size: 0.6875rem; color: var(--ink-soft); font-weight: 600; }
+.ip-d { text-align: center; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ip-d i { display: block; font-style: normal; font-size: 0.5625rem; text-transform: uppercase; opacity: 0.7; }
+.ip-c { display: block; width: 22px; height: 22px; border-radius: 5px; background: rgba(16,16,16,0.06); }
+.ip-c.padaryta { background: var(--ok); }
+.ip-c.dalinai { background: var(--volt); }
+.ip-c.praleista { background: rgba(179,38,30,0.55); }
+.ip-c.laukia { background: transparent; box-shadow: inset 0 0 0 2px rgba(16,16,16,0.25); }
+.ip-c.nera { background: rgba(16,16,16,0.04); }
+.ip-legenda { display: flex; flex-wrap: wrap; gap: var(--s-100) var(--s-300); margin-top: var(--s-200); font-size: 0.8125rem; color: var(--ink-soft); }
+.ip-legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.ip-legenda .ip-c { width: 14px; height: 14px; border-radius: 3px; }
+
+.ip-nuotaikos { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 4px; }
+.ip-nu { display: flex; flex-direction: column; align-items: center; position: relative; min-height: 34px; }
+.ip-nu b { font-weight: 400; font-size: 1.25rem; line-height: 1.3; }
+.ip-nu i { font-style: normal; font-size: 0.625rem; position: absolute; right: 0; top: -2px; }
+
+.u-nuotaika { font-size: 1.25rem; line-height: 1; }
+.u-uzrasas { padding: var(--s-100) var(--s-200) var(--s-200); border-top: 1px solid var(--hair-ink); display: flex; flex-direction: column; gap: var(--s-75); }
+.u-uzrasas blockquote { margin: 0; padding: var(--s-100) var(--s-200); background: var(--surface); border-radius: var(--r-md); font-size: 0.9375rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.u-uzrasas textarea { width: 100%; font: inherit; border: 1px solid rgba(16,16,16,0.2); border-radius: var(--r-sm); padding: var(--s-100); background: var(--white); resize: vertical; }
+
+.u-paketo-eilute { display: flex; flex-wrap: wrap; gap: var(--s-100); align-items: flex-start; }
+.pi-turinys { padding: var(--s-100) var(--s-200) var(--s-200); border-top: 1px solid var(--hair-ink); display: flex; flex-direction: column; gap: var(--s-200); }
+.pi-forma { background: var(--surface); border-radius: var(--r-md); padding: var(--s-200); }
+.pi-forma h4 { margin-bottom: var(--s-100); font-size: 0.9375rem; }
+
+@media (max-width: 620px) {
+  .ip-kat { grid-template-columns: 1fr 52px; }
+  .ip-kat .ip-juosta { grid-column: 1 / -1; order: 3; }
+  .ip-kat .ip-rodykle, .ip-kat .chip { grid-column: 1 / -1; order: 4; justify-self: start; }
+  .ip-eil { grid-template-columns: 130px 40px repeat(var(--n), 20px); }
+  .ip-c { width: 20px; height: 20px; }
+}
