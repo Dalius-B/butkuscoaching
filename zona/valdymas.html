@@ -1224,6 +1224,18 @@ function klientoPatikrinimai(klientas) {
   return patikrinimai.filter((c) => c.user_id === klientas.id);
 }
 
+/** Kurią kliento programą rodyti greitos nuorodos "Istorija" mygtuke —
+ * pirmenybė aktyviai (jei kelios aktyvios, naujausiai priskirtai), o jei
+ * nė vienos aktyvios nėra, tiesiog naujausiai priskirtai bet kurios
+ * būsenos programai. Grąžina null, jei klientas dar neturi nė vienos. */
+function naujausiaKlientoPrograma(clientId) {
+  const savos = priskyrimai.filter((a) => a.client_id === clientId);
+  if (!savos.length) return null;
+  const aktyvios = savos.filter((a) => a.status === 'active');
+  const sarasas = aktyvios.length ? aktyvios : savos;
+  return sarasas.slice().sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at))[0];
+}
+
 function piesPatikrinimus() {
   const klientai = profiliai.filter((p) => p.id !== savasId);
 
@@ -1313,10 +1325,17 @@ async function rodykKlientoPatikrinimus(clientId) {
     </div>`).join('');
 
   const esamaPastaba = await ikelkKlientoPastaba(clientId);
+  const programa = naujausiaKlientoPrograma(clientId);
 
   $('#patikrinimu-detale').innerHTML = `
     <div class="page-head" style="margin-top:var(--s-300);margin-bottom:0">
-      <h2>${esc(klientas.full_name || klientas.email)}</h2>
+      <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--s-100)">
+        <h2 style="margin:0">${esc(klientas.full_name || klientas.email)}</h2>
+        <div class="row" style="gap:var(--s-100)">
+          <a class="btn btn-ghost btn-sm" href="klientas.html?id=${encodeURIComponent(clientId)}">Profilis</a>
+          ${programa ? `<a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(programa.id)}">Istorija</a>` : ''}
+        </div>
+      </div>
       <p>${savi.length} ${zodis(savi.length, 'ataskaita', 'ataskaitos', 'ataskaitų')}.</p>
     </div>
     <form id="forma-trenerio-pastaba" class="card" style="margin-top:var(--s-200)" novalidate>
