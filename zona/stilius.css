@@ -953,3 +953,13 @@ dialog .video-wrap { margin-top: 0; }
 .u-pak summary::before { margin-top: 2px; }
 
 .uzd-hero .uzd-mazas { color: var(--ink-soft); }
+
+/* Žinutė nuo trenerio: mygtukai ir kliento atsakymas */
+.uzd-zinute-turinys { flex: 1; min-width: 0; }
+.uzd-zinute-veiksmai { display: flex; flex-wrap: wrap; gap: var(--s-75); margin-top: var(--s-100); }
+.uzd-zinute .btn-ghost { border-color: rgba(16,16,16,0.4); color: var(--ink); }
+.uzd-zinute .btn-ghost:hover:not([disabled]) { background: rgba(16,16,16,0.08); border-color: var(--ink); }
+.uzd-zinute .btn-primary { background: var(--ink); color: var(--paper); box-shadow: none; }
+.uzd-zinute-atsakymas { margin-top: var(--s-100); }
+.uzd-zinute-atsakymas textarea { width: 100%; font: inherit; border: 1px solid rgba(16,16,16,0.3); border-radius: var(--r-sm); padding: var(--s-100); background: var(--white); resize: vertical; }
+.u-kliento-atsakymas { margin: var(--s-100) 0 0; padding: var(--s-100) var(--s-200); background: var(--surface); border-left: 3px solid var(--volt); border-radius: var(--r-sm); font-size: 0.9375rem; overflow-wrap: anywhere; }

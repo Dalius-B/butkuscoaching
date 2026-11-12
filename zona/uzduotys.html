@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261113">
+<link rel="stylesheet" href="stilius.css?v=20261114">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261113';
+} from './app.js?v=20261114';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261113';
+} from './tekstai.js?v=20261114';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261113';
+} from './uzduociu-logika.js?v=20261114';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -97,7 +97,9 @@ let atlikimai = [];
 let uzrasai = [];            // nuotaikos ir trenerio žinutės (paskutinės dienos)
 let nuotaikaVeikia = true;   // false, jei lentelės dar nėra (SQL nepaleistas)
 let laikinasTekstas = null;  // dar neišsaugotas nuotaikos tekstas, kad jo nepaliktų perpiešiant
-let nuotaikaBusena = '';     // 'issaugota' | 'klaida' | ''
+let nuotaikaBusena = '';
+let atsakymasAtidarytas = false;  // ar atidarytas atsakymo Daliui laukas
+let atsakymoTekstas = '';     // 'issaugota' | 'klaida' | ''
 let sesijosId = null;
 let bukle = false; // ar šiuo metu vyksta įrašymas
 let toastLaikas = null;
@@ -173,7 +175,7 @@ async function ikelk(tyliai = false) {
       .gte('day', pridek(siandien, -40))
       .order('day', { ascending: true }),
     db.from('day_notes')
-      .select('id, day, mood, note, coach_reply, coach_replied_at')
+      .select('*')
       .gte('day', pridek(siandien, -14))
       .order('day', { ascending: true }),
   ]);
@@ -303,6 +305,15 @@ function pieskVisa() {
   for (const b of $$('.nuotaika-mygtukas')) {
     b.addEventListener('click', () => issaugokNuotaika({ mood: Number(b.dataset.v) }));
   }
+  $('#zinute-perskaiciau')?.addEventListener('click', (e) => zinutesRpc('perskaiciau_zinute', { p_day: e.currentTarget.dataset.diena }, T.zinuteNebera));
+  $('#zinute-atsakyti')?.addEventListener('click', () => { atsakymasAtidarytas = true; pieskVisa(); $('#zinute-atsakymo-tekstas')?.focus(); });
+  $('#zinute-atsaukti')?.addEventListener('click', () => { atsakymasAtidarytas = false; atsakymoTekstas = ''; pieskVisa(); });
+  $('#zinute-atsakymo-tekstas')?.addEventListener('input', (e) => { atsakymoTekstas = e.target.value; });
+  $('#zinute-siusti')?.addEventListener('click', (e) => {
+    const tekstas = ($('#zinute-atsakymo-tekstas').value || '').trim();
+    if (!tekstas) { rodykToast(T.atsakymoLaukas, true); return; }
+    zinutesRpc('atsakyti_treneriui', { p_day: e.currentTarget.dataset.diena, p_text: tekstas }, T.atsakymasIssiustas);
+  });
   $('#nuotaika-tekstas')?.addEventListener('input', (e) => { laikinasTekstas = e.target.value; });
   $('#nuotaika-issaugoti')?.addEventListener('click', () => {
     issaugokNuotaika({ note: ($('#nuotaika-tekstas').value || '').trim() });
@@ -313,19 +324,55 @@ function pieskVisa() {
 //  Žinutė nuo trenerio, nuotaika, artimiausios dienos
 // -----------------------------------------------------------------------------
 function zinuteHtml() {
-  // Naujausia trenerio žinutė per paskutines 7 dienas.
+  // Naujausia dar neperskaityta trenerio žinutė per paskutines 7 dienas.
   const ribot = pridek(siandien, -7);
-  const zinute = [...uzrasai].reverse().find((n) => n.coach_reply && n.day >= ribot);
+  const zinute = [...uzrasai].reverse().find((n) => n.coach_reply && !n.coach_reply_read_at && n.day >= ribot);
   if (!zinute) return '';
   return `
     <section class="uzd-zinute" aria-label="${esc(T.zinuteNuoDaliaus)}">
       <span class="uzd-zinute-ikona" aria-hidden="true">💬</span>
-      <div>
+      <div class="uzd-zinute-turinys">
         <strong>${esc(T.zinuteNuoDaliaus)}</strong>
         <p>${esc(zinute.coach_reply)}</p>
         <span class="muted">${esc(dataTrumpa(zinute.day))}</span>
+        ${atsakymasAtidarytas ? `
+        <div class="uzd-zinute-atsakymas">
+          <label for="zinute-atsakymo-tekstas" class="sr-only">${esc(T.atsakymoLaukas)}</label>
+          <textarea id="zinute-atsakymo-tekstas" maxlength="300" rows="3" placeholder="${esc(T.atsakymoLaukas)}">${esc(atsakymoTekstas)}</textarea>
+          <div class="uzd-zinute-veiksmai">
+            <button class="btn btn-primary btn-sm" type="button" id="zinute-siusti" data-diena="${esc(zinute.day)}">${esc(T.atsakymasSiusti)}</button>
+            <button class="btn btn-ghost btn-sm" type="button" id="zinute-atsaukti">Atšaukti</button>
+          </div>
+        </div>` : `
+        <div class="uzd-zinute-veiksmai">
+          <button class="btn btn-ghost btn-sm" type="button" id="zinute-perskaiciau" data-diena="${esc(zinute.day)}">${esc(T.perskaiciau)}</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="zinute-atsakyti">${esc(T.atsakyti)}</button>
+        </div>`}
       </div>
     </section>`;
+}
+
+async function zinutesRpc(funkcija, argumentai, pavykus) {
+  if (bukle) return;
+  bukle = true;
+  try {
+    const { error } = await db.rpc(funkcija, argumentai);
+    if (error) throw error;
+    const eilute = uzrasai.find((n) => n.day === argumentai.p_day);
+    if (eilute) {
+      eilute.coach_reply_read_at = new Date().toISOString();
+      if (funkcija === 'atsakyti_treneriui') eilute.client_reply = argumentai.p_text;
+    }
+    atsakymasAtidarytas = false;
+    atsakymoTekstas = '';
+    rodykToast(pavykus);
+  } catch (klaida) {
+    const trukstaFunkcijos = klaida?.code === 'PGRST202' || String(klaida?.message || '').includes('Could not find the function');
+    rodykToast(trukstaFunkcijos ? T.funkcijaNeijungta : (klaidaLT(klaida) || T.klaidaIsaugoti), true);
+  } finally {
+    bukle = false;
+  }
+  pieskVisa();
 }
 
 function nuotaikaHtml() {
@@ -359,7 +406,7 @@ async function issaugokNuotaika(dalis) {
   if (bukle) return;
   bukle = true;
   nuotaikaBusena = '';
-  const stulpeliai = 'id, day, mood, note, coach_reply, coach_replied_at';
+  const stulpeliai = '*';
   try {
     const keisti = (id) => db.from('day_notes').update(dalis).eq('id', id).select(stulpeliai).single();
     const esamas = uzrasai.find((n) => n.day === siandien && n.id);
