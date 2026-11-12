@@ -161,7 +161,15 @@ create policy "task_pack_items_admin_all" on public.task_pack_items
 
 -- Paketo užduotys nukopijuojamos klientui. Jau esančios (to paties pavadinimo)
 -- praleidžiamos, kad dukart paspaudus nesusidubliuotų. Grąžina, kiek pridėta.
-create or replace function public.admin_priskirti_paketa(p_client uuid, p_pack uuid)
+-- p_weekdays: jei nurodyta, VISOMS pridedamoms užduotims nustato šias savaitės
+-- dienas (1 = pirmadienis ... 7 = sekmadienis). Jei null, naudojamos dienos,
+-- kurios nurodytos pačiame pakete.
+-- Senoji dviejų parametrų versija pašalinama, kad nekiltų dviprasmybių.
+drop function if exists public.admin_priskirti_paketa(uuid, uuid);
+
+create or replace function public.admin_priskirti_paketa(
+  p_client uuid, p_pack uuid, p_weekdays smallint[] default null
+)
 returns integer
 language plpgsql
 security definer
@@ -177,6 +185,12 @@ begin
   if not exists (select 1 from public.profiles where id = p_client) then
     raise exception 'Klientas nerastas' using errcode = 'P0002';
   end if;
+  if p_weekdays is not null and (
+       cardinality(p_weekdays) = 0
+       or not (p_weekdays <@ array[1,2,3,4,5,6,7]::smallint[])
+     ) then
+    raise exception 'Netinkamos savaitės dienos' using errcode = 'P0001';
+  end if;
 
   select coalesce(max(position), -1) + 1 into v_start
     from public.client_challenges where client_id = p_client;
@@ -185,7 +199,7 @@ begin
     insert into public.client_challenges
       (client_id, title, description, category, target, unit, step, is_bonus, weekdays, video_url, position)
     select p_client, i.title, i.description, i.category, i.target, i.unit, i.step,
-           i.is_bonus, i.weekdays, i.video_url,
+           i.is_bonus, coalesce(p_weekdays, i.weekdays), i.video_url,
            v_start + (row_number() over (order by i.position, i.created_at))::integer - 1
       from public.task_pack_items i
      where i.pack_id = p_pack
@@ -231,9 +245,9 @@ begin
 end;
 $$;
 
-revoke all on function public.admin_priskirti_paketa(uuid, uuid)       from public;
+revoke all on function public.admin_priskirti_paketa(uuid, uuid, smallint[]) from public;
 revoke all on function public.admin_issaugoti_paketa(uuid, text, text) from public;
-grant execute on function public.admin_priskirti_paketa(uuid, uuid)       to authenticated;
+grant execute on function public.admin_priskirti_paketa(uuid, uuid, smallint[]) to authenticated;
 grant execute on function public.admin_issaugoti_paketa(uuid, text, text) to authenticated;
 
 -- -----------------------------------------------------------------------------
