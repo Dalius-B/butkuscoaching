@@ -613,9 +613,11 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
    UŽDUOTYS (uzduotys.html)
    ============================================================================= */
 .uzd-hero {
-  background: var(--ink); color: var(--paper); border-radius: var(--r-lg);
+  background: var(--surface); color: var(--ink); border-radius: var(--r-lg);
+  box-shadow: 0 1px 2px rgba(16,16,16,0.06), 0 8px 24px -16px rgba(16,16,16,0.30);
   padding: var(--s-400); display: flex; flex-direction: column; gap: var(--s-200);
 }
+.uzd-hero .label { color: var(--ink-soft); }
 .uzd-hero h1 { font-size: clamp(1.75rem, 4vw, 2.5rem); }
 .uzd-lygis { display: flex; flex-direction: column; gap: var(--s-75); }
 .uzd-lygis-virsus { display: flex; justify-content: space-between; gap: var(--s-100); font-size: 0.9375rem; }
@@ -793,17 +795,17 @@ dialog .video-wrap { margin-top: 0; }
 
 .uzd-savaite { display: flex; flex-direction: column; gap: var(--s-75); margin-top: var(--s-100); }
 .uzd-savaite-virsus { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-100); font-weight: 600; }
-.uzd-savaite-virsus strong { font-size: 2.25rem; line-height: 1; font-weight: 800; font-stretch: 108%; color: var(--volt); }
+.uzd-savaite-virsus strong { font-size: 2.25rem; line-height: 1; font-weight: 800; font-stretch: 108%; color: var(--ink); }
 .sav-juosta { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: var(--s-100); }
-.sav-diena { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--soft-paper); }
+.sav-diena { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; color: var(--ink-soft); }
 .sav-zenklas {
   width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  box-shadow: inset 0 0 0 2px rgba(232,232,227,0.28); font-weight: 800; color: var(--ink);
+  box-shadow: inset 0 0 0 2px rgba(16,16,16,0.22); font-weight: 800; color: var(--ink);
 }
 .sav-diena.pilna .sav-zenklas { background: var(--volt); box-shadow: none; }
-.sav-diena.dalinai .sav-zenklas { box-shadow: inset 0 0 0 2px var(--volt); }
+.sav-diena.dalinai .sav-zenklas { box-shadow: inset 0 0 0 3px var(--volt); background: rgba(255,221,68,0.25); }
 .sav-diena.poilsis .sav-zenklas, .sav-diena.ateitis .sav-zenklas { opacity: 0.35; }
-.sav-diena.siandien .sav-zenklas { outline: 2px solid var(--paper); outline-offset: 2px; }
+.sav-diena.siandien .sav-zenklas { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 .uzd-zinute {
   display: flex; gap: var(--s-200); align-items: flex-start; padding: var(--s-200) var(--s-300);
@@ -949,3 +951,5 @@ dialog .video-wrap { margin-top: 0; }
 .u-pak summary { align-items: flex-start; flex-wrap: nowrap; }
 .u-pak-galva .u-ist-data { flex: 0 0 auto; }
 .u-pak summary::before { margin-top: 2px; }
+
+.uzd-hero .uzd-mazas { color: var(--ink-soft); }

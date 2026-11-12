@@ -37,7 +37,6 @@ export const T = {
   savaiteProc: (p) => `${p}%`,
   savaiteNauja: 'Nauja savaitė. Pirmas žingsnis šiandien.',
   savaitesPaaiskinimas: 'Kiek planuotų užduočių jau atlikta šią savaitę. Dalinai atliktos skaičiuojasi dalimi.',
-  savaitesZodis: (p) => (p >= 80 ? 'Puikiai sekasi!' : p >= 50 ? 'Gerai, tęsk toliau.' : 'Svarbu, kad bandai. Kiekvienas žingsnis skaičiuojasi.'),
 
   // Nuotaika
   nuotaikaKlausimas: 'Kaip šiandien jautiesi?',

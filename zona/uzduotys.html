@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261112">
+<link rel="stylesheet" href="stilius.css?v=20261113">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261112';
+} from './app.js?v=20261113';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261112';
+} from './tekstai.js?v=20261113';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261112';
+} from './uzduociu-logika.js?v=20261113';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -226,7 +226,7 @@ function pieskVisa() {
     </span>`).join('');
 
   const hero = `
-    <section class="uzd-hero on-ink" aria-labelledby="uzd-antraste">
+    <section class="uzd-hero" aria-labelledby="uzd-antraste">
       <p class="label">${esc(dataSuDiena(siandien))}</p>
       <h1 id="uzd-antraste">${esc(T.labas(vardas))}</h1>
       ${uzduotys.length ? `
@@ -236,10 +236,9 @@ function pieskVisa() {
           ${sav.proc !== null ? `<strong>${esc(T.savaiteProc(sav.proc))}</strong>` : ''}
         </div>
         ${sav.proc !== null ? `
-          <div class="uzd-juosta" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${sav.proc}" aria-label="${esc(T.sisSavaite)}">
+          <div class="uzd-juosta uzd-juosta-didele" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${sav.proc}" aria-label="${esc(T.sisSavaite)}">
             <i style="width:${sav.proc}%"></i>
-          </div>
-          <span class="uzd-mazas">${esc(T.savaitesZodis(sav.proc))}</span>` : `<span class="uzd-mazas">${esc(T.savaiteNauja)}</span>`}
+          </div>` : `<span class="uzd-mazas">${esc(T.savaiteNauja)}</span>`}
         <div class="sav-juosta" aria-hidden="false">${savaitesTaskai}</div>
       </div>` : ''}
     </section>`;
@@ -360,19 +359,35 @@ async function issaugokNuotaika(dalis) {
   if (bukle) return;
   bukle = true;
   nuotaikaBusena = '';
+  const stulpeliai = 'id, day, mood, note, coach_reply, coach_replied_at';
   try {
-    const eilute = { client_id: sesijosId, day: siandien, ...dalis };
-    const { data: irasas, error } = await db.from('day_notes')
-      .upsert(eilute, { onConflict: 'client_id,day' })
-      .select('id, day, mood, note, coach_reply, coach_replied_at')
-      .single();
-    if (error) throw error;
+    const keisti = (id) => db.from('day_notes').update(dalis).eq('id', id).select(stulpeliai).single();
+    const esamas = uzrasai.find((n) => n.day === siandien && n.id);
+    let atsakas;
+    if (esamas) {
+      atsakas = await keisti(esamas.id);
+    } else {
+      atsakas = await db.from('day_notes')
+        .insert({ client_id: sesijosId, day: siandien, ...dalis })
+        .select(stulpeliai).single();
+      // Eilutė jau gali būti (pvz. treneris ką tik atsakė): tada ją tiesiog atnaujiname.
+      if (atsakas.error?.code === '23505') {
+        const { data: rasta } = await db.from('day_notes').select('id')
+          .eq('client_id', sesijosId).eq('day', siandien).maybeSingle();
+        if (rasta?.id) atsakas = await keisti(rasta.id);
+      }
+    }
+    if (atsakas.error) throw atsakas.error;
+    const irasas = atsakas.data;
     uzrasai = [...uzrasai.filter((n) => n.day !== siandien), irasas].sort((a, b) => a.day.localeCompare(b.day));
     if ('note' in dalis) laikinasTekstas = null;
     nuotaikaBusena = 'note' in dalis ? 'issaugota' : '';
+    rodykToast(T.nuotaikaIssaugota);
   } catch (klaida) {
     nuotaikaBusena = 'klaida';
     console.warn('Nuotaikos klaida:', klaida);
+    // Klaida visada matoma, net jei teksto laukas dar neatsidarė.
+    rodykToast(T.nuotaikaKlaida, true);
   } finally {
     bukle = false;
   }
