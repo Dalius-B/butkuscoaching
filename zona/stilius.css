@@ -899,3 +899,53 @@ dialog .video-wrap { margin-top: 0; }
   .ip-eil { grid-template-columns: 130px 40px repeat(var(--n), 20px); }
   .ip-c { width: 20px; height: 20px; }
 }
+
+/* =============================================================================
+   Trenerio užduočių skirtukai (apžvalga / istorija / užduotys / planas / paketai)
+   ============================================================================= */
+.tabs-maza { margin-bottom: var(--s-200); gap: var(--s-50); }
+.tabs-maza .tab { min-height: 40px; padding: 0 var(--s-200); font-size: 0.75rem; }
+.u-panele-antraste { font-size: 1.0625rem; font-weight: 800; font-stretch: 106%; text-transform: uppercase; letter-spacing: 0; margin-bottom: var(--s-100); }
+.card-head .u-panele-antraste { margin-bottom: 0; }
+.u-panele > .card + .card { margin-top: var(--s-200); }
+
+.u-skiltis { padding: 0; }
+.u-skiltis > summary { display: flex; align-items: center; justify-content: space-between; gap: var(--s-100); padding: var(--s-200) var(--s-300); cursor: pointer; list-style: none; min-height: 52px; }
+.u-skiltis > summary::-webkit-details-marker { display: none; }
+.u-skiltis > summary h2 { font-size: 1rem; }
+.u-skiltis > summary::after { content: '▸'; color: var(--ink-soft); }
+.u-skiltis[open] > summary::after { content: '▾'; }
+.u-skiltis[open] > summary { border-bottom: 1px solid var(--hair-ink); }
+.u-skiltis-turinys { padding: var(--s-300); }
+
+.u-filtrai-fold, .u-ip-fold { margin: var(--s-100) 0; }
+.u-filtrai-fold > summary, .u-ip-fold > summary { cursor: pointer; font-weight: 700; font-size: 0.875rem; min-height: 40px; display: flex; align-items: center; }
+.u-ip-fold { margin-top: var(--s-200); border-top: 1px solid var(--hair-ink); padding-top: var(--s-75); }
+.u-ip-fold-turinys { padding-top: var(--s-100); }
+
+/* Paketų sąrašas: kas viduje ir kuriomis dienomis */
+.u-pak summary { padding: var(--s-100) var(--s-200); }
+.u-pak-galva { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.u-pak-trumpai { font-size: 0.8125rem; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.u-pak-turinys { padding: var(--s-100) var(--s-200) var(--s-200); border-top: 1px solid var(--hair-ink); display: flex; flex-direction: column; gap: var(--s-100); }
+.u-pak-sarasas { display: flex; flex-direction: column; }
+.u-pak-sarasas li { display: grid; grid-template-columns: 24px 1fr auto; gap: var(--s-100); align-items: baseline; padding: var(--s-75) 0; border-bottom: 1px solid var(--hair-ink); font-size: 0.9375rem; }
+.u-pak-sarasas li:last-child { border-bottom: 0; }
+.u-pak-sarasas li.jau-yra .u-pak-pav { color: var(--ink-soft); }
+.u-pak-dienos { font-size: 0.8125rem; white-space: nowrap; text-align: right; }
+.pk-dienos { border: 1px solid var(--hair-ink); border-radius: var(--r-md); padding: var(--s-100) var(--s-200); margin-top: var(--s-100); background: var(--surface); }
+.pk-dienos legend { font-weight: 700; font-size: 0.875rem; padding: 0 var(--s-75); }
+.pk-dienu-chips { margin: var(--s-75) 0 var(--s-50); }
+.pi-antraste { margin: var(--s-200) 0 var(--s-50); font-size: 1.25rem; }
+
+@media (max-width: 620px) {
+  .u-pak-sarasas li { grid-template-columns: 24px 1fr; }
+  .u-pak-dienos { grid-column: 2; text-align: left; }
+}
+
+.u-klientas-eilute { display: flex; align-items: center; gap: var(--s-200); flex-wrap: wrap; }
+.u-klientas-eilute > label { font-weight: 700; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.u-klientas-eilute .field { flex: 1 1 260px; max-width: 420px; }
+.u-pak summary { align-items: flex-start; flex-wrap: nowrap; }
+.u-pak-galva .u-ist-data { flex: 0 0 auto; }
+.u-pak summary::before { margin-top: 2px; }

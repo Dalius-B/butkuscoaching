@@ -1,33 +1,40 @@
 // =============================================================================
-//  TRENERIO SKYDELIS: UŽDUOČIŲ PAKETAI
-//  Paruošti, redaguojami užduočių rinkiniai (pvz. „Švelnus startas“). Paketas
-//  klientui priskiriamas kliento užduočių skiltyje (valdymas-uzduotys.js).
+//  UŽDUOČIŲ PAKETAI (trenerio skydelis)
+//  Paruošti, redaguojami užduočių rinkiniai (pvz. „Švelnus startas“).
+//  Rodomi kliento užduočių puslapyje, skirtuke „Paketai“: ten juos galima
+//  peržiūrėti (kas viduje ir kuriomis dienomis), pridėti klientui ir redaguoti.
 //  Klientai paketų nemato ir jų neskaito: lentelės tik treneriui.
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261110';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261112';
 import {
   KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine,
-} from './tekstai.js?v=20261110';
-import { videoIterpimas } from './uzduociu-logika.js?v=20261110';
+} from './tekstai.js?v=20261112';
+import { videoIterpimas } from './uzduociu-logika.js?v=20261112';
 
 export const PAKETAI_PASIKEITE = 'paketai-pasikeite';
 
 /** Visi paketai su savo užduotimis. Importuojantys failai mato naujausią reikšmę. */
 export let paketai = [];
 let paketuKlaida = null;
-let atvertas = null;     // atverto paketo id
-let redaguojama = null;  // { pack, item } redaguojamas paketo elementas
+
+let vieta = null;        // konteineris, į kurį piešiama
+let konteksta = null;    // { klientoId(), turi(), poPriskyrimo(), zinok() }
+let redaguojamasPaketas = null;  // paketo id, kuris atvertas redagavimui (null = sąrašas)
+let redaguojama = null;          // { pack, item } redaguojamas paketo elementas
+const atverti = new Set();       // sąraše išskleisti paketai
 
 function zinok(tekstas, tipas) {
-  const el = $('#pranesimas');
-  pranesk(el, tekstas, tipas);
-  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (konteksta?.zinok) konteksta.zinok(tekstas, tipas);
+  else pranesk($('#pranesimas'), tekstas, tipas);
 }
 
 function dbKlaida(error) {
   const t = String(error?.message || '').toLowerCase();
   if (error?.code === 'PGRST205' || t.includes('could not find the table') || t.includes('task_pack')) {
     return 'Paketų lentelių dar nėra. Supabase skiltyje SQL Editor paleisk failą uzduotys-nuotaika-paketai.sql.';
+  }
+  if (error?.code === 'PGRST202' || (t.includes('function') && t.includes('admin_priskirti_paketa'))) {
+    return 'Reikia atnaujinti duomenų bazę: Supabase skiltyje SQL Editor dar kartą paleisk failą uzduotys-nuotaika-paketai.sql.';
   }
   if (error?.code === '23505') return 'Paketas tokiu pavadinimu jau yra.';
   return klaidaLT(error);
@@ -47,20 +54,140 @@ export async function gaukPaketus() {
   return paketai;
 }
 
-function pranesk_pasikeitimas() {
-  document.dispatchEvent(new CustomEvent(PAKETAI_PASIKEITE));
+/** Piešia paketų skirtuko turinį į duotą konteinerį. */
+export function piesPaketuPanele(konteineris, kontekstas) {
+  vieta = konteineris;
+  konteksta = kontekstas;
+  piesk();
 }
 
-// -----------------------------------------------------------------------------
-//  Piešimas
-// -----------------------------------------------------------------------------
-export async function piesPaketus() {
-  const vieta = $('#kortele-paketai');
+function piesk() {
   if (!vieta) return;
-  await gaukPaketus();
-  pieskPaketus();
+  if (paketuKlaida) {
+    vieta.innerHTML = `<p class="note note-error">${esc(dbKlaida(paketuKlaida))}</p>`;
+    return;
+  }
+  const pk = redaguojamasPaketas ? paketai.find((x) => x.id === redaguojamasPaketas) : null;
+  if (pk) pieskRedaktoriu(pk);
+  else { redaguojamasPaketas = null; pieskSarasa(); }
 }
 
+// -----------------------------------------------------------------------------
+//  1. Sąrašas: kas viduje, kuriomis dienomis, pridėti klientui
+// -----------------------------------------------------------------------------
+function dienuPasirinkimasHtml(id) {
+  const chips = [1, 2, 3, 4, 5, 6, 7].map((d) => `
+    <label class="chip-opt"><input type="checkbox" name="pd-diena-${esc(id)}" value="${d}"><span>${SAVAITES_DIENOS_TRUMPOS[d]}</span></label>`).join('');
+  return `
+    <fieldset class="pk-dienos">
+      <legend>Kuriomis dienomis pridėti klientui?</legend>
+      <label class="check-opt"><input type="radio" name="pd-${esc(id)}" value="paketas" checked><span>Kaip nurodyta sąraše aukščiau</span></label>
+      <label class="check-opt"><input type="radio" name="pd-${esc(id)}" value="kasdien"><span>Visas užduotis kasdien</span></label>
+      <label class="check-opt"><input type="radio" name="pd-${esc(id)}" value="pasirinkti"><span>Pasirinkti dienas (visoms užduotims)</span></label>
+      <div class="chips pk-dienu-chips" hidden>${chips}</div>
+    </fieldset>`;
+}
+
+function pieskSarasa() {
+  const klientas = konteksta?.klientoId?.() || null;
+  const turi = klientas ? konteksta.turi() : new Set();
+
+  const korteles = paketai.map((pk) => {
+    const naujos = pk.items.filter((it) => !turi.has(it.title.trim().toLowerCase())).length;
+    const pavadinimai = pk.items.map((it) => it.title);
+    const trumpai = pavadinimai.length
+      ? pavadinimai.slice(0, 3).join(' · ') + (pavadinimai.length > 3 ? ` · dar ${pavadinimai.length - 3}` : '')
+      : 'Tuščias paketas';
+    const eilutes = pk.items.map((it) => {
+      const kat = KATEGORIJOS[it.category] || KATEGORIJOS.iprociai;
+      const kiekis = it.target > 1 ? `<span class="muted"> · ${esc(Number(it.target).toLocaleString('lt-LT'))}${it.unit ? ' ' + esc(it.unit) : ''}</span>` : '';
+      const jauYra = turi.has(it.title.trim().toLowerCase());
+      return `
+        <li class="${jauYra ? 'jau-yra' : ''}">
+          <span aria-hidden="true">${kat.ikona}</span>
+          <span class="u-pak-pav">${esc(it.title)}${kiekis}
+            ${it.is_bonus ? '<span class="chip chip-volt">Papildoma</span>' : ''}
+            ${jauYra ? '<span class="chip chip-ok">jau yra klientui</span>' : ''}</span>
+          <span class="u-pak-dienos"><span class="muted">Dienos:</span> <strong>${esc(dienuSuvestine(it.weekdays))}</strong></span>
+        </li>`;
+    }).join('');
+    return `
+      <details class="u-ist-diena u-pak" data-pack="${esc(pk.id)}"${atverti.has(pk.id) ? ' open' : ''}>
+        <summary>
+          <span class="u-pak-galva">
+            <span class="u-ist-data">${esc(pk.name)} <span class="muted">(${pk.items.length} ${uzduociuVard(pk.items.length)})</span></span>
+            <span class="u-pak-trumpai muted">${esc(trumpai)}</span>
+          </span>
+        </summary>
+        <div class="u-pak-turinys">
+          ${pk.description ? `<p class="muted" style="font-size:.875rem">${esc(pk.description)}</p>` : ''}
+          <ul class="u-pak-sarasas">${eilutes || '<li class="muted">Šiame pakete užduočių dar nėra.</li>'}</ul>
+          ${klientas && pk.items.length ? dienuPasirinkimasHtml(pk.id) : ''}
+          <div class="row" style="margin-top:var(--s-100)">
+            ${klientas ? `<button class="btn btn-primary btn-sm" type="button" data-act="prideti" data-pack="${esc(pk.id)}"${naujos ? '' : ' disabled'}>
+              ${naujos ? `Pridėti klientui (${naujos} ${naujos === 1 ? 'nauja' : 'naujos'})` : 'Viskas jau pridėta'}</button>` : ''}
+            <button class="btn btn-ghost btn-sm" type="button" data-act="redaguoti" data-pack="${esc(pk.id)}">Redaguoti paketą</button>
+          </div>
+        </div>
+      </details>`;
+  }).join('');
+
+  vieta.innerHTML = `
+    <div class="u-ist-dienos">${korteles || '<p class="muted">Paketų dar nėra. Sukurk pirmą žemiau.</p>'}</div>
+    <details class="u-ist-diena" style="margin-top:var(--s-200)">
+      <summary><span class="u-ist-data">+ Naujas paketas</span></summary>
+      <form id="pk-naujas" class="pi-turinys" novalidate>
+        <div class="field">
+          <label for="pk-n-vardas">Pavadinimas</label>
+          <input id="pk-n-vardas" type="text" maxlength="80" placeholder="Pavyzdžiui, Ramesnė savaitė">
+        </div>
+        <div class="field">
+          <label for="pk-n-apr">Aprašymas <span class="hint">(neprivaloma, tik tau)</span></label>
+          <input id="pk-n-apr" type="text" maxlength="400">
+        </div>
+        <div class="form-actions"><button class="btn btn-primary btn-sm" type="submit">Sukurti paketą</button></div>
+        <p class="muted" style="font-size:.8125rem">Tuščią paketą užpildysi spausdamas „Redaguoti paketą“. Arba greičiau: kliento skirtuke „Užduotys“ spausk „Išsaugoti kliento užduotis kaip paketą“.</p>
+      </form>
+    </details>`;
+
+  for (const d of $$('.u-pak', vieta)) {
+    d.addEventListener('toggle', () => { if (d.open) atverti.add(d.dataset.pack); else atverti.delete(d.dataset.pack); });
+  }
+  for (const r of $$('.pk-dienos input[type="radio"]', vieta)) {
+    r.addEventListener('change', () => {
+      const f = r.closest('.pk-dienos');
+      $('.pk-dienu-chips', f).hidden = f.querySelector('input[type="radio"]:checked').value !== 'pasirinkti';
+    });
+  }
+  for (const b of $$('[data-act]', vieta)) b.addEventListener('click', () => veiksmas(b));
+  $('#pk-naujas').addEventListener('submit', sukurkPaketa);
+}
+
+async function priskirk(packId) {
+  const pk = paketai.find((x) => x.id === packId);
+  const klientas = konteksta?.klientoId?.();
+  if (!pk || !klientas) return;
+  const korta = $(`.u-pak[data-pack="${packId}"]`, vieta);
+  const budas = korta.querySelector('.pk-dienos input[type="radio"]:checked')?.value || 'paketas';
+  let dienos = null;
+  let dienuTekstas = 'kaip nurodyta pakete';
+  if (budas === 'kasdien') { dienos = [1, 2, 3, 4, 5, 6, 7]; dienuTekstas = 'kasdien'; }
+  if (budas === 'pasirinkti') {
+    dienos = $$(`input[name="pd-diena-${packId}"]:checked`, korta).map((i) => Number(i.value));
+    if (!dienos.length) { zinok('Pažymėk bent vieną savaitės dieną.', 'error'); return; }
+    dienuTekstas = dienuSuvestine(dienos);
+  }
+  const { data: kiek, error } = await db.rpc('admin_priskirti_paketa', { p_client: klientas, p_pack: packId, p_weekdays: dienos });
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  zinok(kiek > 0
+    ? `Paketas „${pk.name}“ pridėtas: nauja užduočių ${kiek} (dienos: ${dienuTekstas}). Dienas bet kada gali pakeisti skirtuke „Savaitės planas“.`
+    : `Visos paketo „${pk.name}“ užduotys šiam klientui jau yra.`, 'ok');
+  await konteksta.poPriskyrimo();
+}
+
+// -----------------------------------------------------------------------------
+//  2. Paketo redaktorius (ta pati vieta, „sub-puslapis“ su grįžimo mygtuku)
+// -----------------------------------------------------------------------------
 function elementoEilute(pk, it) {
   const kat = KATEGORIJOS[it.category] || KATEGORIJOS.iprociai;
   const kiekis = it.target > 1 ? ` <span class="muted">${esc(Number(it.target).toLocaleString('lt-LT'))}${it.unit ? ' ' + esc(it.unit) : ''}</span>` : '';
@@ -87,12 +214,12 @@ function elementoForma(pk) {
     <form class="pi-forma" data-pack="${esc(pk.id)}" novalidate>
       <h4>${r ? 'Redaguoti užduotį' : 'Pridėti užduotį į paketą'}</h4>
       <div class="field">
-        <label for="pi-pav-${esc(pk.id)}">Pavadinimas</label>
-        <input id="pi-pav-${esc(pk.id)}" name="title" type="text" maxlength="160" required value="${esc(r?.title || '')}">
+        <label for="pi-pav">Pavadinimas</label>
+        <input id="pi-pav" name="title" type="text" maxlength="160" required value="${esc(r?.title || '')}">
       </div>
       <div class="field">
-        <label for="pi-apr-${esc(pk.id)}">Aprašymas <span class="hint">(neprivaloma)</span></label>
-        <input id="pi-apr-${esc(pk.id)}" name="description" type="text" value="${esc(r?.description || '')}">
+        <label for="pi-apr">Aprašymas <span class="hint">(neprivaloma)</span></label>
+        <input id="pi-apr" name="description" type="text" value="${esc(r?.description || '')}">
       </div>
       <div class="field-row" style="margin-top:var(--s-200)">
         <div class="field">
@@ -124,116 +251,85 @@ function elementoForma(pk) {
       </div>
       <div class="form-actions">
         <button class="btn btn-primary btn-sm" type="submit">${r ? 'Išsaugoti' : 'Pridėti'}</button>
-        ${r ? `<button class="btn btn-ghost btn-sm" type="button" data-act="atsaukti-elem">Atšaukti</button>` : ''}
+        ${r ? '<button class="btn btn-ghost btn-sm" type="button" data-act="atsaukti-elem">Atšaukti</button>' : ''}
       </div>
     </form>`;
 }
 
-function pieskPaketus() {
-  const vieta = $('#kortele-paketai');
-  if (paketuKlaida) {
-    vieta.innerHTML = `<div class="card"><div class="card-head"><h2>Užduočių paketai</h2></div><p class="note note-error">${esc(dbKlaida(paketuKlaida))}</p></div>`;
-    return;
-  }
+function pieskRedaktoriu(pk) {
+  vieta.innerHTML = `
+    <button class="btn btn-ghost btn-sm" type="button" data-act="atgal">← Visi paketai</button>
+    <h3 class="pi-antraste">${esc(pk.name)}</h3>
+    <p class="muted" style="font-size:.875rem;margin-bottom:var(--s-200)">Pakeitimai paketuose neveikia klientų, kurie paketą jau gavo.</p>
 
-  const blokai = paketai.map((pk) => `
-    <details class="u-ist-diena pi-paketas" data-pack="${esc(pk.id)}"${atvertas === pk.id ? ' open' : ''}>
-      <summary>
-        <span class="u-ist-data">${esc(pk.name)}</span>
-        <span class="u-ist-santrauka muted">${pk.items.length} ${uzduociuVard(pk.items.length)}</span>
-      </summary>
-      <div class="pi-turinys">
-        <form class="pi-pavadinimo-forma" data-pack="${esc(pk.id)}" novalidate>
-          <div class="field">
-            <label for="pk-vardas-${esc(pk.id)}">Paketo pavadinimas</label>
-            <input id="pk-vardas-${esc(pk.id)}" name="name" type="text" maxlength="80" value="${esc(pk.name)}">
-          </div>
-          <div class="field">
-            <label for="pk-apr-${esc(pk.id)}">Aprašymas <span class="hint">(tik tau)</span></label>
-            <textarea id="pk-apr-${esc(pk.id)}" name="description" maxlength="400" rows="2">${esc(pk.description || '')}</textarea>
-          </div>
-          <div class="row" style="margin-top:var(--s-100)">
-            <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti pavadinimą</button>
-            <button class="btn btn-danger btn-sm" type="button" data-act="trinti-paketa" data-pack="${esc(pk.id)}">Trinti paketą</button>
-          </div>
-        </form>
-        ${pk.items.length ? `
-        <div class="table-wrap"><table>
-          <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
-          <tbody>${pk.items.map((it) => elementoEilute(pk, it)).join('')}</tbody>
-        </table></div>` : '<p class="muted">Šiame pakete užduočių dar nėra.</p>'}
-        ${elementoForma(pk)}
-      </div>
-    </details>`).join('');
+    ${pk.items.length ? `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Užduotis</th><th>Kategorija</th><th>Dienos</th><th>Tipas</th><th></th></tr></thead>
+      <tbody>${pk.items.map((it) => elementoEilute(pk, it)).join('')}</tbody>
+    </table></div>` : '<p class="muted">Šiame pakete užduočių dar nėra. Pridėk pirmą žemiau.</p>'}
 
-  $('#kortele-paketai').innerHTML = `
-    <div class="card">
-      <div class="card-head"><h2>Užduočių paketai</h2><span class="row-end muted">${paketai.length}</span></div>
-      <p class="muted" style="margin-bottom:var(--s-200)">
-        Paruošti užduočių rinkiniai. Redaguok juos čia, o klientui pridėk skiltyje „Užduotys“ (pasirink klientą, kortelė „Užduočių paketai“).
-        Pakeitimai paketuose neveikia klientų, kurie paketą jau gavo.
-      </p>
-      <div class="u-ist-dienos">${blokai || '<p class="muted">Paketų dar nėra. Sukurk pirmą žemiau.</p>'}</div>
-    </div>
-    <div class="card" style="margin-top:var(--s-300)">
-      <div class="card-head"><h2>Naujas paketas</h2></div>
-      <form id="pk-naujas" novalidate>
+    ${elementoForma(pk)}
+
+    <details class="u-ist-diena" style="margin-top:var(--s-200)">
+      <summary><span class="u-ist-data">Pakeisti pavadinimą ar ištrinti paketą</span></summary>
+      <form class="pi-pavadinimo-forma pi-turinys" data-pack="${esc(pk.id)}" novalidate>
         <div class="field">
-          <label for="pk-n-vardas">Pavadinimas</label>
-          <input id="pk-n-vardas" type="text" maxlength="80" placeholder="Pavyzdžiui, Ramesnė savaitė">
+          <label for="pk-vardas">Paketo pavadinimas</label>
+          <input id="pk-vardas" name="name" type="text" maxlength="80" value="${esc(pk.name)}">
         </div>
         <div class="field">
-          <label for="pk-n-apr">Aprašymas <span class="hint">(neprivaloma, tik tau)</span></label>
-          <input id="pk-n-apr" type="text" maxlength="400">
+          <label for="pk-apr">Aprašymas <span class="hint">(tik tau)</span></label>
+          <textarea id="pk-apr" name="description" maxlength="400" rows="2">${esc(pk.description || '')}</textarea>
         </div>
-        <div class="form-actions"><button class="btn btn-primary" type="submit">Sukurti paketą</button></div>
+        <div class="row">
+          <button class="btn btn-ghost btn-sm" type="submit">Išsaugoti</button>
+          <button class="btn btn-danger btn-sm" type="button" data-act="trinti-paketa" data-pack="${esc(pk.id)}">Trinti paketą</button>
+        </div>
       </form>
-      <p class="muted" style="margin-top:var(--s-200);font-size:.875rem">Arba atidaryk klientą skiltyje „Užduotys“ ir spausk „Išsaugoti šias užduotis kaip paketą“.</p>
-    </div>`;
+    </details>`;
 
-  prijunkValdikli();
-}
-
-function prijunkValdikli() {
-  const vieta = $('#kortele-paketai');
-  for (const d of $$('.pi-paketas', vieta)) {
-    d.addEventListener('toggle', () => { if (d.open) atvertas = d.dataset.pack; else if (atvertas === d.dataset.pack) atvertas = null; });
-  }
   for (const b of $$('[data-act]', vieta)) b.addEventListener('click', () => veiksmas(b));
   for (const f of $$('.pi-forma', vieta)) f.addEventListener('submit', issaugokElementa);
   for (const f of $$('.pi-pavadinimo-forma', vieta)) f.addEventListener('submit', issaugokPavadinima);
-  $('#pk-naujas').addEventListener('submit', sukurkPaketa);
 }
 
 async function perkrauk(zinute) {
   await gaukPaketus();
-  pieskPaketus();
-  pranesk_pasikeitimas();
+  piesk();
+  document.dispatchEvent(new CustomEvent(PAKETAI_PASIKEITE));
   if (zinute) zinok(zinute, 'ok');
 }
 
 async function veiksmas(b) {
   const act = b.dataset.act;
-  if (act === 'red-elem') {
+  if (act === 'prideti') {
+    await priskirk(b.dataset.pack);
+  } else if (act === 'redaguoti') {
+    redaguojamasPaketas = b.dataset.pack;
+    redaguojama = null;
+    piesk();
+  } else if (act === 'atgal') {
+    redaguojamasPaketas = null;
+    redaguojama = null;
+    piesk();
+  } else if (act === 'red-elem') {
     redaguojama = { pack: b.dataset.pack, item: b.dataset.item };
-    atvertas = b.dataset.pack;
-    pieskPaketus();
-    $(`.pi-forma[data-pack="${b.dataset.pack}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    piesk();
+    $('.pi-forma', vieta)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else if (act === 'atsaukti-elem') {
     redaguojama = null;
-    pieskPaketus();
+    piesk();
   } else if (act === 'trinti-elem') {
     if (!window.confirm('Ištrinti šią užduotį iš paketo? Klientų, kurie paketą jau gavo, užduotys nesikeičia.')) return;
     const { error } = await db.from('task_pack_items').delete().eq('id', b.dataset.item);
     if (error) { zinok(dbKlaida(error), 'error'); return; }
-    atvertas = b.dataset.pack;
     await perkrauk('Užduotis pašalinta iš paketo.');
   } else if (act === 'trinti-paketa') {
     const pk = paketai.find((x) => x.id === b.dataset.pack);
     if (!window.confirm(`Ištrinti visą paketą „${pk?.name}“? Klientų, kurie jį jau gavo, užduotys nesikeičia.`)) return;
     const { error } = await db.from('task_packs').delete().eq('id', b.dataset.pack);
     if (error) { zinok(dbKlaida(error), 'error'); return; }
-    atvertas = null;
+    redaguojamasPaketas = null;
     await perkrauk('Paketas ištrintas.');
   }
 }
@@ -246,7 +342,7 @@ async function sukurkPaketa(ev) {
     .insert({ name: vardas, description: $('#pk-n-apr').value.trim(), position: paketai.length })
     .select('id').single();
   if (error) { zinok(dbKlaida(error), 'error'); return; }
-  atvertas = data.id;
+  redaguojamasPaketas = data.id;
   await perkrauk(`Paketas „${vardas}“ sukurtas. Pridėk į jį užduočių.`);
 }
 
@@ -258,7 +354,6 @@ async function issaugokPavadinima(ev) {
   const { error } = await db.from('task_packs')
     .update({ name: vardas, description: f.elements.description.value.trim() }).eq('id', f.dataset.pack);
   if (error) { zinok(dbKlaida(error), 'error'); return; }
-  atvertas = f.dataset.pack;
   await perkrauk('Paketas išsaugotas.');
 }
 
@@ -296,6 +391,5 @@ async function issaugokElementa(ev) {
     : await db.from('task_pack_items').insert({ ...eilute, pack_id: packId, position: pk?.items.length || 0 });
   if (error) { zinok(dbKlaida(error), 'error'); return; }
   redaguojama = null;
-  atvertas = packId;
   await perkrauk(keiciama ? 'Užduotis išsaugota.' : 'Užduotis pridėta į paketą.');
 }
