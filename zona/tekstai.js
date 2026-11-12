@@ -52,6 +52,13 @@ export const T = {
   nuotaikaIssaugota: 'Išsaugota ✓',
   nuotaikaKlaida: 'Nepavyko išsaugoti. Pabandyk dar kartą.',
   zinuteNuoDaliaus: 'Žinutė nuo Daliaus',
+  perskaiciau: 'Perskaičiau',
+  atsakyti: 'Atsakyti',
+  atsakymoLaukas: 'Tavo atsakymas Daliui (iki 300 simbolių)',
+  atsakymasSiusti: 'Siųsti',
+  atsakymasIssiustas: 'Atsakymas išsiųstas',
+  zinuteNebera: 'Gerai, žinutė paslėpta',
+  funkcijaNeijungta: 'Ši funkcija dar neįjungta. Parašyk Daliui.',
 
   // Artimiausios dienos
   artimiausiosDienos: 'Kas laukia artimiausiomis dienomis',

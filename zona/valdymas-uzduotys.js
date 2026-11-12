@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261113';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261114';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261113';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261113';
+} from './tekstai.js?v=20261114';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261114';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261113';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261114';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -77,7 +77,7 @@ async function ikelkKliento() {
       .order('position', { ascending: true }).order('created_at', { ascending: true }),
     db.from('challenge_completions').select('id, challenge_id, day, xp, amount').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
-    db.from('day_notes').select('id, day, mood, note, coach_reply, coach_replied_at').eq('client_id', pasirinktas)
+    db.from('day_notes').select('*').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
   ]);
   // Jei nuotaikos lentelės dar nėra (SQL nepaleistas), likusi dalis veikia kaip veikusi.
@@ -345,7 +345,8 @@ function uzrasoHtml(d, u) {
       <label class="sr-only" for="atsakymas-${esc(d)}">Tavo žinutė klientui</label>
       <textarea id="atsakymas-${esc(d)}" maxlength="300" rows="2" placeholder="Trumpa žinutė klientui (iki 300 simbolių)">${esc(u?.coach_reply || '')}</textarea>
       <div class="row"><button class="btn btn-ghost btn-sm u-atsakyti" type="button" data-diena="${esc(d)}">${u?.coach_reply ? 'Atnaujinti žinutę' : 'Siųsti žinutę'}</button>
-      ${u?.coach_replied_at ? `<span class="muted" style="font-size:.8125rem">Išsiųsta ${esc(dataTrumpa(dataLT(u.coach_replied_at)))}</span>` : ''}</div>
+      ${u?.coach_replied_at ? `<span class="muted" style="font-size:.8125rem">Išsiųsta ${esc(dataTrumpa(dataLT(u.coach_replied_at)))} · ${u.coach_reply_read_at ? 'klientas perskaitė ✓' : 'dar neperskaityta'}</span>` : ''}</div>
+      ${u?.client_reply ? `<blockquote class="u-kliento-atsakymas"><strong>Kliento atsakymas:</strong> ${esc(u.client_reply)}</blockquote>` : ''}
     </div>`;
 }
 
@@ -620,7 +621,8 @@ function pieskZinute() {
       <div class="form-actions" style="margin-top:var(--s-100)">
         <button class="btn btn-primary btn-sm" type="button" id="u-zinute-siusti">Siųsti</button>
       </div>
-      ${paskutine ? `<p class="muted" style="margin-top:var(--s-200);font-size:.8125rem">Paskutinė žinutė (${esc(dataTrumpa(paskutine.day))}): „${esc(paskutine.coach_reply)}“</p>` : ''}`;
+      ${paskutine ? `<p class="muted" style="margin-top:var(--s-200);font-size:.8125rem">Paskutinė žinutė (${esc(dataTrumpa(paskutine.day))}): „${esc(paskutine.coach_reply)}“ · ${paskutine.coach_reply_read_at ? 'klientas perskaitė ✓' : 'dar neperskaityta'}</p>` : ''}
+      ${paskutine?.client_reply ? `<blockquote class="u-kliento-atsakymas"><strong>Klientas atsakė:</strong> ${esc(paskutine.client_reply)}</blockquote>` : ''}`;
   $('#u-zinute-siusti').addEventListener('click', () => {
     const tekstas = $('#u-zinute').value.trim();
     if (!tekstas) { zinok('Parašyk žinutę.', 'error'); return; }

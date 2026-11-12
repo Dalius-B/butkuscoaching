@@ -79,8 +79,17 @@ create policy "day_notes_update_own" on public.day_notes
     and day = private.siandien_lt()
   );
 
+-- Žinutės "perskaityta" žyma ir kliento atsakymas trenerio žinutei.
+-- Klientas jų rašo tik per dvi funkcijas žemiau (stulpelių teisių jam neduota),
+-- ir tik savo eilutėse, kuriose treneris yra parašęs žinutę.
+alter table public.day_notes
+  add column if not exists coach_reply_read_at timestamptz,
+  add column if not exists client_reply        text not null default '' check (char_length(client_reply) <= 300),
+  add column if not exists client_replied_at   timestamptz;
+
 -- Trenerio trumpas atsakymas. Per funkciją, nes klientas negali rašyti į šį stulpelį.
--- Tuščias tekstas atsakymą ištrina.
+-- Tuščias tekstas atsakymą ištrina. Pakeitus tekstą, žinutė vėl tampa neperskaityta,
+-- o ankstesnis kliento atsakymas (jis buvo senai žinutei) išvalomas.
 create or replace function public.admin_atsakyti(p_client uuid, p_day date, p_reply text)
 returns void
 language plpgsql
@@ -100,13 +109,72 @@ begin
   insert into public.day_notes (client_id, day, coach_reply, coach_replied_at)
   values (p_client, p_day, v_reply, case when v_reply = '' then null else now() end)
   on conflict (client_id, day) do update
-    set coach_reply      = excluded.coach_reply,
-        coach_replied_at = excluded.coach_replied_at;
+    set coach_reply         = excluded.coach_reply,
+        coach_replied_at    = excluded.coach_replied_at,
+        coach_reply_read_at = case when day_notes.coach_reply is distinct from excluded.coach_reply
+                                   then null else day_notes.coach_reply_read_at end,
+        client_reply        = case when day_notes.coach_reply is distinct from excluded.coach_reply
+                                   then '' else day_notes.client_reply end,
+        client_replied_at   = case when day_notes.coach_reply is distinct from excluded.coach_reply
+                                   then null else day_notes.client_replied_at end;
 end;
 $$;
 
 revoke all on function public.admin_atsakyti(uuid, date, text) from public;
 grant execute on function public.admin_atsakyti(uuid, date, text) to authenticated;
+
+-- Klientas pažymi trenerio žinutę perskaityta (ji jam nebesirodo).
+create or replace function public.perskaiciau_zinute(p_day date)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not private.gali_uzduotys() then
+    raise exception 'Neturi teisių' using errcode = '42501';
+  end if;
+  update public.day_notes
+     set coach_reply_read_at = coalesce(coach_reply_read_at, now())
+   where client_id = (select auth.uid())
+     and day = p_day
+     and coach_reply <> '';
+end;
+$$;
+
+-- Klientas trumpai atsako į trenerio žinutę. Atsakymas kartu pažymi žinutę perskaityta.
+create or replace function public.atsakyti_treneriui(p_day date, p_text text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_text text := btrim(coalesce(p_text, ''));
+begin
+  if not private.gali_uzduotys() then
+    raise exception 'Neturi teisių' using errcode = '42501';
+  end if;
+  if v_text = '' or char_length(v_text) > 300 then
+    raise exception 'Atsakymas turi būti nuo 1 iki 300 simbolių' using errcode = 'P0001';
+  end if;
+  update public.day_notes
+     set client_reply        = v_text,
+         client_replied_at   = now(),
+         coach_reply_read_at = coalesce(coach_reply_read_at, now())
+   where client_id = (select auth.uid())
+     and day = p_day
+     and coach_reply <> '';
+  if not found then
+    raise exception 'Žinutė nerasta' using errcode = 'P0002';
+  end if;
+end;
+$$;
+
+revoke all on function public.perskaiciau_zinute(date)        from public;
+revoke all on function public.atsakyti_treneriui(date, text)  from public;
+grant execute on function public.perskaiciau_zinute(date)       to authenticated;
+grant execute on function public.atsakyti_treneriui(date, text) to authenticated;
 
 -- -----------------------------------------------------------------------------
 --  2. Užduočių paketai (tik treneriui)
