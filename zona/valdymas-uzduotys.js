@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261114';
+import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261115';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261114';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261114';
+} from './tekstai.js?v=20261115';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261115';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261114';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261115';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -560,14 +560,42 @@ function ipociuKortele() {
       </div>`;
   }).join('');
 
+  // Kliento užrašai: matomi iškart, be užvedimo pelės ir be paspaudimų.
+  const uzrasaiRodomi = nuotaikaVeikia
+    ? [...uzrasai].filter((n) => n.day >= v.dienos[0] && n.day <= dabar && (n.note || n.client_reply)).sort((x, y) => y.day.localeCompare(x.day))
+    : [];
+  const uzrasoEilute = (n) => {
+    const m = T.nuotaikos.find((x) => x.v === n.mood);
+    return `
+      <li class="ip-uzr">
+        <div class="ip-uzr-virsus">
+          <strong>${esc(SAVAITES_DIENOS_TRUMPOS[savaitesDiena(n.day)])}, ${esc(dataTrumpa(n.day))}</strong>
+          ${m ? `<span class="ip-uzr-nuotaika"><span aria-hidden="true">${m.ikona}</span> ${esc(m.pavadinimas)}</span>` : ''}
+        </div>
+        ${n.note ? `<p class="ip-uzr-tekstas">${esc(n.note)}</p>` : ''}
+        ${n.coach_reply ? `<p class="ip-uzr-atsakymas"><span class="muted">Tavo žinutė:</span> ${esc(n.coach_reply)}</p>` : ''}
+        ${n.client_reply ? `<p class="ip-uzr-atsakymas"><span class="muted">Kliento atsakymas:</span> ${esc(n.client_reply)}</p>` : ''}
+      </li>`;
+  };
+  const uzrasuBlokas = uzrasaiRodomi.length ? `
+    <h4 class="ip-poantraste">Kliento užrašai</h4>
+    <ul class="ip-uzrasai">${uzrasaiRodomi.slice(0, 4).map(uzrasoEilute).join('')}</ul>
+    ${uzrasaiRodomi.length > 4 ? `
+    <details class="u-ip-fold" data-skiltis="uzrasai"${atviros.get('uzrasai') ? ' open' : ''}>
+      <summary>Dar ${uzrasaiRodomi.length - 4} ${uzrasaiRodomi.length - 4 === 1 ? 'užrašas' : 'užrašai'}</summary>
+      <ul class="ip-uzrasai">${uzrasaiRodomi.slice(4).map(uzrasoEilute).join('')}</ul>
+    </details>` : ''}` : '';
+
   const nuotaikuJuosta = nuotaikaVeikia ? `
+    <h4 class="ip-poantraste">Nuotaika</h4>
     <div class="ip-nuotaikos" style="--n:${v.dienos.length}">
       ${v.dienos.map((d) => {
         const u = uzrasai.find((n) => n.day === d);
         const m = T.nuotaikos.find((n) => n.v === u?.mood);
-        return `<span class="ip-nu" title="${esc(dataTrumpa(d) + (m ? ': ' + m.pavadinimas : ''))}"><b>${m ? m.ikona : '·'}</b>${u?.note ? '<i title="Yra užrašas">💬</i>' : ''}</span>`;
+        return `<span class="ip-nu${u?.note ? ' su-uzrasu' : ''}" title="${esc(dataTrumpa(d) + (m ? ': ' + m.pavadinimas : ''))}"><b>${m ? m.ikona : '·'}</b><small>${Number(d.slice(8))}</small></span>`;
       }).join('')}
-    </div>` : '<p class="muted" style="font-size:.8125rem;margin-top:var(--s-200)">Nuotaikos funkcija dar neįjungta: Supabase SQL Editor paleisk failą uzduotys-nuotaika-paketai.sql.</p>';
+    </div>
+    ${uzrasuBlokas}` : '<p class="muted" style="font-size:.8125rem;margin-top:var(--s-200)">Nuotaikos funkcija dar neįjungta: Supabase SQL Editor paleisk failą uzduotys-nuotaika-paketai.sql.</p>';
 
   const turinys = `
       <div class="uzd-statai" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
