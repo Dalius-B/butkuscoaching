@@ -328,6 +328,9 @@ function piesProgramas() {
       redaguokKlientoPratimus(b.dataset.id);
     });
   }
+  for (const b of $$('.pervadinti-is-saraso')) {
+    b.addEventListener('click', () => pervadinkKlientoPrograma(b.dataset.id, b.dataset.vardas, b.dataset.client));
+  }
   for (const b of $$('.issaugoti-kaip-sablona-is-saraso')) {
     b.addEventListener('click', () => issaugokKaipSablona(b.dataset.id, b));
   }
@@ -357,6 +360,7 @@ function klientuProgramuSarasas() {
           <div class="row">
             <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
             <button class="btn btn-ghost btn-sm redaguoti-is-saraso" type="button" data-id="${esc(a.id)}" data-client="${esc(a.client_id)}">Pratimai</button>
+            <button class="btn btn-ghost btn-sm pervadinti-is-saraso" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}" data-client="${esc(a.client_id)}">Pervadinti</button>
             <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(a.id)}">Išsaugoti kaip šabloną</button>
           </div>
         </td>
