@@ -151,6 +151,15 @@ let redaguojamoKlientoPratimoId = null;
 let pridedamosKlientoDienosId = null;
 let pridedamaKlientoDiena = false;
 let velkamaKlientoEilute = null;
+let rodomaKlientoDienosId = null;
+
+// Programos sąrašo (Programos skiltis) filtrai — laikomi modulio lygmeniu,
+// kad išliktų tarp piesProgramas() iššaukimų (pvz. po naujos programos
+// sukūrimo), bet rodomos eilutės perrenkamos atskirai nuo visos kortelės
+// (piesProgramuEilutes()), kad rašant paieškoje nenukristų fokusas.
+let progFiltrasTekstas = '';
+let progFiltrasKlientas = '';
+let progRikiavimas = 'naujausios';
 
 paleisk();
 
@@ -183,6 +192,11 @@ async function paleisk() {
     if (atidarytiPrograma) {
       await redaguokKlientoPratimus(atidarytiPrograma);
       if (atidarytiPratima) {
+        // Diena, kuriai pratimas priklauso, turi būti ir pasirinkta kairės
+        // šoninio sąrašo skiltyje — kitaip pratimas liktų nerodomas, nes
+        // dešinėje vienu metu matoma tik vienos dienos turinys.
+        const pratimas = klientoPratimai.find((p) => p.id === atidarytiPratima);
+        if (pratimas) rodomaKlientoDienosId = pratimas.client_day_id;
         redaguojamoKlientoPratimoId = atidarytiPratima;
         piesKlientoPratimus();
         $('#klientu-pratimu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -254,27 +268,6 @@ function rodykKortele(vardas) {
 //  PROGRAMOS
 // =============================================================================
 function piesProgramas() {
-  const eilutes = programos.map((p) => {
-    const kiek = priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length;
-    return `
-      <tr>
-        <td>
-          <strong>${esc(p.title)}</strong>
-          ${p.summary ? `<div class="muted" style="font-size:.8125rem">${esc(p.summary.slice(0, 90))}${p.summary.length > 90 ? '…' : ''}</div>` : ''}
-        </td>
-        <td data-label="Būsena"><span class="chip ${p.status === 'published' ? 'chip-ok' : 'chip-quiet'}">${esc(p.status === 'published' ? 'Paskelbta' : p.status === 'archived' ? 'Archyve' : 'Juodraštis')}</span></td>
-        <td data-label="Klientų">${kiek}</td>
-        <td data-label="Atnaujinta">${esc(data(p.updated_at))}</td>
-        <td data-label="">
-          <div class="row">
-            <a class="btn btn-ghost btn-sm" href="redaguoti.html?id=${encodeURIComponent(p.id)}">Redaguoti</a>
-            <button class="btn btn-ghost btn-sm dubliuoti-programa" type="button" data-id="${esc(p.id)}">Dubliuoti</button>
-            <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
-
   $('#kortele-programos').innerHTML = `
     <div class="card" style="margin-bottom:var(--s-300)">
       <div class="card-head">
@@ -296,29 +289,111 @@ function piesProgramas() {
     </div>
 
     <div class="card">
-      <details>
-        <summary class="card-head" style="cursor:pointer;list-style:none">
-          <h2 style="display:inline">Visos programos</h2>
-          <span class="row-end muted">${programos.length}</span>
-        </summary>
-        <p class="muted" style="font-size:.8125rem;margin:var(--s-200) 0">
-          Būsena nurodo, ar programą gali priskirti NAUJAM klientui — klientai, kurie programą jau turi
-          priskirtą, mato savo kopiją nepriklausomai nuo šios būsenos (ir jei ją pakeisi į Juodraštis ar
-          Archyve, jau priskirtiems klientams niekas nepasikeičia).
-        </p>
-        ${programos.length ? `
-          <div class="table-wrap table-kortelese">
-            <table>
-              <thead><tr><th>Programa</th><th>Būsena</th><th>Klientų</th><th>Atnaujinta</th><th></th></tr></thead>
-              <tbody>${eilutes}</tbody>
-            </table>
-          </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
-      </details>
-    </div>
-
-    ${klientuProgramuSarasas()}`;
+      <div class="card-head">
+        <h2>Programos</h2>
+        <span class="row-end muted" id="programu-kiek"></span>
+      </div>
+      <p class="muted" style="font-size:.8125rem;margin-bottom:var(--s-200)">
+        Šablonai (priskiriami naujam klientui iš naujo) ir jau priskirtos klientų kopijos — įskaitant tas,
+        kurios nuo šablono jau nutolo, nes buvo pataisytos tiesiai kliento profilyje — visos vienoje
+        vietoje. „Redaguoti“ visada atveria tą pačią vietą, nepriklausomai nuo tipo.
+      </p>
+      <div class="field-row" style="margin-bottom:var(--s-200)">
+        <div class="field">
+          <label for="prog-paieska">Paieška</label>
+          <input id="prog-paieska" type="text" placeholder="Pagal pavadinimą ar klientą" value="${esc(progFiltrasTekstas)}">
+        </div>
+        <div class="field">
+          <label for="prog-klientas-filtras">Kam</label>
+          <select id="prog-klientas-filtras">
+            <option value="">Visos</option>
+            <option value="sablonai"${progFiltrasKlientas === 'sablonai' ? ' selected' : ''}>Tik šablonai</option>
+            ${profiliai.filter((p) => p.id !== savasId).map((k) => `<option value="${esc(k.id)}"${progFiltrasKlientas === k.id ? ' selected' : ''}>${esc(k.full_name || k.email || 'Be vardo')}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label for="prog-rikiavimas">Rikiavimas</label>
+          <select id="prog-rikiavimas">
+            <option value="naujausios"${progRikiavimas === 'naujausios' ? ' selected' : ''}>Naujausios pirma</option>
+            <option value="seniausios"${progRikiavimas === 'seniausios' ? ' selected' : ''}>Seniausios pirma</option>
+          </select>
+        </div>
+      </div>
+      <div id="programu-sarasas"></div>
+    </div>`;
 
   $('#forma-programa').addEventListener('submit', sukurkPrograma);
+  $('#prog-paieska').addEventListener('input', (ev) => { progFiltrasTekstas = ev.target.value; piesProgramuEilutes(); });
+  $('#prog-klientas-filtras').addEventListener('change', (ev) => { progFiltrasKlientas = ev.target.value; piesProgramuEilutes(); });
+  $('#prog-rikiavimas').addEventListener('change', (ev) => { progRikiavimas = ev.target.value; piesProgramuEilutes(); });
+  piesProgramuEilutes();
+}
+
+/** Sujungia šablonus (programos) ir klientų nuosavas kopijas (priskyrimai) į
+ * vieną bendrą sąrašą — treneriui nereikia žinoti, kurioje lentelėje kuri
+ * programa yra, kad ją atidarytų. Anksčiau tai buvo dvi atskiros kortelės
+ * ("Visos programos" ir "Klientų programos"), kurios iš trenerio pusės
+ * atrodė kaip du nesusiję sąrašai be aiškaus "redaguoti" veiksmo antrajame. */
+function visuProgramuSarasas() {
+  const sablonai = programos.map((p) => ({
+    tipas: 'sablonas',
+    id: p.id,
+    title: p.title,
+    clientId: null,
+    clientName: null,
+    statusLabel: p.status === 'published' ? 'Paskelbta' : p.status === 'archived' ? 'Archyve' : 'Juodraštis',
+    statusChip: p.status === 'published' ? 'chip-ok' : 'chip-quiet',
+    kada: p.updated_at,
+    kiek: priskyrimai.filter((a) => a.program_id === p.id && a.status === 'active').length,
+    raw: p,
+  }));
+  const klientuKopijos = priskyrimai.map((a) => {
+    const klientas = profiliai.find((p) => p.id === a.client_id);
+    const pagrindas = programos.find((p) => p.id === a.program_id);
+    return {
+      tipas: 'kliento',
+      id: a.id,
+      title: a.title,
+      clientId: a.client_id,
+      clientName: klientas?.full_name || klientas?.email || 'Nežinomas',
+      statusLabel: a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : a.status,
+      statusChip: a.status === 'active' ? 'chip-ok' : 'chip-quiet',
+      kada: a.assigned_at,
+      pagrindas,
+      raw: a,
+    };
+  });
+  return [...sablonai, ...klientuKopijos];
+}
+
+function filtruotosProgramos() {
+  const q = progFiltrasTekstas.trim().toLowerCase();
+  const atrinktos = visuProgramuSarasas().filter((eil) => {
+    if (progFiltrasKlientas === 'sablonai' && eil.tipas !== 'sablonas') return false;
+    if (progFiltrasKlientas && progFiltrasKlientas !== 'sablonai' && eil.clientId !== progFiltrasKlientas) return false;
+    if (q && !(eil.title.toLowerCase().includes(q) || (eil.clientName || '').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  atrinktos.sort((a, b) => progRikiavimas === 'seniausios'
+    ? new Date(a.kada) - new Date(b.kada)
+    : new Date(b.kada) - new Date(a.kada));
+  return atrinktos;
+}
+
+/** Perrenka TIK eilutes (ne visą kortelę su filtrų laukais) — kitaip rašant
+ * paieškos lauke kiekvienas raktas iš naujo nupieštų innerHTML ir fokusas
+ * iš lauko dingtų po pirmo simbolio. */
+function piesProgramuEilutes() {
+  const eilutes = filtruotosProgramos();
+  $('#programu-kiek').textContent = String(eilutes.length);
+  $('#programu-sarasas').innerHTML = eilutes.length ? `
+    <div class="table-wrap table-kortelese">
+      <table>
+        <thead><tr><th>Programa</th><th>Kam</th><th>Būsena</th><th>Data</th><th></th></tr></thead>
+        <tbody>${eilutes.map(programosEiluteHtml).join('')}</tbody>
+      </table>
+    </div>` : '<p class="muted">Nerasta programų, atitinkančių filtrą.</p>';
+
   for (const b of $$('.trinti-programa')) b.addEventListener('click', () => trinkPrograma(b.dataset.id, b.dataset.vardas));
   for (const b of $$('.dubliuoti-programa')) b.addEventListener('click', () => dubliuokPrograma(b.dataset.id, b));
   for (const b of $$('.redaguoti-is-saraso')) {
@@ -336,56 +411,30 @@ function piesProgramas() {
   }
 }
 
-/** "Visos programos" aukščiau yra ŠABLONAI — šis sąrašas yra KLIENTŲ
- * NUOSAVOS kopijos (client_programs), įskaitant tas, kurios nuo šablono jau
- * nutolo (pervadintos, su papildoma diena ar kitaip pataisytos tiesiai
- * kliento profilyje). Be šio sąrašo tokios kopijos matomos tik atidarius tą
- * konkretų klientą per Klientai skiltį — čia jos visos vienoje vietoje. */
-function klientuProgramuSarasas() {
-  const surikiuota = [...priskyrimai].sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at));
-
-  const eilutes = surikiuota.map((a) => {
-    const klientas = profiliai.find((p) => p.id === a.client_id);
-    const pagrindas = programos.find((p) => p.id === a.program_id);
-    return `
-      <tr>
-        <td>
-          <strong>${esc(a.title)}</strong>
-          ${pagrindas ? `<div class="muted" style="font-size:.8125rem">Pagal: ${esc(pagrindas.title)}</div>` : ''}
-        </td>
-        <td data-label="Klientas">${esc(klientas?.full_name || klientas?.email || 'Nežinomas')}</td>
-        <td data-label="Būsena"><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
-        <td data-label="Priskirta">${esc(data(a.assigned_at))}</td>
-        <td data-label="">
-          <div class="row">
-            <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
-            <button class="btn btn-ghost btn-sm redaguoti-is-saraso" type="button" data-id="${esc(a.id)}" data-client="${esc(a.client_id)}">Pratimai</button>
-            <button class="btn btn-ghost btn-sm pervadinti-is-saraso" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}" data-client="${esc(a.client_id)}">Pervadinti</button>
-            <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(a.id)}">Išsaugoti kaip šabloną</button>
-          </div>
-        </td>
-      </tr>`;
-  }).join('');
+function programosEiluteHtml(eil) {
+  const kam = eil.tipas === 'sablonas'
+    ? `<span class="chip chip-quiet">Šablonas</span>${eil.kiek ? ` <span class="muted" style="font-size:.8125rem">${eil.kiek} ${zodis(eil.kiek, 'klientas', 'klientai', 'klientų')}</span>` : ''}`
+    : esc(eil.clientName);
+  const paantrastes = eil.tipas === 'sablonas'
+    ? (eil.raw.summary ? `<div class="muted" style="font-size:.8125rem">${esc(eil.raw.summary.slice(0, 90))}${eil.raw.summary.length > 90 ? '…' : ''}</div>` : '')
+    : (eil.pagrindas ? `<div class="muted" style="font-size:.8125rem">Pagal: ${esc(eil.pagrindas.title)}</div>` : '');
+  const veiksmai = eil.tipas === 'sablonas' ? `
+    <a class="btn btn-primary btn-sm" href="redaguoti.html?id=${encodeURIComponent(eil.id)}">Redaguoti</a>
+    <button class="btn btn-ghost btn-sm dubliuoti-programa" type="button" data-id="${esc(eil.id)}">Dubliuoti</button>
+    <button class="btn btn-danger btn-sm trinti-programa" type="button" data-id="${esc(eil.id)}" data-vardas="${esc(eil.title)}">Trinti</button>` : `
+    <button class="btn btn-primary btn-sm redaguoti-is-saraso" type="button" data-id="${esc(eil.id)}" data-client="${esc(eil.clientId)}">Redaguoti</button>
+    <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(eil.id)}">Istorija</a>
+    <button class="btn btn-ghost btn-sm pervadinti-is-saraso" type="button" data-id="${esc(eil.id)}" data-vardas="${esc(eil.title)}" data-client="${esc(eil.clientId)}">Pervadinti</button>
+    <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(eil.id)}">Išsaugoti kaip šabloną</button>`;
 
   return `
-    <div class="card" style="margin-top:var(--s-300)">
-      <div class="card-head">
-        <h2>Klientų programos</h2>
-        <span class="row-end muted">${surikiuota.length}</span>
-      </div>
-      <p class="muted" style="font-size:.8125rem;margin-bottom:var(--s-200)">
-        Kiekvieno kliento NUOSAVA programos kopija — įskaitant tas, kurios nuo šablono aukščiau jau nutolo,
-        nes buvo pataisytos tiesiai kliento profilyje. Čia jas visas gali rasti vienoje vietoje, be reikalo
-        neieškodamas, kurio kliento profilyje kuri yra.
-      </p>
-      ${surikiuota.length ? `
-        <div class="table-wrap table-kortelese">
-          <table>
-            <thead><tr><th>Programa</th><th>Klientas</th><th>Būsena</th><th>Priskirta</th><th></th></tr></thead>
-            <tbody>${eilutes}</tbody>
-          </table>
-        </div>` : '<p class="muted">Klientų programų dar nėra.</p>'}
-    </div>`;
+    <tr>
+      <td><strong>${esc(eil.title)}</strong>${paantrastes}</td>
+      <td data-label="Kam">${kam}</td>
+      <td data-label="Būsena"><span class="chip ${eil.statusChip}">${esc(eil.statusLabel)}</span></td>
+      <td data-label="Data">${esc(data(eil.kada))}</td>
+      <td data-label=""><div class="row">${veiksmai}</div></td>
+    </tr>`;
 }
 
 /** Pilna, nepriklausoma programos kopija (visos dienos ir pratimai) nauju
@@ -639,6 +688,7 @@ async function redaguokKlientoPratimus(clientProgramId) {
   redaguojamosKlientoDienosId = null;
   redaguojamoKlientoPratimoId = null;
   pridedamosKlientoDienosId = null;
+  rodomaKlientoDienosId = null;
   await ikelkIrPiesKlientoPratimus();
 }
 
@@ -669,8 +719,19 @@ async function ikelkIrPiesKlientoPratimus() {
   piesKlientoPratimus();
 }
 
+/** Dienos kairėje kaip šoninis sąrašas, viena pasirinkta diena dešinėje —
+ * ne visos dienos vienoje ilgoje vertikalioje juostoje. Ilgoms (6-8 dienų)
+ * programoms ankstesnis variantas reiškė scrollinimą pro visas ankstesnes
+ * dienas, kad pasiektum, pvz., 5-ą; čia dienos visos matomos vienu žvilgsniu. */
 function piesKlientoPratimus() {
   const vieta = $('#klientu-pratimu-detale');
+
+  if (!klientoDienos.some((x) => x.id === rodomaKlientoDienosId)) {
+    rodomaKlientoDienosId = klientoDienos[0]?.id || null;
+  }
+  const d = klientoDienos.find((x) => x.id === rodomaKlientoDienosId) || null;
+  const savi = d ? klientoPratimai.filter((p) => p.client_day_id === d.id) : [];
+  const zenklai = d ? apskaiciuokSupersetuZenklus(savi) : new Map();
 
   vieta.innerHTML = `
     <div class="card" style="margin-top:var(--s-300)">
@@ -682,15 +743,31 @@ function piesKlientoPratimus() {
         Čia taisomas tik šio kliento jau priskirtas egzempliorius — šablonas ir kiti klientai nepasikeičia,
         o kliento jau įrašyta treniruočių istorija lieka susieta su tais pačiais pratimais.
       </p>
-      ${klientoDienos.map((d) => {
-        const savi = klientoPratimai.filter((p) => p.client_day_id === d.id);
-        const zenklai = apskaiciuokSupersetuZenklus(savi);
-        return `
-          <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+      <div style="display:flex;gap:var(--s-300);margin-top:var(--s-200);flex-wrap:wrap">
+        <div style="flex:0 0 230px;min-width:200px">
+          ${klientoDienos.map((diena, i) => `
+            <div style="display:flex;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;margin-bottom:2px;${diena.id === rodomaKlientoDienosId ? 'background:var(--volt)' : ''}">
+              <button type="button" class="btn-link rodyk-kliento-diena" data-id="${esc(diena.id)}" style="flex:1;text-align:left;font-weight:${diena.id === rodomaKlientoDienosId ? '700' : '400'}">${esc(diena.title)}</button>
+              <button type="button" class="kelk-kliento-diena" data-id="${esc(diena.id)}" data-kryptis="-1" aria-label="Kelti aukštyn" style="border:none;background:none;cursor:pointer;padding:2px 4px"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+              <button type="button" class="kelk-kliento-diena" data-id="${esc(diena.id)}" data-kryptis="1" aria-label="Kelti žemyn" style="border:none;background:none;cursor:pointer;padding:2px 4px"${i === klientoDienos.length - 1 ? ' disabled' : ''}>&#9660;</button>
+            </div>`).join('')}
+          ${klientoDienos.length ? '' : '<p class="muted" style="font-size:.875rem">Dienų dar nėra.</p>'}
+          <div style="margin-top:var(--s-200)">
+            ${pridedamaKlientoDiena ? klientoDienosPridejimoForma() : `
+              <button class="btn btn-ghost btn-sm" type="button" id="prideti-kliento-diena" style="width:100%">+ Pridėti dieną</button>`}
+          </div>
+        </div>
+
+        <div style="flex:1;min-width:280px">
+          ${d ? `
             ${d.id === redaguojamosKlientoDienosId ? klientoDienosRedagavimoForma(d) : `
               <div class="card-head">
                 <h3 style="margin:0;font-size:1.0625rem">${esc(d.title)}</h3>
-                <button class="btn btn-ghost btn-sm row-end redaguoti-kliento-diena" type="button" data-id="${esc(d.id)}">Redaguoti dieną</button>
+                <div class="row" style="gap:var(--s-100)">
+                  <button class="btn btn-ghost btn-sm redaguoti-kliento-diena" type="button" data-id="${esc(d.id)}">Redaguoti</button>
+                  <button class="btn btn-ghost btn-sm dubliuoti-kliento-diena" type="button" data-id="${esc(d.id)}">Dubliuoti dieną</button>
+                  <button class="btn btn-danger btn-sm trinti-kliento-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Šalinti dieną</button>
+                </div>
               </div>
               ${d.notes ? `<p class="muted" style="font-size:.875rem">${esc(d.notes)}</p>` : ''}
             `}
@@ -704,13 +781,8 @@ function piesKlientoPratimus() {
               <div class="form-actions" style="margin-top:var(--s-200)">
                 <button class="btn btn-ghost btn-sm prideti-kliento-pratima" type="button" data-diena="${esc(d.id)}">+ Pridėti pratimą</button>
               </div>`}
-          </div>`;
-      }).join('')}
-      <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
-        ${pridedamaKlientoDiena ? klientoDienosPridejimoForma() : `
-          <div class="form-actions">
-            <button class="btn btn-ghost btn-sm" type="button" id="prideti-kliento-diena">+ Pridėti dieną</button>
-          </div>`}
+          ` : '<p class="muted">Pridėk pirmą dieną kairėje.</p>'}
+        </div>
       </div>
     </div>`;
 
@@ -718,6 +790,24 @@ function piesKlientoPratimus() {
     vieta.innerHTML = '';
     redaguojamosKlientoProgramosId = null;
   });
+  for (const b of $$('.rodyk-kliento-diena')) {
+    b.addEventListener('click', () => {
+      rodomaKlientoDienosId = b.dataset.id;
+      redaguojamosKlientoDienosId = null;
+      redaguojamoKlientoPratimoId = null;
+      pridedamosKlientoDienosId = null;
+      piesKlientoPratimus();
+    });
+  }
+  for (const b of $$('.kelk-kliento-diena')) {
+    b.addEventListener('click', () => perkelkKlientoDiena(b.dataset.id, Number(b.dataset.kryptis)));
+  }
+  for (const b of $$('.dubliuoti-kliento-diena')) {
+    b.addEventListener('click', () => dubliuokKlientoDiena(b.dataset.id, b));
+  }
+  for (const b of $$('.trinti-kliento-diena')) {
+    b.addEventListener('click', () => trinkKlientoDiena(b.dataset.id, b.dataset.vardas));
+  }
   for (const f of $$('.forma-kliento-pratimas')) f.addEventListener('submit', issaugokKlientoPratimoRedagavima);
   for (const f of $$('.forma-redaguoti-kliento-diena')) f.addEventListener('submit', issaugokKlientoDienosRedagavima);
   for (const f of $$('.forma-prideti-kliento-pratima')) {
@@ -804,6 +894,63 @@ async function pridekKlientoDiena(ev) {
   }
   pridedamaKlientoDiena = false;
   pranesk($('#pranesimas'), 'Diena pridėta.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
+}
+
+/** Tas pats modelis kaip issaugokKlientoPratimuTvarka() žemiau, tik dienoms. */
+async function issaugokKlientoDienuTvarka(tvarkaId) {
+  const atnaujinimai = tvarkaId.map((id, idx) => db.from('client_days').update({ position: idx }).eq('id', id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return false;
+  }
+  tvarkaId.forEach((id, idx) => {
+    const x = klientoDienos.find((y) => y.id === id);
+    if (x) x.position = idx;
+  });
+  klientoDienos.sort((a, b) => a.position - b.position);
+  return true;
+}
+
+async function perkelkKlientoDiena(dienosId, kryptis) {
+  const surikiuotos = [...klientoDienos].sort((a, b) => a.position - b.position);
+  const i = surikiuotos.findIndex((x) => x.id === dienosId);
+  const j = i + kryptis;
+  if (i < 0 || j < 0 || j >= surikiuotos.length) return;
+  [surikiuotos[i], surikiuotos[j]] = [surikiuotos[j], surikiuotos[i]];
+  const sekme = await issaugokKlientoDienuTvarka(surikiuotos.map((x) => x.id));
+  if (sekme) piesKlientoPratimus();
+}
+
+/** Nukopijuoja vieną dieną (su jos pratimais) tame pačiame kliento
+ * egzemplioriuje — žr. supabase/dienos-tvarkymas.sql. Naudinga, kai dvi
+ * dienos labai panašios (pvz. savaitės A/B variantai) ir rašyti antrą iš
+ * naujo nėra prasmės. */
+async function dubliuokKlientoDiena(dienosId, mygtukas) {
+  mygtukas.disabled = true;
+  const { data: naujosId, error } = await db.rpc('duplicate_client_day', { p_client_day_id: dienosId });
+  if (error) {
+    mygtukas.disabled = false;
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Diena nukopijuota.', 'ok');
+  rodomaKlientoDienosId = naujosId;
+  await ikelkIrPiesKlientoPratimus();
+}
+
+async function trinkKlientoDiena(dienosId, vardas) {
+  if (!confirm(`Ištrinti dieną "${vardas}"?\n\nKartu dings jos pratimai ir kliento jau įrašyta šios dienos treniruočių istorija. To atstatyti nebus galima.`)) return;
+
+  const { error } = await db.from('client_days').delete().eq('id', dienosId);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Diena ištrinta.', 'ok');
+  rodomaKlientoDienosId = null;
   await ikelkIrPiesKlientoPratimus();
 }
 
@@ -995,53 +1142,56 @@ function klientoPridejimoForma(dienaId) {
           ${bibliotekosOptGrupes(bibliotekosPratimai)}
         </select>
       </div>` : ''}
-      <div class="field-row">
-        <div class="field">
-          <label for="np-pavadinimas-${esc(dienaId)}">Pratimo pavadinimas</label>
-          <input id="np-pavadinimas-${esc(dienaId)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint" list="pratimu-biblioteka-sarasas" autocomplete="off">
-          <p class="hint">Jau žinomą pavadinimą įrašius ar pasirinkus iš sąrašo, setai, kartai, svoris, poilsis, pastabos ir vaizdo nuoroda užsipildys patys.</p>
-        </div>
-        <div class="field">
-          <label for="np-setai-${esc(dienaId)}">Setai</label>
-          <input id="np-setai-${esc(dienaId)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
-        </div>
-        <div class="field">
-          <label for="np-kartai-${esc(dienaId)}">Kartai</label>
-          <input id="np-kartai-${esc(dienaId)}" name="reps" type="text" placeholder="Pvz., 8-10">
-        </div>
-        <div class="field">
-          <label for="np-svoris-${esc(dienaId)}">Svoris / intensyvumas</label>
-          <input id="np-svoris-${esc(dienaId)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
-        </div>
-        <div class="field">
-          <label for="np-poilsis-${esc(dienaId)}">Poilsis, sek</label>
-          <input id="np-poilsis-${esc(dienaId)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
-        </div>
-        <div class="field">
-          <label for="np-tipas-${esc(dienaId)}">Įrašymo tipas</label>
-          <select id="np-tipas-${esc(dienaId)}" name="log_type">
-            <option value="svoris">Svoris ir kartai</option>
-            <option value="kartai">Tik kartai (be svorio)</option>
-            <option value="laikas">Laikas (sekundėmis)</option>
-          </select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="np-pastabos-${esc(dienaId)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
-          <input id="np-pastabos-${esc(dienaId)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
-        </div>
-        <div class="field">
-          <label for="np-video-${esc(dienaId)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
-          <input id="np-video-${esc(dienaId)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
-        </div>
-      </div>
       <div class="field">
-        <label class="check-opt" for="np-supersetas-${esc(dienaId)}">
-          <input id="np-supersetas-${esc(dienaId)}" name="superset" type="checkbox">
-          <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
-        </label>
+        <label for="np-pavadinimas-${esc(dienaId)}">Pratimo pavadinimas</label>
+        <input id="np-pavadinimas-${esc(dienaId)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint" list="pratimu-biblioteka-sarasas" autocomplete="off">
+        <p class="hint">Įrašyk pavadinimą ir spausk „Pridėti pratimą" — kitus laukus visada gali papildyti vėliau. Jau žinomą pavadinimą įrašius ar pasirinkus iš sąrašo, jie užsipildys patys.</p>
       </div>
+      <details style="margin:var(--s-100) 0">
+        <summary class="muted" style="cursor:pointer;font-size:.8125rem">Daugiau laukų (setai, kartai, svoris, poilsis, pastabos, vaizdas, supersetas)</summary>
+        <div class="field-row" style="margin-top:var(--s-100)">
+          <div class="field">
+            <label for="np-setai-${esc(dienaId)}">Setai</label>
+            <input id="np-setai-${esc(dienaId)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="np-kartai-${esc(dienaId)}">Kartai</label>
+            <input id="np-kartai-${esc(dienaId)}" name="reps" type="text" placeholder="Pvz., 8-10">
+          </div>
+          <div class="field">
+            <label for="np-svoris-${esc(dienaId)}">Svoris / intensyvumas</label>
+            <input id="np-svoris-${esc(dienaId)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
+          </div>
+          <div class="field">
+            <label for="np-poilsis-${esc(dienaId)}">Poilsis, sek</label>
+            <input id="np-poilsis-${esc(dienaId)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="np-tipas-${esc(dienaId)}">Įrašymo tipas</label>
+            <select id="np-tipas-${esc(dienaId)}" name="log_type">
+              <option value="svoris">Svoris ir kartai</option>
+              <option value="kartai">Tik kartai (be svorio)</option>
+              <option value="laikas">Laikas (sekundėmis)</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="np-pastabos-${esc(dienaId)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="np-pastabos-${esc(dienaId)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+          </div>
+          <div class="field">
+            <label for="np-video-${esc(dienaId)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+            <input id="np-video-${esc(dienaId)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
+          </div>
+        </div>
+        <div class="field">
+          <label class="check-opt" for="np-supersetas-${esc(dienaId)}">
+            <input id="np-supersetas-${esc(dienaId)}" name="superset" type="checkbox">
+            <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+          </label>
+        </div>
+      </details>
       <div class="form-actions">
         <button class="btn btn-primary btn-sm" type="submit">Pridėti pratimą</button>
         <button class="btn btn-ghost btn-sm atsaukti-kliento-pridejima" type="button">Atšaukti</button>

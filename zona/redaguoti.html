@@ -122,6 +122,8 @@ let priskyrimai = [];
 let redaguojamoPratimoId = null;
 let redaguojamosDienosId = null;
 let velkamaEilute = null;
+let rodomaDienosId = null;
+let pridedamaDiena = false;
 
 // Visų anksčiau naudotų pratimų biblioteka — leidžia naujam pratimui bet
 // kurioje programoje gauti pavadinimą, setus, kartus, svorį, poilsį, pastabas
@@ -248,30 +250,28 @@ function piesTurini() {
     </div>
 
     <div class="card-head" style="margin-bottom:var(--s-200)"><h2>Dienos</h2></div>
-    <div id="dienu-sarasas"></div>
-
-    <div class="card" style="margin-top:var(--s-300)">
-      <div class="card-head"><h2>Nauja diena</h2></div>
-      <form id="forma-diena" novalidate>
-        <div class="field-row">
-          <div class="field">
-            <label for="d-pavadinimas">Pavadinimas</label>
-            <input id="d-pavadinimas" type="text" required placeholder="Pvz., 1 diena — stūmimas">
-          </div>
-          <div class="field">
-            <label for="d-pastabos">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
-            <input id="d-pastabos" type="text" placeholder="Bendra šios dienos pastaba">
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" type="submit">Pridėti dieną</button>
-        </div>
-      </form>
-    </div>`;
+    <div id="dienu-sarasas"></div>`;
 
   $('#forma-antraste').addEventListener('submit', issaugokAntraste);
-  $('#forma-diena').addEventListener('submit', prideDiena);
   piesDienuSarasa();
+}
+
+function naujosDienosForma() {
+  return `
+    <form id="forma-diena" novalidate>
+      <div class="field">
+        <label for="d-pavadinimas">Pavadinimas</label>
+        <input id="d-pavadinimas" type="text" required placeholder="Pvz., 1 diena — stūmimas">
+      </div>
+      <div class="field">
+        <label for="d-pastabos">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+        <input id="d-pastabos" type="text" placeholder="Bendra šios dienos pastaba">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Pridėti dieną</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="atsaukti-dienos-pridejimo">Atšaukti</button>
+      </div>
+    </form>`;
 }
 
 async function issaugokAntraste(ev) {
@@ -305,141 +305,187 @@ async function issaugokAntraste(ev) {
   await perkrauk();
 }
 
+/** Dienos kairėje kaip šoninis sąrašas, viena pasirinkta diena dešinėje —
+ * ne kiekviena diena savo kortelėje, visos vienoje ilgoje vertikalioje
+ * juostoje. Ilgoms (6-8 dienų) programoms ankstesnis variantas reiškė
+ * scrollinimą pro visas ankstesnes dienas; čia jos visos matomos vienu
+ * žvilgsniu kairėje, be reikalo nebraukiant per svetimų dienų turinį. */
 function piesDienuSarasa() {
   const vieta = $('#dienu-sarasas');
-  if (!dienos.length) {
-    vieta.innerHTML = '<p class="muted">Dienų dar nėra. Pridėk pirmą žemiau.</p>';
-    return;
+
+  if (!dienos.some((x) => x.id === rodomaDienosId)) {
+    rodomaDienosId = dienos[0]?.id || null;
   }
+  const d = dienos.find((x) => x.id === rodomaDienosId) || null;
+  const savi = d ? pratimai.filter((p) => p.section_id === d.id) : [];
+  const supersetuZenklai = d ? apskaiciuokSupersetuZenklus(savi) : new Map();
 
-  vieta.innerHTML = dienos.map((d) => {
-    const savi = pratimai.filter((p) => p.section_id === d.id);
-    const supersetuZenklai = apskaiciuokSupersetuZenklus(savi);
-    return `
-      <div class="card diena-kortele">
-        ${d.id === redaguojamosDienosId ? dienosRedagavimoForma(d) : `
-          <div class="card-head">
-            <h3 style="margin:0">${esc(d.title)}</h3>
-            <div class="row" style="gap:var(--s-100)">
-              <button class="btn btn-ghost btn-sm redaguoti-diena" type="button" data-id="${esc(d.id)}">Redaguoti</button>
-              <button class="btn btn-danger btn-sm trinti-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Trinti dieną</button>
-            </div>
+  vieta.innerHTML = `
+    <div class="card">
+      <div style="display:flex;gap:var(--s-300);flex-wrap:wrap">
+        <div style="flex:0 0 230px;min-width:200px">
+          ${dienos.map((diena, i) => `
+            <div style="display:flex;align-items:center;gap:2px;padding:6px 8px;border-radius:8px;margin-bottom:2px;${diena.id === rodomaDienosId ? 'background:var(--volt)' : ''}">
+              <button type="button" class="btn-link rodyk-diena" data-id="${esc(diena.id)}" style="flex:1;text-align:left;font-weight:${diena.id === rodomaDienosId ? '700' : '400'}">${esc(diena.title)}</button>
+              <button type="button" class="kelk-diena" data-id="${esc(diena.id)}" data-kryptis="-1" aria-label="Kelti aukštyn" style="border:none;background:none;cursor:pointer;padding:2px 4px"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+              <button type="button" class="kelk-diena" data-id="${esc(diena.id)}" data-kryptis="1" aria-label="Kelti žemyn" style="border:none;background:none;cursor:pointer;padding:2px 4px"${i === dienos.length - 1 ? ' disabled' : ''}>&#9660;</button>
+            </div>`).join('')}
+          ${dienos.length ? '' : '<p class="muted" style="font-size:.875rem">Dienų dar nėra.</p>'}
+          <div style="margin-top:var(--s-200)">
+            ${pridedamaDiena ? naujosDienosForma() : `
+              <button class="btn btn-ghost btn-sm" type="button" id="prideti-diena" style="width:100%">+ Pridėti dieną</button>`}
           </div>
-          ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}`}
-
-        <div id="pratimai-${esc(d.id)}" data-sekcija="${esc(d.id)}">
-          ${savi.length ? savi.map((p, i) => {
-            if (p.id === redaguojamoPratimoId) return pratimoRedagavimoForma(p);
-            const zenklas = supersetuZenklai.get(p.id);
-            const tesinys = i > 0 && p.superset_with_previous && zenklas;
-            return `
-            <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${tesinys ? ' supersete-tesinys' : ''}" draggable="true" data-id="${esc(p.id)}">
-              <span class="tvarkos-rankena" title="Tempk, kad pakeistum tvarką">⠿</span>
-              <div class="pratimo-eilute-info">
-                <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
-                <div class="pratimo-meta muted" style="font-size:.8125rem">
-                  ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
-                  ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
-                  ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
-                  ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
-                  ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
-                </div>
-                ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
-                ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
-              </div>
-              <div class="pratimo-eilute-valdymas">
-                <div class="tvarkos-mygtukai">
-                  <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
-                  <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === savi.length - 1 ? ' disabled' : ''}>&#9660;</button>
-                </div>
-                <button class="btn btn-ghost btn-sm redaguoti-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
-                <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
-              </div>
-            </div>`;
-          }).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
         </div>
 
-        ${pratimai.length ? `
-          <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
-            <div class="field">
-              <label for="kp-pasirinkimas-${esc(d.id)}">Kopijuoti esamą pratimą į šią dieną</label>
-              <select id="kp-pasirinkimas-${esc(d.id)}">
-                ${dienos.map((diena) => {
-                  const jos = pratimai.filter((p) => p.section_id === diena.id);
-                  if (!jos.length) return '';
-                  return `<optgroup label="${esc(diena.title)}">
-                    ${jos.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}
-                  </optgroup>`;
-                }).join('')}
-              </select>
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-ghost btn-sm kopijuoti-pratima" type="button" data-sekcija="${esc(d.id)}">Kopijuoti</button>
-            </div>
-          </div>` : ''}
+        <div style="flex:1;min-width:280px">
+          ${d ? `
+            ${d.id === redaguojamosDienosId ? dienosRedagavimoForma(d) : `
+              <div class="card-head">
+                <h3 style="margin:0">${esc(d.title)}</h3>
+                <div class="row" style="gap:var(--s-100)">
+                  <button class="btn btn-ghost btn-sm redaguoti-diena" type="button" data-id="${esc(d.id)}">Redaguoti</button>
+                  <button class="btn btn-ghost btn-sm dubliuoti-diena" type="button" data-id="${esc(d.id)}">Dubliuoti dieną</button>
+                  <button class="btn btn-danger btn-sm trinti-diena" type="button" data-id="${esc(d.id)}" data-vardas="${esc(d.title)}">Trinti dieną</button>
+                </div>
+              </div>
+              ${d.notes ? `<p class="muted" style="font-size:.9375rem">${esc(d.notes)}</p>` : ''}`}
 
-        <form class="forma-pratimas" data-sekcija="${esc(d.id)}" novalidate style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
-          ${bibliotekosPratimai.length ? `
-          <div class="field" style="margin-bottom:var(--s-200)">
-            <label for="p-bib-${esc(d.id)}">Pasirink iš bibliotekos pagal kūno sritį <span class="hint" style="display:inline">(neprivaloma)</span></label>
-            <select id="p-bib-${esc(d.id)}" class="bib-pasirinkimas">
-              <option value="">— pasirink pratimą —</option>
-              ${bibliotekosOptGrupes(bibliotekosPratimai)}
-            </select>
-          </div>` : ''}
-          <div class="field-row">
-            <div class="field">
-              <label for="p-pavadinimas-${esc(d.id)}">Pratimo pavadinimas</label>
-              <input id="p-pavadinimas-${esc(d.id)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint" list="pratimu-biblioteka-sarasas" autocomplete="off">
-              <p class="hint">Jau žinomą pavadinimą įrašius ar pasirinkus iš sąrašo, setai, kartai, svoris, poilsis, pastabos ir vaizdo nuoroda užsipildys patys.</p>
+            <div id="pratimai-${esc(d.id)}" data-sekcija="${esc(d.id)}">
+              ${savi.length ? savi.map((p, i) => {
+                if (p.id === redaguojamoPratimoId) return pratimoRedagavimoForma(p);
+                const zenklas = supersetuZenklai.get(p.id);
+                const tesinys = i > 0 && p.superset_with_previous && zenklas;
+                return `
+                <div class="pratimo-eilute${zenklas ? ' supersete' : ''}${tesinys ? ' supersete-tesinys' : ''}" draggable="true" data-id="${esc(p.id)}">
+                  <span class="tvarkos-rankena" title="Tempk, kad pakeistum tvarką">⠿</span>
+                  <div class="pratimo-eilute-info">
+                    <strong>${esc(p.title)}</strong>${zenklas ? ` <span class="superseto-zenklas">${zenklas}</span>` : ''}
+                    <div class="pratimo-meta muted" style="font-size:.8125rem">
+                      ${p.log_type === 'kartai' ? '<span>Tik kartai</span>' : p.log_type === 'laikas' ? '<span>Laikas</span>' : ''}
+                      ${p.target_sets ? `<span>${esc(p.target_sets)} setai</span>` : ''}
+                      ${p.target_reps ? `<span>${esc(p.target_reps)} kartų</span>` : ''}
+                      ${p.target_load ? `<span>${esc(p.target_load)}</span>` : ''}
+                      ${p.rest_seconds ? `<span>${esc(p.rest_seconds)} sek poilsis</span>` : ''}
+                    </div>
+                    ${p.notes ? `<p class="muted" style="font-size:.8125rem;margin-top:4px">${esc(p.notes)}</p>` : ''}
+                    ${p.video_url ? `<p style="font-size:.8125rem;margin-top:4px"><a href="${esc(p.video_url)}" target="_blank" rel="noopener" style="text-decoration:underline">Vaizdo nuoroda</a></p>` : ''}
+                  </div>
+                  <div class="pratimo-eilute-valdymas">
+                    <div class="tvarkos-mygtukai">
+                      <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="-1" aria-label="Kelti aukštyn"${i === 0 ? ' disabled' : ''}>&#9650;</button>
+                      <button type="button" class="kelk-pratima" data-id="${esc(p.id)}" data-kryptis="1" aria-label="Kelti žemyn"${i === savi.length - 1 ? ' disabled' : ''}>&#9660;</button>
+                    </div>
+                    <button class="btn btn-ghost btn-sm redaguoti-pratima" type="button" data-id="${esc(p.id)}">Redaguoti</button>
+                    <button class="btn btn-ghost btn-sm trinti-pratima" type="button" data-id="${esc(p.id)}" data-vardas="${esc(p.title)}">Trinti</button>
+                  </div>
+                </div>`;
+              }).join('') : '<p class="muted" style="font-size:.9375rem">Pratimų dar nėra.</p>'}
             </div>
-            <div class="field">
-              <label for="p-setai-${esc(d.id)}">Setai</label>
-              <input id="p-setai-${esc(d.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
-            </div>
-            <div class="field">
-              <label for="p-kartai-${esc(d.id)}">Kartai</label>
-              <input id="p-kartai-${esc(d.id)}" name="reps" type="text" placeholder="Pvz., 8-10">
-            </div>
-            <div class="field">
-              <label for="p-svoris-${esc(d.id)}">Svoris / intensyvumas</label>
-              <input id="p-svoris-${esc(d.id)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
-            </div>
-            <div class="field">
-              <label for="p-poilsis-${esc(d.id)}">Poilsis, sek</label>
-              <input id="p-poilsis-${esc(d.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
-            </div>
-            <div class="field">
-              <label for="p-tipas-${esc(d.id)}">Įrašymo tipas</label>
-              <select id="p-tipas-${esc(d.id)}" name="log_type">
-                <option value="svoris">Svoris ir kartai</option>
-                <option value="kartai">Tik kartai (be svorio)</option>
-                <option value="laikas">Laikas (sekundėmis)</option>
-              </select>
-            </div>
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="p-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
-              <input id="p-pastabos-${esc(d.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
-            </div>
-            <div class="field">
-              <label for="p-video-${esc(d.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
-              <input id="p-video-${esc(d.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
-            </div>
-          </div>
-          <div class="field">
-            <label class="check-opt" for="p-supersetas-${esc(d.id)}">
-              <input id="p-supersetas-${esc(d.id)}" name="superset" type="checkbox">
-              <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
-            </label>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-ghost btn-sm" type="submit">Pridėti pratimą</button>
-          </div>
-        </form>
-      </div>`;
-  }).join('');
+
+            ${pratimai.length ? `
+              <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+                <div class="field">
+                  <label for="kp-pasirinkimas-${esc(d.id)}">Kopijuoti esamą pratimą į šią dieną</label>
+                  <select id="kp-pasirinkimas-${esc(d.id)}">
+                    ${dienos.map((diena) => {
+                      const jos = pratimai.filter((p) => p.section_id === diena.id);
+                      if (!jos.length) return '';
+                      return `<optgroup label="${esc(diena.title)}">
+                        ${jos.map((p) => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}
+                      </optgroup>`;
+                    }).join('')}
+                  </select>
+                </div>
+                <div class="form-actions">
+                  <button class="btn btn-ghost btn-sm kopijuoti-pratima" type="button" data-sekcija="${esc(d.id)}">Kopijuoti</button>
+                </div>
+              </div>` : ''}
+
+            <form class="forma-pratimas" data-sekcija="${esc(d.id)}" novalidate style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+              ${bibliotekosPratimai.length ? `
+              <div class="field" style="margin-bottom:var(--s-200)">
+                <label for="p-bib-${esc(d.id)}">Pasirink iš bibliotekos pagal kūno sritį <span class="hint" style="display:inline">(neprivaloma)</span></label>
+                <select id="p-bib-${esc(d.id)}" class="bib-pasirinkimas">
+                  <option value="">— pasirink pratimą —</option>
+                  ${bibliotekosOptGrupes(bibliotekosPratimai)}
+                </select>
+              </div>` : ''}
+              <div class="field">
+                <label for="p-pavadinimas-${esc(d.id)}">Pratimo pavadinimas</label>
+                <input id="p-pavadinimas-${esc(d.id)}" name="title" type="text" required placeholder="Pvz., Štangos spaudimas gulint" list="pratimu-biblioteka-sarasas" autocomplete="off">
+                <p class="hint">Įrašyk pavadinimą ir spausk „Pridėti pratimą" — kitus laukus visada gali papildyti vėliau. Jau žinomą pavadinimą įrašius ar pasirinkus iš sąrašo, jie užsipildys patys.</p>
+              </div>
+              <details style="margin:var(--s-100) 0">
+                <summary class="muted" style="cursor:pointer;font-size:.8125rem">Daugiau laukų (setai, kartai, svoris, poilsis, pastabos, vaizdas, supersetas)</summary>
+                <div class="field-row" style="margin-top:var(--s-100)">
+                  <div class="field">
+                    <label for="p-setai-${esc(d.id)}">Setai</label>
+                    <input id="p-setai-${esc(d.id)}" name="sets" type="number" min="1" max="20" inputmode="numeric">
+                  </div>
+                  <div class="field">
+                    <label for="p-kartai-${esc(d.id)}">Kartai</label>
+                    <input id="p-kartai-${esc(d.id)}" name="reps" type="text" placeholder="Pvz., 8-10">
+                  </div>
+                  <div class="field">
+                    <label for="p-svoris-${esc(d.id)}">Svoris / intensyvumas</label>
+                    <input id="p-svoris-${esc(d.id)}" name="load" type="text" placeholder="Pvz., 60 kg arba RPE 8">
+                  </div>
+                  <div class="field">
+                    <label for="p-poilsis-${esc(d.id)}">Poilsis, sek</label>
+                    <input id="p-poilsis-${esc(d.id)}" name="rest" type="number" min="0" max="600" inputmode="numeric">
+                  </div>
+                  <div class="field">
+                    <label for="p-tipas-${esc(d.id)}">Įrašymo tipas</label>
+                    <select id="p-tipas-${esc(d.id)}" name="log_type">
+                      <option value="svoris">Svoris ir kartai</option>
+                      <option value="kartai">Tik kartai (be svorio)</option>
+                      <option value="laikas">Laikas (sekundėmis)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label for="p-pastabos-${esc(d.id)}">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+                    <input id="p-pastabos-${esc(d.id)}" name="notes" type="text" placeholder="Technikos pastaba klientui">
+                  </div>
+                  <div class="field">
+                    <label for="p-video-${esc(d.id)}">Vaizdo nuoroda <span class="hint" style="display:inline">(neprivaloma)</span></label>
+                    <input id="p-video-${esc(d.id)}" name="video" type="url" placeholder="YouTube arba Vimeo nuoroda">
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="check-opt" for="p-supersetas-${esc(d.id)}">
+                    <input id="p-supersetas-${esc(d.id)}" name="superset" type="checkbox">
+                    <span>Supersetas su ankstesniu pratimu <span class="hint" style="display:inline">(atliekama iš karto po jo, be poilsio tarp jų)</span></span>
+                  </label>
+                </div>
+              </details>
+              <div class="form-actions">
+                <button class="btn btn-ghost btn-sm" type="submit">Pridėti pratimą</button>
+              </div>
+            </form>
+          ` : '<p class="muted">Pridėk pirmą dieną kairėje.</p>'}
+        </div>
+      </div>
+    </div>`;
+
+  for (const b of $$('.rodyk-diena')) {
+    b.addEventListener('click', () => {
+      rodomaDienosId = b.dataset.id;
+      redaguojamosDienosId = null;
+      redaguojamoPratimoId = null;
+      piesDienuSarasa();
+    });
+  }
+  for (const b of $$('.kelk-diena')) {
+    b.addEventListener('click', () => perkelkDiena(b.dataset.id, Number(b.dataset.kryptis)));
+  }
+  for (const b of $$('.dubliuoti-diena')) {
+    b.addEventListener('click', () => dubliuokDiena(b.dataset.id, b));
+  }
+  $('#prideti-diena')?.addEventListener('click', () => { pridedamaDiena = true; piesDienuSarasa(); });
+  $('#atsaukti-dienos-pridejimo')?.addEventListener('click', () => { pridedamaDiena = false; piesDienuSarasa(); });
+  $('#forma-diena')?.addEventListener('submit', prideDiena);
 
   for (const b of $$('.trinti-diena')) b.addEventListener('click', () => trinkDiena(b.dataset.id, b.dataset.vardas));
   for (const b of $$('.trinti-pratima')) b.addEventListener('click', () => trinkPratima(b.dataset.id, b.dataset.vardas));
@@ -475,6 +521,47 @@ function piesDienuSarasa() {
     prijunkBibliotekosUzpildyma(f, () => bibliotekosPratimai);
     prijunkBibliotekosPasirinkima(f.querySelector('.bib-pasirinkimas'), f.querySelector('[name="title"]'));
   }
+}
+
+async function issaugokDienuTvarka(tvarkaId) {
+  const atnaujinimai = tvarkaId.map((id, idx) => db.from('program_sections').update({ position: idx }).eq('id', id));
+  const rezultatai = await Promise.all(atnaujinimai);
+  const klaida = rezultatai.find((r) => r.error)?.error;
+  if (klaida) {
+    pranesk($('#pranesimas'), klaidaLT(klaida), 'error');
+    return false;
+  }
+  tvarkaId.forEach((id, idx) => {
+    const x = dienos.find((y) => y.id === id);
+    if (x) x.position = idx;
+  });
+  dienos.sort((a, b) => a.position - b.position);
+  return true;
+}
+
+async function perkelkDiena(dienosId, kryptis) {
+  const surikiuotos = [...dienos].sort((a, b) => a.position - b.position);
+  const i = surikiuotos.findIndex((x) => x.id === dienosId);
+  const j = i + kryptis;
+  if (i < 0 || j < 0 || j >= surikiuotos.length) return;
+  [surikiuotos[i], surikiuotos[j]] = [surikiuotos[j], surikiuotos[i]];
+  const sekme = await issaugokDienuTvarka(surikiuotos.map((x) => x.id));
+  if (sekme) piesDienuSarasa();
+}
+
+/** Nukopijuoja vieną dieną (su jos pratimais) tame pačiame šablone — žr.
+ * supabase/dienos-tvarkymas.sql. */
+async function dubliuokDiena(dienosId, mygtukas) {
+  mygtukas.disabled = true;
+  const { data: naujosId, error } = await db.rpc('duplicate_program_section', { p_section_id: dienosId });
+  if (error) {
+    mygtukas.disabled = false;
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Diena nukopijuota.', 'ok');
+  rodomaDienosId = naujosId;
+  await perkrauk();
 }
 
 async function kopijuokPratima(targetSectionId, sourceExerciseId) {
@@ -702,6 +789,7 @@ async function prideDiena(ev) {
     if (btn) btn.disabled = false;
     return;
   }
+  pridedamaDiena = false;
   await perkrauk();
 }
 
@@ -712,6 +800,7 @@ async function trinkDiena(id, vardas) {
     pranesk($('#pranesimas'), klaidaLT(error), 'error');
     return;
   }
+  rodomaDienosId = null;
   await perkrauk();
 }
 
