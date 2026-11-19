@@ -149,6 +149,7 @@ let klientoPratimai = [];
 let redaguojamosKlientoDienosId = null;
 let redaguojamoKlientoPratimoId = null;
 let pridedamosKlientoDienosId = null;
+let pridedamaKlientoDiena = false;
 let velkamaKlientoEilute = null;
 
 paleisk();
@@ -485,6 +486,7 @@ function rodykKlientoProgramas(clientId) {
           <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
           <button class="btn btn-ghost btn-sm redaguoti-kliento-pratimus" type="button" data-id="${esc(a.id)}">Pratimai</button>
           <button class="btn btn-ghost btn-sm pervadinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Pervadinti</button>
+          <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona" type="button" data-id="${esc(a.id)}">Išsaugoti kaip šabloną</button>
           <button class="btn btn-danger btn-sm trinti-kliento-programa" type="button" data-id="${esc(a.id)}" data-vardas="${esc(a.title)}">Trinti</button>
         </div>
       </td>
@@ -514,7 +516,29 @@ function rodykKlientoProgramas(clientId) {
   for (const b of $$('.pervadinti-kliento-programa')) {
     b.addEventListener('click', () => pervadinkKlientoPrograma(b.dataset.id, b.dataset.vardas, clientId));
   }
+  for (const b of $$('.issaugoti-kaip-sablona')) {
+    b.addEventListener('click', () => issaugokKaipSablona(b.dataset.id, b));
+  }
   $('#klientu-programu-detale').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/** Paverčia kliento DABARTINĘ (galbūt jau pataisytą) programos kopiją atgal
+ * nauju, pakartotinai naudojamu šablonu — dienomis ir pratimais tiksliai
+ * tokiais, kokie jie yra dabar šiam klientui. Naudinga, kai programa buvo
+ * priskirta kaip kito šablono kopija, paskui pataisyta tiesiai kliento
+ * profilyje (žr. supabase/kliento-sablono-issaugojimas.sql) — be šios
+ * funkcijos vienintelis būdas tas pataisas pakartoti kitam klientui būtų
+ * jas surašyti iš naujo ranka. Originalas ir kliento kopija nepaliečiami,
+ * paslėpti (is_hidden) pratimai į šabloną nekeliami. */
+async function issaugokKaipSablona(clientProgramId, mygtukas) {
+  mygtukas.disabled = true;
+  const { data: naujosId, error } = await db.rpc('save_client_program_as_template', { p_client_program_id: clientProgramId });
+  if (error) {
+    mygtukas.disabled = false;
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  location.href = 'redaguoti.html?id=' + encodeURIComponent(naujosId);
 }
 
 /** Pervadinimas nepaliečia client_days/client_exercises/exercise_logs —
@@ -615,6 +639,12 @@ function piesKlientoPratimus() {
               </div>`}
           </div>`;
       }).join('')}
+      <div style="margin-top:var(--s-300);padding-top:var(--s-300);border-top:1px solid var(--hair-ink)">
+        ${pridedamaKlientoDiena ? klientoDienosPridejimoForma() : `
+          <div class="form-actions">
+            <button class="btn btn-ghost btn-sm" type="button" id="prideti-kliento-diena">+ Pridėti dieną</button>
+          </div>`}
+      </div>
     </div>`;
 
   $('#uzdaryti-kliento-pratimus').addEventListener('click', () => {
@@ -656,6 +686,58 @@ function piesKlientoPratimus() {
     b.addEventListener('click', () => keiskKlientoPratimoMatoma(b.dataset.id, b.dataset.slepti === '1'));
   }
   for (const konteineris of $$('div[data-diena]')) prijunkKlientoPratimuTempima(konteineris);
+  $('#prideti-kliento-diena')?.addEventListener('click', () => { pridedamaKlientoDiena = true; piesKlientoPratimus(); });
+  $('#atsaukti-kliento-dienos-pridejima')?.addEventListener('click', () => { pridedamaKlientoDiena = false; piesKlientoPratimus(); });
+  $('#forma-prideti-kliento-diena')?.addEventListener('submit', pridekKlientoDiena);
+}
+
+function klientoDienosPridejimoForma() {
+  return `
+    <form id="forma-prideti-kliento-diena" novalidate>
+      <div class="field-row">
+        <div class="field">
+          <label for="kd-nauja-pavadinimas">Dienos pavadinimas</label>
+          <input id="kd-nauja-pavadinimas" name="title" type="text" required placeholder="Pvz., 4 diena — rankos">
+        </div>
+        <div class="field">
+          <label for="kd-nauja-pastabos">Pastabos <span class="hint" style="display:inline">(neprivaloma)</span></label>
+          <input id="kd-nauja-pastabos" name="notes" type="text" placeholder="Bendra šios dienos pastaba">
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Pridėti dieną</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="atsaukti-kliento-dienos-pridejima">Atšaukti</button>
+      </div>
+    </form>`;
+}
+
+async function pridekKlientoDiena(ev) {
+  ev.preventDefault();
+  const pavadinimas = $('#kd-nauja-pavadinimas').value.trim();
+  if (!pavadinimas) {
+    pranesk($('#pranesimas'), 'Įrašyk dienos pavadinimą.', 'error');
+    return;
+  }
+
+  const btn = ev.submitter;
+  if (btn?.disabled) return;
+  if (btn) btn.disabled = true;
+
+  const { error } = await db.from('client_days').insert({
+    client_program_id: redaguojamosKlientoProgramosId,
+    title: pavadinimas,
+    notes: $('#kd-nauja-pastabos').value.trim(),
+    position: klientoDienos.length,
+  });
+
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  pridedamaKlientoDiena = false;
+  pranesk($('#pranesimas'), 'Diena pridėta.', 'ok');
+  await ikelkIrPiesKlientoPratimus();
 }
 
 /** Paslepia arba vėl parodo klientui vieną jo programos pratimą, nieko
