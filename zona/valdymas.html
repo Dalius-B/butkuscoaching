@@ -314,11 +314,74 @@ function piesProgramas() {
             </table>
           </div>` : '<p class="muted">Programų dar nėra. Sukurk pirmą viršuje.</p>'}
       </details>
-    </div>`;
+    </div>
+
+    ${klientuProgramuSarasas()}`;
 
   $('#forma-programa').addEventListener('submit', sukurkPrograma);
   for (const b of $$('.trinti-programa')) b.addEventListener('click', () => trinkPrograma(b.dataset.id, b.dataset.vardas));
   for (const b of $$('.dubliuoti-programa')) b.addEventListener('click', () => dubliuokPrograma(b.dataset.id, b));
+  for (const b of $$('.redaguoti-is-saraso')) {
+    b.addEventListener('click', () => {
+      rodykKortele('klientai');
+      rodykKlientoProgramas(b.dataset.client);
+      redaguokKlientoPratimus(b.dataset.id);
+    });
+  }
+  for (const b of $$('.issaugoti-kaip-sablona-is-saraso')) {
+    b.addEventListener('click', () => issaugokKaipSablona(b.dataset.id, b));
+  }
+}
+
+/** "Visos programos" aukščiau yra ŠABLONAI — šis sąrašas yra KLIENTŲ
+ * NUOSAVOS kopijos (client_programs), įskaitant tas, kurios nuo šablono jau
+ * nutolo (pervadintos, su papildoma diena ar kitaip pataisytos tiesiai
+ * kliento profilyje). Be šio sąrašo tokios kopijos matomos tik atidarius tą
+ * konkretų klientą per Klientai skiltį — čia jos visos vienoje vietoje. */
+function klientuProgramuSarasas() {
+  const surikiuota = [...priskyrimai].sort((a, b) => new Date(b.assigned_at) - new Date(a.assigned_at));
+
+  const eilutes = surikiuota.map((a) => {
+    const klientas = profiliai.find((p) => p.id === a.client_id);
+    const pagrindas = programos.find((p) => p.id === a.program_id);
+    return `
+      <tr>
+        <td>
+          <strong>${esc(a.title)}</strong>
+          ${pagrindas ? `<div class="muted" style="font-size:.8125rem">Pagal: ${esc(pagrindas.title)}</div>` : ''}
+        </td>
+        <td data-label="Klientas">${esc(klientas?.full_name || klientas?.email || 'Nežinomas')}</td>
+        <td data-label="Būsena"><span class="chip ${a.status === 'active' ? 'chip-ok' : 'chip-quiet'}">${a.status === 'active' ? 'Aktyvi' : a.status === 'finished' ? 'Baigta' : esc(a.status)}</span></td>
+        <td data-label="Priskirta">${esc(data(a.assigned_at))}</td>
+        <td data-label="">
+          <div class="row">
+            <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(a.id)}">Istorija</a>
+            <button class="btn btn-ghost btn-sm redaguoti-is-saraso" type="button" data-id="${esc(a.id)}" data-client="${esc(a.client_id)}">Pratimai</button>
+            <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(a.id)}">Išsaugoti kaip šabloną</button>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card" style="margin-top:var(--s-300)">
+      <div class="card-head">
+        <h2>Klientų programos</h2>
+        <span class="row-end muted">${surikiuota.length}</span>
+      </div>
+      <p class="muted" style="font-size:.8125rem;margin-bottom:var(--s-200)">
+        Kiekvieno kliento NUOSAVA programos kopija — įskaitant tas, kurios nuo šablono aukščiau jau nutolo,
+        nes buvo pataisytos tiesiai kliento profilyje. Čia jas visas gali rasti vienoje vietoje, be reikalo
+        neieškodamas, kurio kliento profilyje kuri yra.
+      </p>
+      ${surikiuota.length ? `
+        <div class="table-wrap table-kortelese">
+          <table>
+            <thead><tr><th>Programa</th><th>Klientas</th><th>Būsena</th><th>Priskirta</th><th></th></tr></thead>
+            <tbody>${eilutes}</tbody>
+          </table>
+        </div>` : '<p class="muted">Klientų programų dar nėra.</p>'}
+    </div>`;
 }
 
 /** Pilna, nepriklausoma programos kopija (visos dienos ir pratimai) nauju
