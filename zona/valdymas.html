@@ -409,6 +409,9 @@ function piesProgramuEilutes() {
   for (const b of $$('.issaugoti-kaip-sablona-is-saraso')) {
     b.addEventListener('click', () => issaugokKaipSablona(b.dataset.id, b));
   }
+  for (const b of $$('.trinti-kliento-programa-is-saraso')) {
+    b.addEventListener('click', () => trinkKlientoProgramaIsSarasas(b.dataset.id, b.dataset.vardas));
+  }
 }
 
 function programosEiluteHtml(eil) {
@@ -425,7 +428,8 @@ function programosEiluteHtml(eil) {
     <button class="btn btn-primary btn-sm redaguoti-is-saraso" type="button" data-id="${esc(eil.id)}" data-client="${esc(eil.clientId)}">Redaguoti</button>
     <a class="btn btn-ghost btn-sm" href="istorija.html?id=${encodeURIComponent(eil.id)}">Istorija</a>
     <button class="btn btn-ghost btn-sm pervadinti-is-saraso" type="button" data-id="${esc(eil.id)}" data-vardas="${esc(eil.title)}" data-client="${esc(eil.clientId)}">Pervadinti</button>
-    <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(eil.id)}">Išsaugoti kaip šabloną</button>`;
+    <button class="btn btn-ghost btn-sm issaugoti-kaip-sablona-is-saraso" type="button" data-id="${esc(eil.id)}">Išsaugoti kaip šabloną</button>
+    <button class="btn btn-danger btn-sm trinti-kliento-programa-is-saraso" type="button" data-id="${esc(eil.id)}" data-vardas="${esc(eil.title)}">Trinti</button>`;
 
   return `
     <tr>
@@ -1340,6 +1344,21 @@ async function trinkKlientoPrograma(id, vardas, clientId) {
   pranesk($('#pranesimas'), 'Programa ištrinta.', 'ok');
   await perkrauk();
   rodykKlientoProgramas(clientId);
+}
+
+/** Tas pats trynimas iš bendro Programos skilties sąrašo — čia, skirtingai
+ * nuo trinkKlientoPrograma, po perkrauk() nereikia atkurti #klientu-programu-detale,
+ * nes tas elementas priklauso Klientai skilčiai, o ne Programos. */
+async function trinkKlientoProgramaIsSarasas(id, vardas) {
+  if (!confirm(`Ištrinti "${vardas}" kopiją visam laikui?\n\nKartu dings jos dienos, pratimai ir visa įrašyta treniruočių istorija. To atstatyti nebus galima.`)) return;
+
+  const { error } = await db.from('client_programs').delete().eq('id', id);
+  if (error) {
+    pranesk($('#pranesimas'), klaidaLT(error), 'error');
+    return;
+  }
+  pranesk($('#pranesimas'), 'Programa ištrinta.', 'ok');
+  await perkrauk();
 }
 
 // =============================================================================
