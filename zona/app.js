@@ -59,6 +59,29 @@ export const db = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 //  Smulkūs pagalbininkai
 // -----------------------------------------------------------------------------
 
+/**
+ * Dviejų žingsnių patvirtinimas ant paties mygtuko, vietoje iššokančio lango.
+ * Pirmas paspaudimas mygtuką "užtaiso" (jis parausta ir paklausia), antras atlieka veiksmą.
+ * Po kelių sekundžių mygtukas pats atsitaiso. Grąžina true tik antrą kartą.
+ */
+export function patvirtink(mygtukas, klausimas = 'Tikrai ištrinti?') {
+  if (mygtukas.dataset.uztaisytas === '1') {
+    delete mygtukas.dataset.uztaisytas;
+    return true;
+  }
+  const buvo = mygtukas.textContent;
+  mygtukas.dataset.uztaisytas = '1';
+  mygtukas.textContent = klausimas;
+  mygtukas.classList.add('uztaisytas');
+  setTimeout(() => {
+    if (mygtukas.dataset.uztaisytas !== '1') return;
+    delete mygtukas.dataset.uztaisytas;
+    mygtukas.textContent = buvo;
+    mygtukas.classList.remove('uztaisytas');
+  }, 4000);
+  return false;
+}
+
 /** Saugus teksto įdėjimas į HTML. Visur, kur rodomas vartotojo įvestas tekstas. */
 export function esc(value) {
   return String(value ?? '')

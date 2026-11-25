@@ -5,11 +5,11 @@
 //  peržiūrėti (kas viduje ir kuriomis dienomis), pridėti klientui ir redaguoti.
 //  Klientai paketų nemato ir jų neskaito: lentelės tik treneriui.
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk } from './app.js?v=20261115';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261125';
 import {
   KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine,
-} from './tekstai.js?v=20261115';
-import { videoIterpimas } from './uzduociu-logika.js?v=20261115';
+} from './tekstai.js?v=20261125';
+import { videoIterpimas } from './uzduociu-logika.js?v=20261125';
 
 export const PAKETAI_PASIKEITE = 'paketai-pasikeite';
 
@@ -320,13 +320,13 @@ async function veiksmas(b) {
     redaguojama = null;
     piesk();
   } else if (act === 'trinti-elem') {
-    if (!window.confirm('Ištrinti šią užduotį iš paketo? Klientų, kurie paketą jau gavo, užduotys nesikeičia.')) return;
+    if (!patvirtink(b, 'Tikrai ištrinti?')) return;
     const { error } = await db.from('task_pack_items').delete().eq('id', b.dataset.item);
     if (error) { zinok(dbKlaida(error), 'error'); return; }
     await perkrauk('Užduotis pašalinta iš paketo.');
   } else if (act === 'trinti-paketa') {
     const pk = paketai.find((x) => x.id === b.dataset.pack);
-    if (!window.confirm(`Ištrinti visą paketą „${pk?.name}“? Klientų, kurie jį jau gavo, užduotys nesikeičia.`)) return;
+    if (!patvirtink(b, `Ištrinti paketą „${pk?.name}“?`)) return;
     const { error } = await db.from('task_packs').delete().eq('id', b.dataset.pack);
     if (error) { zinok(dbKlaida(error), 'error'); return; }
     redaguojamasPaketas = null;
