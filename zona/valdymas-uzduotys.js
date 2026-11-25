@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261128';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261129';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261128';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261128';
+} from './tekstai.js?v=20261129';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261129';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261128';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261129';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -380,23 +380,27 @@ function savaitesPlanas() {
   const dienos = [1, 2, 3, 4, 5, 6, 7];
 
   const eilute = (x) => {
-    const kat = KATEGORIJOS[x.category] || KATEGORIJOS.iprociai;
     const langeliai = dienos.map((d) => {
       const ijungta = x.weekdays.includes(d);
       return `<button class="pl-c${ijungta ? ' on' : ''}${d === siandienWd ? ' siandien' : ''}" type="button" data-id="${esc(x.id)}" data-d="${d}" aria-pressed="${ijungta}" aria-label="${esc(SAVAITES_DIENOS[d] + ': ' + x.title)}">${ijungta ? '✓' : ''}</button>`;
     }).join('');
-    return `<div class="pl-eil"><span class="pl-pav" title="${esc(x.title)}"><span aria-hidden="true">${kat.ikona}</span> ${esc(x.title)}</span>${langeliai}</div>`;
+    return `<div class="pl-eil"><span class="pl-pav" title="${esc(x.title)}">${x.is_bonus ? '<em class="pl-papild">papild.</em> ' : ''}${esc(x.title)}</span>${langeliai}</div>`;
   };
-  const privalomos = aktyvios.filter((x) => !x.is_bonus);
-  const papildomos = aktyvios.filter((x) => x.is_bonus);
+  // Užduotys sugrupuotos pagal kategoriją; kiekvienoje grupėje privalomos pirmiau.
+  const grupes = Object.keys(KATEGORIJOS).map((k) => ({
+    k,
+    uzduotys: aktyvios.filter((x) => (KATEGORIJOS[x.category] ? x.category : 'iprociai') === k)
+      .sort((a, b) => Number(a.is_bonus) - Number(b.is_bonus)),
+  })).filter((g) => g.uzduotys.length);
   const sumos = dienos.map((d) => `<span class="pl-sum${d === siandienWd ? ' siandien' : ''}">${aktyvios.filter((x) => x.weekdays.includes(d)).length}</span>`).join('');
 
   return `
     <div class="pl-wrap">
       <div class="pl-lentele">
         <div class="pl-eil pl-antraste"><span></span>${dienos.map((d) => `<span class="pl-d${d === siandienWd ? ' siandien' : ''}" title="${esc(SAVAITES_DIENOS[d])}">${SAVAITES_DIENOS_TRUMPOS[d]}</span>`).join('')}</div>
-        ${privalomos.map(eilute).join('')}
-        ${papildomos.length ? `<div class="pl-grupe">Papildomos</div>${papildomos.map(eilute).join('')}` : ''}
+        ${grupes.map((g) => `
+          <div class="pl-grupe"><span aria-hidden="true">${KATEGORIJOS[g.k].ikona}</span> ${esc(KATEGORIJOS[g.k].pavadinimas)}</div>
+          ${g.uzduotys.map(eilute).join('')}`).join('')}
         <div class="pl-eil pl-sumos"><span class="pl-pav muted">Užduočių per dieną</span>${sumos}</div>
       </div>
     </div>`;

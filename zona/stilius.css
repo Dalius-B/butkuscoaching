@@ -1003,3 +1003,7 @@ dialog .video-wrap { margin-top: 0; }
   .pl-eil { grid-template-columns: minmax(120px, 1fr) repeat(7, 34px); }
   .pl-c { width: 34px; height: 34px; }
 }
+
+.pl-grupe { margin-top: var(--s-150, 14px); padding-top: var(--s-75); border-top: 1px solid var(--hair-ink); }
+.pl-grupe:first-of-type { border-top: 0; }
+.pl-papild { font-style: normal; font-size: 0.6875rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.08em; }
