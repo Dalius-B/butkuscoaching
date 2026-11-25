@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261125';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261126';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261125';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261125';
+} from './tekstai.js?v=20261126';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261126';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261125';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261126';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -345,7 +345,6 @@ function uzrasoHtml(d, u) {
   const n = T.nuotaikos.find((x) => x.v === u?.mood);
   return `
     <div class="u-uzrasas">
-      ${u?.hard_day ? '<p><span class="chip chip-quiet">Sunki diena</span> <span class="muted">klientas ją pažymėjo pats</span></p>' : ''}
       ${n ? `<p><span class="u-nuotaika">${n.ikona}</span> <strong>${esc(n.pavadinimas)}</strong></p>` : '<p class="muted">Nuotaikos klientas neįrašė.</p>'}
       ${u?.note ? `<blockquote>${esc(u.note)}</blockquote>` : ''}
       <label class="sr-only" for="atsakymas-${esc(d)}">Tavo žinutė klientui</label>
@@ -509,11 +508,10 @@ const spalvaPagalProc = (p) => (p === null ? 'var(--hair-ink)' : p < 50 ? 'var(-
 
 function ipociuKortele() {
   const dabar = siandienLT();
-  const sunkios = new Set(uzrasai.filter((n) => n.hard_day).map((n) => n.day));
-  const sia = savaitesPazanga(uzduotys, atlikimai, savPirmadienis(dabar), dabar, sunkios);
-  const praeita = savaitesPazanga(uzduotys, atlikimai, pridek(savPirmadienis(dabar), -7), dabar, sunkios);
+  const sia = savaitesPazanga(uzduotys, atlikimai, savPirmadienis(dabar), dabar);
+  const praeita = savaitesPazanga(uzduotys, atlikimai, pridek(savPirmadienis(dabar), -7), dabar);
   const st = apskaiciuok(uzduotys.filter((x) => x.active), atlikimai, dabar);
-  const v = ipociuVaizdas(uzduotys, atlikimai, ipociuDienos, dabar, sunkios);
+  const v = ipociuVaizdas(uzduotys, atlikimai, ipociuDienos, dabar);
 
   if (!uzduotys.length) {
     return '<p class="muted">Kai klientas turės užduočių ir jas žymės, čia matysi, kas jam sekasi, o kas sunkiau.</p>';
@@ -556,7 +554,7 @@ function ipociuKortele() {
   const antraste = v.dienos.map((d) => `<span class="ip-d" title="${esc(dataTrumpa(d))}"><i>${DIENU[savaitesDiena(d) - 1]}</i>${Number(d.slice(8))}</span>`).join('');
   const eilutes = v.eilutes.map((e) => {
     const langeliai = e.langeliai.map((l) => {
-      const aprasas = { padaryta: 'atlikta', dalinai: 'atlikta dalis', praleista: 'neatlikta', laukia: 'dar neatlikta', nera: 'nenumatyta', sunki: 'sunki diena' }[l.busena];
+      const aprasas = { padaryta: 'atlikta', dalinai: 'atlikta dalis', praleista: 'neatlikta', laukia: 'dar neatlikta', nera: 'nenumatyta' }[l.busena];
       return `<span class="ip-c ${l.busena}" style="--a:${l.dalis || 0}" title="${esc(dataTrumpa(l.d) + ': ' + aprasas)}"></span>`;
     }).join('');
     return `
@@ -569,7 +567,7 @@ function ipociuKortele() {
 
   // Kliento užrašai: matomi iškart, be užvedimo pelės ir be paspaudimų.
   const uzrasaiRodomi = nuotaikaVeikia
-    ? [...uzrasai].filter((n) => n.day >= v.dienos[0] && n.day <= dabar && (n.note || n.client_reply || n.hard_day)).sort((x, y) => y.day.localeCompare(x.day))
+    ? [...uzrasai].filter((n) => n.day >= v.dienos[0] && n.day <= dabar && (n.note || n.client_reply)).sort((x, y) => y.day.localeCompare(x.day))
     : [];
   const uzrasoEilute = (n) => {
     const m = T.nuotaikos.find((x) => x.v === n.mood);
@@ -577,7 +575,7 @@ function ipociuKortele() {
       <li class="ip-uzr">
         <div class="ip-uzr-virsus">
           <strong>${esc(SAVAITES_DIENOS_TRUMPOS[savaitesDiena(n.day)])}, ${esc(dataTrumpa(n.day))}</strong>
-          <span class="ip-uzr-nuotaika">${n.hard_day ? '<span class="chip chip-quiet">Sunki diena</span> ' : ''}${m ? `<span aria-hidden="true">${m.ikona}</span> ${esc(m.pavadinimas)}` : ''}</span>
+          ${m ? `<span class="ip-uzr-nuotaika"><span aria-hidden="true">${m.ikona}</span> ${esc(m.pavadinimas)}</span>` : ''}
         </div>
         ${n.note ? `<p class="ip-uzr-tekstas">${esc(n.note)}</p>` : ''}
         ${n.coach_reply ? `<p class="ip-uzr-atsakymas"><span class="muted">Tavo žinutė:</span> ${esc(n.coach_reply)}</p>` : ''}
@@ -611,7 +609,6 @@ function ipociuKortele() {
         <div class="uzd-stat"><strong>${vidIkona}</strong><span>Nuotaika (7 d.)</span></div>
       </div>
       ${isvada ? `<p class="ip-isvada">${isvada}</p>` : ''}
-      ${v.sunkiuDienu ? `<p class="muted" style="font-size:.875rem">Per šį laikotarpį klientas pažymėjo sunkių dienų: ${v.sunkiuDienu}. Jos neįskaičiuotos į procentus.</p>` : ''}
       ${kategorijuEilutes ? `<div class="ip-kategorijos">${kategorijuEilutes}</div>` : ''}
       ${nuotaikuJuosta}
       <details class="u-ip-fold" data-skiltis="heatmap"${atviros.get('heatmap') ? ' open' : ''}>
@@ -634,7 +631,6 @@ function ipociuKortele() {
             <span><i class="ip-c dalinai"></i> dalis</span>
             <span><i class="ip-c praleista"></i> neatlikta</span>
             <span><i class="ip-c laukia"></i> šiandien dar laukia</span>
-            <span><i class="ip-c sunki"></i> sunki diena (neįskaičiuojama)</span>
           </div>
         </div>
       </details>`;
@@ -719,12 +715,12 @@ function eksportuokKlientoCsv() {
     if (!pagalDiena.has(a.day)) pagalDiena.set(a.day, []);
     pagalDiena.get(a.day).push(a);
   }
-  const antraste = ['Data', 'Savaitės diena', 'Užduotis', 'Kategorija', 'Tipas', 'Atlikta', 'Dienos tikslas', 'Vienetas', 'Būsena', 'Sunki diena', 'Nuotaika (1-5)', 'Kliento užrašas', 'Trenerio žinutė', 'Kliento atsakymas'];
+  const antraste = ['Data', 'Savaitės diena', 'Užduotis', 'Kategorija', 'Tipas', 'Atlikta', 'Dienos tikslas', 'Vienetas', 'Būsena', 'Nuotaika (1-5)', 'Kliento užrašas', 'Trenerio žinutė', 'Kliento atsakymas'];
   const eilutes = [antraste];
   for (let d = istorijosPradzia(); d <= dabar; d = pridek(d, 1)) {
     const u = uzrasai.find((n) => n.day === d);
     const diena = SAVAITES_DIENOS[savaitesDiena(d)];
-    const dienosDalis = [u?.hard_day ? 'taip' : 'ne', u?.mood || '', u?.note || '', u?.coach_reply || '', u?.client_reply || ''];
+    const dienosDalis = [u?.mood || '', u?.note || '', u?.coach_reply || '', u?.client_reply || ''];
     const sarasas = dienosEilutes(d, pagalDiena);
     if (!sarasas.length) {
       if (u) eilutes.push([d, diena, '', '', '', '', '', '', '', ...dienosDalis]);
@@ -735,7 +731,7 @@ function eksportuokKlientoCsv() {
       eilutes.push([
         d, diena, e.u.title, (KATEGORIJOS[e.u.category] || KATEGORIJOS.iprociai).pavadinimas,
         e.u.is_bonus ? 'papildoma' : 'privaloma', e.kiek, tikslas(e.u), e.u.unit || '', busena,
-        ...(i === 0 ? dienosDalis : ['', '', '', '', '']),
+        ...(i === 0 ? dienosDalis : ['', '', '', '']),
       ]);
     });
   }

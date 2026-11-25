@@ -974,12 +974,6 @@ dialog .video-wrap { margin-top: 0; }
 .ip-uzr-tekstas { margin-top: 4px; font-size: 1rem; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ip-uzr-atsakymas { margin-top: 4px; font-size: 0.875rem; padding-left: var(--s-100); border-left: 3px solid var(--volt); overflow-wrap: anywhere; }
 
-/* Sunki diena (klientas) */
-.sunki-diena { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-100); margin-top: var(--s-200); padding-top: var(--s-200); border-top: 1px solid var(--hair-ink); font-size: 0.9375rem; }
-.sunki-diena.ijungta { background: rgba(70,110,170,0.10); border-top: 0; border-radius: var(--r-md); padding: var(--s-200); }
-.sunki-diena p { flex: 1 1 260px; margin: 0; }
-.sav-diena.sunki .sav-zenklas { box-shadow: inset 0 0 0 2px rgba(70,110,170,0.6); border-style: dashed; color: rgba(70,110,170,1); font-weight: 800; }
-/* Sunki diena (treneris): žalia/raudona nesiskaičiuoja, todėl atskira, švelni spalva */
-.ip-c.sunki { background: repeating-linear-gradient(45deg, rgba(70,110,170,0.30), rgba(70,110,170,0.30) 3px, rgba(70,110,170,0.12) 3px, rgba(70,110,170,0.12) 6px); }
+
 /* Dviejų žingsnių trynimas */
 .btn.uztaisytas { background: var(--danger); color: var(--white); border-color: var(--danger); }

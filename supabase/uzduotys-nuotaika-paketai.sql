@@ -87,13 +87,17 @@ alter table public.day_notes
   add column if not exists client_reply        text not null default '' check (char_length(client_reply) <= 300),
   add column if not exists client_replied_at   timestamptz;
 
--- "Sunki diena": klientas pats pažymi, kad šiandien labai sunku. Tokia diena
--- neįtraukiama į savaitės procentą (nei į gerą, nei į blogą pusę), bet išlieka
--- įrašuose, ir treneris ją mato. Klientas rašo tik šį stulpelį ir tik apie šiandieną.
-alter table public.day_notes
-  add column if not exists hard_day boolean not null default false;
-grant insert (hard_day) on public.day_notes to authenticated;
-grant update (hard_day) on public.day_notes to authenticated;
+-- Anksčiau buvo "sunkios dienos" žyma. Ji pašalinta (žmonės galėtų ja piktnaudžiauti,
+-- o pastabų laukas jau yra). Jei stulpelis kada nors buvo sukurtas, klientui atimamos
+-- teisės jį rašyti. Pats stulpelis ir jo duomenys paliekami nepaliesti.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'day_notes' and column_name = 'hard_day') then
+    revoke insert (hard_day) on public.day_notes from authenticated;
+    revoke update (hard_day) on public.day_notes from authenticated;
+  end if;
+end $$;
 
 -- Įpročių diena trunka nuo 04:00 iki kitos dienos 04:00 (Lietuvos laiku), kad
 -- vėlai vakare atliktos užduotys (pvz. "prieš miegą") po vidurnakčio dar
