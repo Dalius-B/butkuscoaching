@@ -87,6 +87,26 @@ alter table public.day_notes
   add column if not exists client_reply        text not null default '' check (char_length(client_reply) <= 300),
   add column if not exists client_replied_at   timestamptz;
 
+-- "Sunki diena": klientas pats pažymi, kad šiandien labai sunku. Tokia diena
+-- neįtraukiama į savaitės procentą (nei į gerą, nei į blogą pusę), bet išlieka
+-- įrašuose, ir treneris ją mato. Klientas rašo tik šį stulpelį ir tik apie šiandieną.
+alter table public.day_notes
+  add column if not exists hard_day boolean not null default false;
+grant insert (hard_day) on public.day_notes to authenticated;
+grant update (hard_day) on public.day_notes to authenticated;
+
+-- Įpročių diena trunka nuo 04:00 iki kitos dienos 04:00 (Lietuvos laiku), kad
+-- vėlai vakare atliktos užduotys (pvz. "prieš miegą") po vidurnakčio dar
+-- priklausytų praėjusiai dienai. Klientas ir serveris turi sutarti dėl "šiandien".
+create or replace function private.siandien_lt()
+returns date
+language sql
+stable
+set search_path = ''
+as $$
+  select ((now() at time zone 'Europe/Vilnius') - interval '4 hours')::date;
+$$;
+
 -- Trenerio trumpas atsakymas. Per funkciją, nes klientas negali rašyti į šį stulpelį.
 -- Tuščias tekstas atsakymą ištrina. Pakeitus tekstą, žinutė vėl tampa neperskaityta,
 -- o ankstesnis kliento atsakymas (jis buvo senai žinutei) išvalomas.

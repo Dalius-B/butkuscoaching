@@ -8,9 +8,20 @@ const VILNIUS = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Europe/Vilnius', year: 'numeric', month: '2-digit', day: '2-digit',
 });
 
-/** Šiandienos data Lietuvoje kaip YYYY-MM-DD (tokią pat skaičiuoja ir duomenų bazė). */
+const DIENOS_PRADZIA_VALANDOS = 4;
+
+/**
+ * Įpročių diena trunka nuo 04:00 iki kitos dienos 04:00 (Lietuvos laiku), kad vėlai
+ * vakare atlikta užduotis (pvz. "prieš miegą") po vidurnakčio dar priklausytų praėjusiai
+ * dienai. Taip pat skaičiuoja ir duomenų bazė (private.siandien_lt), tad abi pusės sutampa.
+ */
+export function dienaIsLaiko(laikas) {
+  return VILNIUS.format(new Date(new Date(laikas).getTime() - DIENOS_PRADZIA_VALANDOS * 3600 * 1000));
+}
+
+/** Šiandienos įpročių diena kaip YYYY-MM-DD. */
 export function siandienLT() {
-  return VILNIUS.format(new Date());
+  return dienaIsLaiko(Date.now());
 }
 
 /** Laiko žymė -> data Lietuvoje kaip YYYY-MM-DD. */
@@ -33,7 +44,7 @@ export function pridek(iso, dienos) {
 export function privalomosDienai(uzduotys, iso) {
   const wd = savaitesDiena(iso);
   return uzduotys.filter((u) => u.active && !u.is_bonus
-    && u.weekdays.includes(wd) && dataLT(u.created_at) <= iso);
+    && u.weekdays.includes(wd) && dienaIsLaiko(u.created_at) <= iso);
 }
 
 export function papildomosDienai(uzduotys, iso) {
@@ -108,7 +119,7 @@ export function apskaiciuok(uzduotys, atlikimai, siandien = siandienLT()) {
 
   let pradzia = siandien;
   for (const u of uzduotys) {
-    const d = dataLT(u.created_at);
+    const d = dienaIsLaiko(u.created_at);
     if (d < pradzia) pradzia = d;
   }
   for (const a of atlikimai) if (a.day < pradzia) pradzia = a.day;
@@ -155,7 +166,7 @@ export function dalisPadaryta(u, kiekis, diena) {
  * Šiandiena, kol dar nieko nepadaryta, dar nelaikoma praleista.
  * Grąžina procentą (arba null, jei dar nėra ką vertinti) ir kiekvienos dienos būseną.
  */
-export function savaitesPazanga(uzduotys, atlikimai, pirmadienis, siandien = siandienLT()) {
+export function savaitesPazanga(uzduotys, atlikimai, pirmadienis, siandien = siandienLT(), sunkios = new Set()) {
   const st = apskaiciuok(uzduotys, atlikimai, siandien);
   let viso = 0;
   let padaryta = 0;
@@ -163,6 +174,8 @@ export function savaitesPazanga(uzduotys, atlikimai, pirmadienis, siandien = sia
   for (let i = 0; i < 7; i += 1) {
     const d = pridek(pirmadienis, i);
     if (d > siandien) { dienos.push({ d, busena: 'ateitis' }); continue; }
+    // Sunki diena: neįtraukiama į procentą (nei į gerą, nei į blogą pusę), bet išlieka įrašuose.
+    if (sunkios.has(d)) { dienos.push({ d, busena: 'sunki' }); continue; }
     const reikia = privalomosDienai(uzduotys, d);
     if (!reikia.length) { dienos.push({ d, busena: 'poilsis' }); continue; }
     const dalys = reikia.map((u) => dalisPadaryta(u, st.kiekis, d));
@@ -180,7 +193,7 @@ export function savaitesPazanga(uzduotys, atlikimai, pirmadienis, siandien = sia
  * `dienu` dienų, taip pat kategorijų procentai ir jų kryptis (paskutinės 7 dienos
  * lyginamos su ankstesnėmis 7).
  */
-export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT()) {
+export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT(), sunkios = new Set()) {
   const st = apskaiciuok(uzduotys, atlikimai, siandien);
   let pradzia = pridek(siandien, -(dienu - 1));
   const dienos = [];
@@ -191,16 +204,18 @@ export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT(
 
   const eilutes = sarasas.map((u) => {
     const langeliai = dienos.map((d) => {
-      const numatyta = u.weekdays.includes(savaitesDiena(d)) && dataLT(u.created_at) <= d;
+      const numatyta = u.weekdays.includes(savaitesDiena(d)) && dienaIsLaiko(u.created_at) <= d;
       const dalis = dalisPadaryta(u, st.kiekis, d);
       if (!numatyta && dalis === 0) return { d, busena: 'nera' };
-      if (dalis >= 1) return { d, busena: 'padaryta', dalis, numatyta };
+      const sunki = sunkios.has(d);
+      if (sunki && dalis < 1) return { d, busena: dalis > 0 ? 'dalinai' : 'sunki', dalis, numatyta, sunki: true };
+      if (dalis >= 1) return { d, busena: 'padaryta', dalis, numatyta, sunki };
       if (dalis > 0) return { d, busena: 'dalinai', dalis, numatyta };
       if (d === siandien) return { d, busena: 'laukia', dalis: 0, numatyta };
       return { d, busena: 'praleista', dalis: 0, numatyta };
     });
     // Procentas tik iš numatytų dienų, neskaičiuojant dar nepradėtos šiandienos.
-    const vertinamos = langeliai.filter((l) => l.numatyta !== false && l.busena !== 'nera' && l.busena !== 'laukia');
+    const vertinamos = langeliai.filter((l) => l.numatyta !== false && l.busena !== 'nera' && l.busena !== 'laukia' && !l.sunki);
     const suma = vertinamos.reduce((a, l) => a + (l.dalis || 0), 0);
     return { u, langeliai, proc: vertinamos.length ? Math.round((suma / vertinamos.length) * 100) : null, numatyta: vertinamos.length };
   });
@@ -211,7 +226,7 @@ export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT(
     for (const e of ei) {
       for (const l of e.langeliai) {
         if (l.d < nuo || l.d > iki) continue;
-        if (l.busena === 'nera' || l.busena === 'laukia' || l.numatyta === false) continue;
+        if (l.busena === 'nera' || l.busena === 'laukia' || l.numatyta === false || l.sunki) continue;
         n += 1; s += l.dalis || 0;
       }
     }
@@ -241,5 +256,5 @@ export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT(
     if (a.u.is_bonus !== b.u.is_bonus) return a.u.is_bonus ? 1 : -1;
     return (a.proc ?? 101) - (b.proc ?? 101);
   });
-  return { dienos, eilutes, kategorijos: kategoriju };
+  return { dienos, eilutes, kategorijos: kategoriju, sunkiuDienu: dienos.filter((d) => sunkios.has(d)).length };
 }
