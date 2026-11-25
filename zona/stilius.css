@@ -1011,3 +1011,19 @@ dialog .video-wrap { margin-top: 0; }
 /* Klientas: šiandienos užduotys po kategorijomis */
 .uzd-grupe { margin: var(--s-200) 0 var(--s-75); font-size: 0.75rem; font-weight: 700; font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
 .uzd-santrauka + .uzd-grupe { margin-top: var(--s-100); }
+
+/* Naktinė DI analizė (trenerio skydelis) */
+.ai-galva { display: flex; align-items: center; gap: var(--s-100); margin-bottom: var(--s-100); font-size: 0.875rem; }
+.ai-santrauka { font-size: 1.0625rem; line-height: 1.45; margin-bottom: var(--s-200); overflow-wrap: anywhere; }
+.ai-bloko { margin-top: var(--s-200); }
+.ai-bloko h4 { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-soft); margin-bottom: var(--s-50); }
+.ai-bloko ul { list-style: disc; margin: 0; padding-left: var(--s-300); display: flex; flex-direction: column; gap: var(--s-50); }
+.ai-bloko li { overflow-wrap: anywhere; }
+.ai-senos { margin-top: var(--s-300); border-top: 1px solid var(--hair-ink); padding-top: var(--s-200); }
+.ai-senos > summary { cursor: pointer; font-weight: 700; min-height: 40px; display: flex; align-items: center; }
+.ai-sena { margin-top: var(--s-200); padding-top: var(--s-200); border-top: 1px solid var(--hair-ink); }
+.ai-apzvalga { margin-bottom: var(--s-200); }
+.ai-eilute { display: flex; align-items: center; gap: var(--s-100); flex-wrap: wrap; width: 100%; min-height: 44px; padding: var(--s-75) 0; text-align: left; border-top: 1px solid var(--hair-ink); }
+.ai-eilute:first-of-type { border-top: 0; }
+.ai-eilute:hover strong { text-decoration: underline; }
+.ai-eilute-tekstas { flex: 1 1 260px; color: var(--ink-soft); font-size: 0.9375rem; }

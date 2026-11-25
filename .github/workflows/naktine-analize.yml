@@ -1,0 +1,47 @@
+# Kiekvieną naktį dirbtinis intelektas perskaito klientų paskutinių savaičių
+# duomenis ir parašo treneriui trumpą santrauką (žr. scripts/naktine-analize.mjs).
+# Analizuojami tik klientai, kuriems treneris įjungė analizę.
+#
+# Reikia dviejų GitHub paslapčių (Settings -> Secrets and variables -> Actions):
+#   ANTHROPIC_API_KEY           raktas iš console.anthropic.com
+#   SUPABASE_SERVICE_ROLE_KEY   Supabase -> Project Settings -> API Keys -> service_role / secret
+#
+# Laikas 02:30 UTC = 04:30 žiemą ir 05:30 vasarą Lietuvoje, jau po įpročių dienos
+# pabaigos (04:00). GitHub suplanuotus darbus paleidžia tik iš main šakos.
+name: Naktinė klientų analizė
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      diena:
+        description: 'Kurią dieną analizuoti (YYYY-MM-DD). Palik tuščią, jei vakar.'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: naktine-analize
+  cancel-in-progress: false
+
+jobs:
+  analize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Įdiek Anthropic biblioteką
+        run: npm install --no-save --no-audit --no-fund @anthropic-ai/sdk@1.14.0
+      - name: Paleisk analizę
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_URL: https://asqhesgicdtmgaafglkl.supabase.co
+          DIENA: ${{ github.event.inputs.diena }}
+        run: node scripts/naktine-analize.mjs
