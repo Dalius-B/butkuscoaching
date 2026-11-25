@@ -1,0 +1,25 @@
+# Tikrina, ar nauji pakeitimai nesulaužo klientų zonos nuoseklumo taisyklių
+# (žr. DIZAINO-TAISYKLES.md): viena talpyklos versija visuose failuose, jokių
+# naujų iššokančių langų ar spalvų, įrašytų tiesiai į puslapius.
+name: Dizaino patikra
+
+on:
+  pull_request:
+    paths:
+      - 'zona/**'
+      - 'scripts/tikrink-dizaina.mjs'
+  push:
+    branches: [main]
+    paths:
+      - 'zona/**'
+  workflow_dispatch: {}
+
+jobs:
+  dizainas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/tikrink-dizaina.mjs
