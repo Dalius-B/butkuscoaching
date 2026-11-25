@@ -1,0 +1,25 @@
+{
+  "spalvos_puslapiuose": {
+    "atsiliepimas.html": 2,
+    "biblioteka.html": 1,
+    "index.html": 1,
+    "istorija.html": 4,
+    "klientas.html": 3,
+    "mano.html": 1,
+    "paskyra.html": 1,
+    "patikrinimas.html": 1,
+    "programa.html": 5,
+    "redaguoti.html": 7,
+    "registracija.html": 1,
+    "slaptazodis.html": 1,
+    "uzduotys.html": 2,
+    "valdymas-paketai.js": 1,
+    "valdymas-uzduotys.js": 1,
+    "valdymas.html": 10
+  },
+  "iššokantys_langai": {
+    "redaguoti.html": 2,
+    "valdymas-uzduotys.js": 1,
+    "valdymas.html": 10
+  }
+}

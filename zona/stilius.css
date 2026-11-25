@@ -977,3 +977,29 @@ dialog .video-wrap { margin-top: 0; }
 
 /* Dviejų žingsnių trynimas */
 .btn.uztaisytas { background: var(--danger); color: var(--white); border-color: var(--danger); }
+
+/* Savaitės planas: užduotys x dienos, spaudi langelį */
+.pl-wrap { overflow-x: auto; padding-bottom: var(--s-50); }
+.pl-lentele { min-width: max-content; display: flex; flex-direction: column; gap: 4px; }
+.pl-eil { display: grid; grid-template-columns: minmax(150px, 320px) repeat(7, 40px); gap: 4px; align-items: center; }
+.pl-pav { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9375rem; padding-right: var(--s-100); }
+.pl-antraste, .pl-sumos { font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); }
+.pl-d, .pl-sum { text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
+.pl-sum { font-variant-numeric: tabular-nums; }
+.pl-d.siandien, .pl-sum.siandien { color: var(--ink); }
+.pl-d.siandien { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px; }
+.pl-sumos { border-top: 1px solid var(--hair-ink); padding-top: var(--s-75); margin-top: var(--s-50); }
+.pl-grupe { margin-top: var(--s-100); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
+.pl-c {
+  width: 40px; height: 36px; border-radius: var(--r-sm); background: var(--white);
+  box-shadow: inset 0 0 0 1px rgba(16,16,16,0.16); font-weight: 800; font-size: 1rem; color: var(--ink);
+  transition: background-color 120ms var(--ease-out), scale 120ms var(--ease-out);
+}
+.pl-c:hover { box-shadow: inset 0 0 0 2px var(--ink); }
+.pl-c:active { scale: 0.94; }
+.pl-c.on { background: var(--volt); box-shadow: inset 0 0 0 1px rgba(16,16,16,0.35); }
+.pl-c.siandien:not(.on) { background: rgba(16,16,16,0.04); }
+@media (max-width: 620px) {
+  .pl-eil { grid-template-columns: minmax(120px, 1fr) repeat(7, 34px); }
+  .pl-c { width: 34px; height: 34px; }
+}
