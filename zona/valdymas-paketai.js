@@ -5,11 +5,11 @@
 //  peržiūrėti (kas viduje ir kuriomis dienomis), pridėti klientui ir redaguoti.
 //  Klientai paketų nemato ir jų neskaito: lentelės tik treneriui.
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261125';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261126';
 import {
   KATEGORIJOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine,
-} from './tekstai.js?v=20261125';
-import { videoIterpimas } from './uzduociu-logika.js?v=20261125';
+} from './tekstai.js?v=20261126';
+import { videoIterpimas } from './uzduociu-logika.js?v=20261126';
 
 export const PAKETAI_PASIKEITE = 'paketai-pasikeite';
 

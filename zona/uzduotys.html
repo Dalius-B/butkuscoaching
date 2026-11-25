@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261125">
+<link rel="stylesheet" href="stilius.css?v=20261126">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261125';
+} from './app.js?v=20261126';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261125';
+} from './tekstai.js?v=20261126';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261125';
+} from './uzduociu-logika.js?v=20261126';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -219,12 +219,11 @@ function pieskVisa() {
   else if (diena) santrauka = T.visosAtliktos;
   else santrauka = T.darLiko(liko) + '.';
 
-  const sunkios = new Set(uzrasai.filter((n) => n.hard_day).map((n) => n.day));
-  const sav = savaitesPazanga(uzduotys, atlikimai, savaitesPirmadienis(siandien), siandien, sunkios);
+  const sav = savaitesPazanga(uzduotys, atlikimai, savaitesPirmadienis(siandien), siandien);
   const DIENU_TRUMP = ['Pr', 'An', 'Tr', 'Ke', 'Pe', 'Še', 'Se'];
   const savaitesTaskai = sav.dienos.map((x, i) => `
-    <span class="sav-diena ${x.busena}${x.d === siandien ? ' siandien' : ''}" title="${esc(dataTrumpa(x.d) + (x.busena === 'sunki' ? ': sunki diena' : ''))}">
-      <span class="sav-zenklas" aria-hidden="true">${x.busena === 'pilna' ? '✓' : x.busena === 'sunki' ? '~' : ''}</span>
+    <span class="sav-diena ${x.busena}${x.d === siandien ? ' siandien' : ''}" title="${esc(dataTrumpa(x.d))}">
+      <span class="sav-zenklas" aria-hidden="true">${x.busena === 'pilna' ? '✓' : ''}</span>
       <span class="sav-pav">${DIENU_TRUMP[i]}</span>
     </span>`).join('');
 
@@ -315,8 +314,6 @@ function pieskVisa() {
     if (!tekstas) { rodykToast(T.atsakymoLaukas, true); return; }
     zinutesRpc('atsakyti_treneriui', { p_day: e.currentTarget.dataset.diena, p_text: tekstas }, T.atsakymasIssiustas);
   });
-  $('#sunki-pazymeti')?.addEventListener('click', () => issaugokNuotaika({ hard_day: true }));
-  $('#sunki-atsaukti')?.addEventListener('click', () => issaugokNuotaika({ hard_day: false }));
   $('#nuotaika-tekstas')?.addEventListener('input', (e) => { laikinasTekstas = e.target.value; });
   $('#nuotaika-issaugoti')?.addEventListener('click', () => {
     issaugokNuotaika({ note: ($('#nuotaika-tekstas').value || '').trim() });
@@ -381,7 +378,6 @@ async function zinutesRpc(funkcija, argumentai, pavykus) {
 function nuotaikaHtml() {
   if (!nuotaikaVeikia || !uzduotys.length) return '';
   const siandienos = uzrasai.find((n) => n.day === siandien);
-  const siandienosEilute = siandienos;
   const mood = siandienos?.mood || 0;
   const tekstas = laikinasTekstas ?? siandienos?.note ?? '';
   const mygtukai = T.nuotaikos.map((n) => `
@@ -403,14 +399,6 @@ function nuotaikaHtml() {
         <button class="btn btn-ghost btn-sm" type="button" id="nuotaika-issaugoti">${esc(T.nuotaikaIssaugoti)}</button>
         <span class="muted" aria-live="polite">${nuotaikaBusena === 'issaugota' ? esc(T.nuotaikaIssaugota) : nuotaikaBusena === 'klaida' ? esc(T.nuotaikaKlaida) : ''}</span>
       </div>` : ''}
-      <div class="sunki-diena${siandienosEilute?.hard_day ? ' ijungta' : ''}">
-        ${siandienosEilute?.hard_day ? `
-          <p>${esc(T.sunkiAiskinimas)}</p>
-          <button class="btn btn-ghost btn-sm" type="button" id="sunki-atsaukti">${esc(T.sunkiAtsaukti)}</button>`
-        : `
-          <span class="muted">${esc(T.sunkiKlausimas)}</span>
-          <button class="btn btn-ghost btn-sm" type="button" id="sunki-pazymeti">${esc(T.sunkiMygtukas)}</button>`}
-      </div>
     </section>`;
 }
 
@@ -441,7 +429,7 @@ async function issaugokNuotaika(dalis) {
     uzrasai = [...uzrasai.filter((n) => n.day !== siandien), irasas].sort((a, b) => a.day.localeCompare(b.day));
     if ('note' in dalis) laikinasTekstas = null;
     nuotaikaBusena = 'note' in dalis ? 'issaugota' : '';
-    rodykToast('hard_day' in dalis ? (dalis.hard_day ? T.sunkiPazymeta : T.sunkiAtsaukta) : T.nuotaikaIssaugota);
+    rodykToast(T.nuotaikaIssaugota);
   } catch (klaida) {
     nuotaikaBusena = 'klaida';
     console.warn('Nuotaikos klaida:', klaida);
