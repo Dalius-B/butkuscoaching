@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261129">
+<link rel="stylesheet" href="stilius.css?v=20261130">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261129';
+} from './app.js?v=20261130';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261129';
+} from './tekstai.js?v=20261130';
 import {
   siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261129';
+} from './uzduociu-logika.js?v=20261130';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -270,7 +270,7 @@ function pieskVisa() {
             <i style="width:${procentas}%"></i>
           </div>
           <p class="muted uzd-santrauka">${esc(santrauka)}</p>
-          <ul class="uzd-sarasas">${reikia.map((u) => uzduotiesEilute(u, st)).join('')}</ul>`
+          ${grupuotosUzduotys(reikia, st)}`
           : `<div class="empty" style="margin-top:var(--s-200)"><h2>${esc(T.poilsioDiena)}</h2><p>${esc(T.poilsioTekstas)}</p></div>`}
       </section>`;
   }
@@ -498,13 +498,24 @@ videoDialogas.addEventListener('close', () => { $('#video-vieta').innerHTML = ''
 $('#video-uzdaryti').addEventListener('click', () => videoDialogas.close());
 videoDialogas.addEventListener('click', (ev) => { if (ev.target === videoDialogas) videoDialogas.close(); });
 
-function uzduotiesEilute(u, st) {
+/** Šiandienos užduotys po kategorijų antraštėmis (Judėjimas, Mityba, Miegas...). */
+function grupuotosUzduotys(sarasas, st) {
+  return Object.entries(KATEGORIJOS).map(([raktas, kat]) => {
+    const grupe = sarasas.filter((u) => (KATEGORIJOS[u.category] ? u.category : 'iprociai') === raktas);
+    if (!grupe.length) return '';
+    return `
+      <h3 class="uzd-grupe"><span aria-hidden="true">${kat.ikona}</span> ${esc(kat.pavadinimas)}</h3>
+      <ul class="uzd-sarasas">${grupe.map((u) => uzduotiesEilute(u, st, false)).join('')}</ul>`;
+  }).join('');
+}
+
+function uzduotiesEilute(u, st, rodytiKategorija = true) {
   const kiek = st.kiekis.get(`${u.id}|${siandien}`) || 0;
   const padaryta = kiek >= tikslas(u);
   const kat = KATEGORIJOS[u.category] || KATEGORIJOS.iprociai;
   const zymos = `
     <span class="uzd-zymos">
-      <span class="chip chip-quiet">${kat.ikona} ${esc(kat.pavadinimas)}</span>
+      ${rodytiKategorija ? `<span class="chip chip-quiet">${kat.ikona} ${esc(kat.pavadinimas)}</span>` : ''}
       ${u.is_bonus ? `<span class="chip chip-volt">${esc(T.papildoma)}</span>` : ''}
       ${padaryta ? `<span class="chip chip-ok">${esc(T.atlikta)}</span>` : ''}
     </span>`;
