@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261129';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261130';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261129';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261129';
+} from './tekstai.js?v=20261130';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261130';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261129';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261130';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -132,6 +132,9 @@ function eilutesHtml(sarasas) {
 const TUSCI_FILTRAI = { q: '', kategorija: '', diena: '', tipas: '', busena: '' };
 let filtrai = { ...TUSCI_FILTRAI };
 
+// Kategorijų eilė sąraše: ta pati kaip planuose (Judėjimas, Mityba, Vanduo, Miegas...).
+const kategorijosEile = (k) => { const i = Object.keys(KATEGORIJOS).indexOf(k); return i < 0 ? 99 : i; };
+
 function filtruotos() {
   const q = filtrai.q.trim().toLowerCase();
   return uzduotys.filter((x) => {
@@ -145,7 +148,7 @@ function filtruotos() {
     if (filtrai.busena === 'aktyvi' && !x.active) return false;
     if (filtrai.busena === 'isjungta' && x.active) return false;
     return true;
-  });
+  }).sort((a, b) => kategorijosEile(a.category) - kategorijosEile(b.category));
 }
 
 function filtruBlokas() {

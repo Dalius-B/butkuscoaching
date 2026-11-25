@@ -1007,3 +1007,7 @@ dialog .video-wrap { margin-top: 0; }
 .pl-grupe { margin-top: var(--s-150, 14px); padding-top: var(--s-75); border-top: 1px solid var(--hair-ink); }
 .pl-grupe:first-of-type { border-top: 0; }
 .pl-papild { font-style: normal; font-size: 0.6875rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Klientas: šiandienos užduotys po kategorijomis */
+.uzd-grupe { margin: var(--s-200) 0 var(--s-75); font-size: 0.75rem; font-weight: 700; font-stretch: 100%; text-transform: uppercase; letter-spacing: 0.12em; color: var(--ink-soft); }
+.uzd-santrauka + .uzd-grupe { margin-top: var(--s-100); }
