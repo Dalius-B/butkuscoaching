@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261205';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261206';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261205';
-import { nustatykPoilsioDienas, apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261205';
+} from './tekstai.js?v=20261206';
+import { nustatykPoilsioDienas, apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261206';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261205';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261206';
 let poilsioDienos = [];       // kliento pažymėtos poilsio dienos (datos)
 let poilsisVeikia = true;
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
@@ -45,7 +45,7 @@ let visiProfiliai = [];
 export async function piesUzduotis(profiliai, savasId) {
   visiProfiliai = profiliai;
   const vieta = $('#kortele-uzduotys');
-  const klientai = profiliai.filter((p) => p.id !== savasId && p.uzduotys_ijungtos);
+  const klientai = profiliai.filter((p) => p.uzduotys_ijungtos);
 
   if (!klientai.length) {
     vieta.innerHTML = `
@@ -61,7 +61,7 @@ export async function piesUzduotis(profiliai, savasId) {
     <div class="u-klientas-eilute">
       <label for="u-klientas">Klientas</label>
       <div class="field"><select id="u-klientas">
-        ${klientai.map((k) => `<option value="${esc(k.id)}"${k.id === pasirinktas ? ' selected' : ''}>${esc(k.full_name || k.email)}</option>`).join('')}
+        ${klientai.map((k) => `<option value="${esc(k.id)}"${k.id === pasirinktas ? ' selected' : ''}>${esc(k.full_name || k.email)}${k.id === savasId ? ' (aš)' : ''}</option>`).join('')}
       </select></div>
       <button class="btn btn-ghost btn-sm row-end" type="button" id="u-eksportas-visi" title="Visų klientų užduotys, atlikimai ir užrašai viename faile">Atsarginė kopija (visi klientai)</button>
     </div>

@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261205">
+<link rel="stylesheet" href="stilius.css?v=20261206">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261205';
+} from './app.js?v=20261206';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261205';
+} from './tekstai.js?v=20261206';
 import {
   siandienLT, nustatykPoilsioDienas, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261205';
+} from './uzduociu-logika.js?v=20261206';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -124,8 +124,8 @@ async function paleisk() {
     vidus.innerHTML = `<div class="note note-error">${esc(klaidaLT(s.klaida))}</div>`;
     return;
   }
-  // Treneris užduotis tvarko valdymo skydelyje, o ne čia.
-  if (s.arTreneris) { location.replace('valdymas.html'); return; }
+  // Treneris užduotis tvarko valdymo skydelyje. Čia jis patenka tik jei įjungė užduotis sau.
+  if (s.arTreneris && !profilis?.uzduotys_ijungtos) { location.replace('valdymas.html'); return; }
   // Privati skiltis: neįjungtas klientas grąžinamas į savo programą.
   if (!profilis?.uzduotys_ijungtos) {
     vidus.innerHTML = `
