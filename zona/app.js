@@ -817,7 +817,7 @@ export function rodykNav(profilis, aktyvus = '', arTreneris = false) {
     nuorodos.push({ href: 'patikrinimas.html', tekstas: 'Savaitinė ataskaita' });
   }
   // Užduotys — privati skiltis, rodoma tik klientams, kuriems Dalius ją įjungė.
-  if (!treneris && profilis?.uzduotys_ijungtos) {
+  if (profilis?.uzduotys_ijungtos) {
     nuorodos.push({ href: 'uzduotys.html', tekstas: 'Užduotys' });
   }
   // Biblioteka — tik "pilnas" paketo klientams (treneriui visada, kad matytų,
