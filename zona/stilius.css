@@ -643,24 +643,39 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
 .uzd-pagrindas, .uzd-salis { display: flex; flex-direction: column; gap: var(--s-300); min-width: 0; }
 .uzd-santrauka { margin: var(--s-100) 0 var(--s-200); font-size: 0.9375rem; }
 
-.uzd-sarasas { display: flex; flex-direction: column; gap: var(--s-100); }
-.uzd-eilute { border-radius: var(--r-md); background: var(--white); box-shadow: inset 0 0 0 1px var(--hair-ink); transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
-.uzd-eilute.padaryta { background: rgba(30,107,58,0.07); box-shadow: inset 0 0 0 1px rgba(30,107,58,0.3); }
-.uzd-mygtukas { display: flex; gap: var(--s-200); align-items: flex-start; width: 100%; text-align: left; padding: var(--s-200); min-height: 64px; border-radius: var(--r-md); }
-.uzd-mygtukas:active { scale: 0.99; }
-.uzd-zenklas {
-  flex: none; width: 32px; height: 32px; border-radius: 50%; margin-top: 2px;
-  box-shadow: inset 0 0 0 2px rgba(16,16,16,0.3); display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 1.0625rem; color: var(--white);
-  transition: background-color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), scale 200ms var(--ease-out);
+.uzd-sarasas {
+  display: flex; flex-direction: column; background: var(--white); border-radius: var(--r-md);
+  box-shadow: inset 0 0 0 1px var(--hair-ink); overflow: hidden;
 }
-.uzd-eilute.padaryta .uzd-zenklas { background: var(--ok); box-shadow: none; scale: 1.05; }
-.uzd-tekstas { display: flex; flex-direction: column; gap: var(--s-50); min-width: 0; }
-.uzd-tekstas strong { font-weight: 600; font-size: 1.0625rem; line-height: 1.35; overflow-wrap: anywhere; }
+.uzd-eilute { border-top: 1px solid var(--hair-ink); transition: background-color 160ms var(--ease-out); }
+.uzd-eilute:first-child { border-top: 0; }
+.uzd-eilute.padaryta { background: rgba(30,107,58,0.06); }
+.uzd-ei { display: flex; align-items: center; }
+.uzd-mygtukas { display: flex; gap: var(--s-100); align-items: center; flex: 1; min-width: 0; text-align: left; padding: 8px var(--s-100) 8px var(--s-200); min-height: 52px; touch-action: manipulation; }
+.uzd-mygtukas:active { background: rgba(16,16,16,0.04); }
+.uzd-zenklas {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(16,16,16,0.3); display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.9375rem; color: var(--white);
+  transition: background-color 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+}
+.uzd-eilute.padaryta .uzd-zenklas { background: var(--ok); box-shadow: none; }
+.uzd-tekstas { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.uzd-tekstas strong { font-weight: 600; font-size: 1rem; line-height: 1.3; overflow-wrap: anywhere; }
 .uzd-eilute.padaryta .uzd-tekstas strong { color: var(--ink-soft); }
-.uzd-aprasas { font-size: 0.875rem; color: var(--ink-soft); line-height: 1.45; }
-.uzd-zymos { display: flex; flex-wrap: wrap; gap: var(--s-50); margin-top: var(--s-50); }
-
+.uzd-aprasas { font-size: 0.8125rem; color: var(--ink-soft); line-height: 1.35; }
+.uzd-zymos { display: flex; flex-wrap: wrap; gap: var(--s-50); margin-top: 2px; }
+.uzd-veiksmai { display: flex; align-items: center; gap: 6px; padding-right: var(--s-100); flex: none; }
+.uzd-ikona {
+  width: 40px; height: 40px; border-radius: 50%; font-size: 1rem; line-height: 1; flex: none;
+  box-shadow: inset 0 0 0 1px var(--hair-ink); background: var(--white); touch-action: manipulation;
+}
+.uzd-ikona:hover { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.uzd-ikona[aria-expanded="true"] { background: var(--volt); box-shadow: none; }
+.uzd-laikmatis { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-100); padding: var(--s-100) var(--s-200) var(--s-100) calc(var(--s-200) + 26px + var(--s-100)); background: rgba(16,16,16,0.03); }
+.uzd-laikmatis[hidden] { display: none; }
+.uzd-laikas { font-size: 1.75rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.uzd-laikmacio-veiksmai { display: flex; flex-wrap: wrap; gap: var(--s-75); }
 .uzd-statai { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: var(--s-100); }
 .uzd-stat { background: var(--surface); border-radius: var(--r-md); padding: var(--s-200); box-shadow: 0 1px 2px rgba(16,16,16,0.06); }
 .uzd-stat strong { display: block; font-weight: 800; font-stretch: 108%; font-size: 1.75rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
@@ -713,26 +728,20 @@ dialog::backdrop { background: rgba(16,16,16,0.55); }
 
 /* Užduotys su kiekiu (pvz. 10 stiklinių vandens) */
 .uzd-mygtukas-kiekis { cursor: default; }
-.uzd-juosta-maza { height: 8px; margin-top: var(--s-75); display: block; }
-.uzd-kiekis-eilute { display: flex; align-items: center; gap: var(--s-100); margin: var(--s-75) 0 var(--s-50); }
-.uzd-kiekis { flex: 1; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 1.0625rem; }
+.uzd-mygtukas-kiekis:active { background: transparent; }
+.uzd-juosta-maza { height: 4px; margin-top: 4px; display: block; }
+.uzd-kiekis { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.8125rem; color: var(--ink-soft); }
 .uzd-kiekio-mygtukas {
-  min-width: 56px; min-height: 48px; padding: 0 var(--s-200); border-radius: var(--r-pill);
-  font-weight: 800; font-size: 1.0625rem; font-variant-numeric: tabular-nums;
-  box-shadow: inset 0 0 0 1.5px var(--hair-ink); background: var(--white);
-  transition: background-color 160ms var(--ease-out), scale 160ms var(--ease-out);
+  min-width: 44px; min-height: 40px; padding: 0 10px; border-radius: var(--r-pill);
+  font-weight: 800; font-size: 0.9375rem; font-variant-numeric: tabular-nums; white-space: nowrap;
+  box-shadow: inset 0 0 0 1.5px var(--hair-ink); background: var(--white); touch-action: manipulation;
+  transition: background-color 120ms var(--ease-out), scale 120ms var(--ease-out);
 }
 .uzd-kiekio-mygtukas:hover:not([disabled]) { box-shadow: inset 0 0 0 1.5px var(--ink); }
 .uzd-kiekio-mygtukas:active:not([disabled]) { scale: 0.96; }
 .uzd-kiekio-mygtukas[disabled] { opacity: 0.35; cursor: not-allowed; }
 .uzd-prideti { background: var(--volt); box-shadow: none; }
 .uzd-prideti:hover:not([disabled]) { background: #FFE873; box-shadow: none; }
-
-@media (max-width: 620px) {
-  .uzd-kiekis-eilute { flex-wrap: wrap; }
-  .uzd-kiekis { flex: 1 1 100%; order: -1; text-align: left; }
-  .uzd-kiekio-mygtukas { flex: 1 1 0; min-width: 0; }
-}
 
 /* Užduoties video */
 .uzd-video-eilute { padding: 0 var(--s-200) var(--s-200) calc(var(--s-200) + 32px + var(--s-200)); }
@@ -1058,3 +1067,26 @@ dialog .video-wrap { margin-top: 0; }
 .u-ps-kl { margin-bottom: var(--s-100); font-size: 0.875rem; }
 .ps-forma .field { min-width: 0; }
 .ps-forma input[type=date] { min-width: 0; width: 100%; }
+
+/* Kompaktiškesnis kliento puslapis: mažiau slinkimo */
+.uzd-hero { padding: var(--s-300); gap: var(--s-100); }
+.uzd-hero h1 { font-size: clamp(1.5rem, 4vw, 2rem); }
+.uzd-savaite-virsus strong { font-size: 1.75rem; }
+.uzd-savaite { margin-top: 0; }
+.sav-juosta { margin-top: var(--s-75); }
+.sav-zenklas { width: 26px; height: 26px; }
+.uzd-vienas { gap: var(--s-200); margin-top: var(--s-200); }
+.uzd-blokas { padding: var(--s-200); }
+.uzd-blokas .card-head { margin-bottom: var(--s-100); }
+.uzd-blokas .uzd-juosta-didele { height: 8px; }
+.uzd-grupe { margin: var(--s-200) 0 var(--s-50); }
+.uzd-blokas .uzd-grupe:first-of-type { margin-top: var(--s-100); }
+.uzd-zinute { padding: var(--s-100) var(--s-200); }
+
+/* Kiekio eilutė: skaičius ir juosta kairėje, − ir + dešinėje (pavadinimui lieka visas plotis) */
+.uzd-kiekio-eil { display: flex; align-items: center; gap: var(--s-100); margin-top: 2px; }
+.uzd-kiekio-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.uzd-kiekio-valdymas { display: flex; gap: 6px; flex: none; }
+.uzd-juosta-maza { background: rgba(16,16,16,0.1); }
+.uzd-juosta-maza i { background: var(--ink); }
+.uzd-eilute.padaryta .uzd-juosta-maza i { background: var(--ok); }
