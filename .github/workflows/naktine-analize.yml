@@ -10,9 +10,11 @@
 # pabaigos (04:00). GitHub suplanuotus darbus paleidžia tik iš main šakos.
 name: Naktinė klientų analizė
 
+# Naktinis paleidimas šiuo metu IŠJUNGTAS (kol nepridėtos paslaptys). Norint jį įjungti,
+# atkurk šias dvi eilutes po "on:":
+#   schedule:
+#     - cron: '30 2 * * *'
 on:
-  schedule:
-    - cron: '30 2 * * *'
   workflow_dispatch:
     inputs:
       diena:
