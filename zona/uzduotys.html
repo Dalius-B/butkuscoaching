@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261206">
+<link rel="stylesheet" href="stilius.css?v=20261208">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261206';
+} from './app.js?v=20261208';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261206';
+} from './tekstai.js?v=20261208';
 import {
   siandienLT, nustatykPoilsioDienas, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261206';
+} from './uzduociu-logika.js?v=20261208';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -95,6 +95,9 @@ let profilis = null;
 let uzduotys = [];
 let atlikimai = [];
 let uzrasai = [];            // nuotaikos ir trenerio žinutės (paskutinės dienos)
+let poilsioEilutes = [];       // [{day, set_by}]
+let poilsisVeikia = true;
+let poilsioAtidarytas = false;
 let nuotaikaVeikia = true;   // false, jei lentelės dar nėra (SQL nepaleistas)
 let laikinasTekstas = null;  // dar neišsaugotas nuotaikos tekstas, kad jo nepaliktų perpiešiant
 let nuotaikaBusena = '';
@@ -163,6 +166,14 @@ function atnaujink(butinai = false) {
   ikelk(true);
 }
 
+// set_by stulpelio gali dar nebūti (SQL nepaleistas iš naujo): tada skaitome tik datas.
+async function gaukPoilsi() {
+  const nuo = pridek(siandien, -40);
+  const r = await db.from('rest_days').select('day, set_by').gte('day', nuo);
+  if (!r.error) return r;
+  return db.from('rest_days').select('day').gte('day', nuo);
+}
+
 async function ikelk(tyliai = false) {
   const [u, a, n, poilsis] = await Promise.all([
     db.from('client_challenges')
@@ -178,7 +189,7 @@ async function ikelk(tyliai = false) {
       .select('*')
       .gte('day', pridek(siandien, -14))
       .order('day', { ascending: true }),
-    db.from('rest_days').select('day').gte('day', pridek(siandien, -40)),
+    gaukPoilsi(),
   ]);
   const klaida = u.error || a.error;
   if (klaida && tyliai) return; // fone nepavykęs atnaujinimas nieko neišvalo
@@ -192,7 +203,9 @@ async function ikelk(tyliai = false) {
   uzduotys = u.data || [];
   atlikimai = a.data || [];
   // Jei poilsio dienų lentelės dar nėra, tiesiog jų nėra.
-  nustatykPoilsioDienas((poilsis.error ? [] : poilsis.data || []).map((x) => x.day));
+  poilsisVeikia = !poilsis.error;
+  poilsioEilutes = poilsis.error ? [] : poilsis.data || [];
+  nustatykPoilsioDienas(poilsioEilutes.map((x) => x.day));
   // Nuotaikos lentelė gali dar neegzistuoti: tada tiesiog nerodome nuotaikos bloko.
   nuotaikaVeikia = !n.error;
   uzrasai = n.data || [];
@@ -294,6 +307,7 @@ function pieskVisa() {
       ${siandienHtml}
       ${papildomosHtml}
       ${artimiausiosHtml()}
+      ${poilsioHtml()}
     </div>`;
 
   for (const b of $$('.uzd-mygtukas')) {
@@ -317,6 +331,14 @@ function pieskVisa() {
     if (!tekstas) { rodykToast(T.atsakymoLaukas, true); return; }
     zinutesRpc('atsakyti_treneriui', { p_day: e.currentTarget.dataset.diena, p_text: tekstas }, T.atsakymasIssiustas);
   });
+  $('#poilsio-blokas')?.addEventListener('toggle', (e) => { poilsioAtidarytas = e.currentTarget.open; });
+  $('#ps-nuo')?.addEventListener('change', (e) => { const iki = $('#ps-iki'); iki.min = e.target.value || siandien; if (iki.value && iki.value < iki.min) iki.value = ''; });
+  $('#ps-prideti')?.addEventListener('click', () => {
+    const nuo = $('#ps-nuo').value;
+    if (!nuo) { rodykToast(T.poilsioPasirinkData, true); return; }
+    keiskPoilsi(nuo, $('#ps-iki').value || null, true);
+  });
+  for (const b of $$('[data-nuimti]')) b.addEventListener('click', () => keiskPoilsi(b.dataset.nuimti, null, false));
   $('#nuotaika-tekstas')?.addEventListener('input', (e) => { laikinasTekstas = e.target.value; });
   $('#nuotaika-issaugoti')?.addEventListener('click', () => {
     issaugokNuotaika({ note: ($('#nuotaika-tekstas').value || '').trim() });
@@ -466,6 +488,37 @@ function artimiausiosHtml() {
       <summary>${esc(T.artimiausiosDienos)}</summary>
       <div class="art-dienos">${dienos.join('')}</div>
     </details>`;
+}
+
+/** Poilsio dienos: klientas pats pažymi atostogas ar šventes (nuo šiandien į priekį). */
+function poilsioHtml() {
+  if (!poilsisVeikia || !uzduotys.length) return '';
+  const busimos = poilsioEilutes.filter((x) => x.day >= siandien).sort((a, b) => (a.day < b.day ? -1 : 1));
+  return `
+    <details class="card card-tight art-blokas" id="poilsio-blokas"${poilsioAtidarytas ? ' open' : ''}>
+      <summary>${esc(T.poilsioAntraste)}${busimos.length ? ` (${busimos.length})` : ''}</summary>
+      <div class="ps-kl">
+        <p class="muted">${esc(T.poilsioPaaiskinimas)}</p>
+        ${busimos.length ? `<ul class="ps-sarasas">${busimos.map((x) => `
+          <li><span>${esc(dataSuDiena(x.day))}</span>${x.set_by === 'treneris'
+            ? `<span class="chip chip-quiet">${esc(T.poilsioTrenerio)}</span>`
+            : `<button class="btn btn-ghost btn-sm" type="button" data-nuimti="${esc(x.day)}">${esc(T.poilsioNuimti)}</button>`}</li>`).join('')}</ul>`
+          : `<p class="muted">${esc(T.poilsioNera)}</p>`}
+        <div class="ps-forma">
+          <div class="field"><label for="ps-nuo">${esc(T.poilsioNuo)}</label><input id="ps-nuo" type="date" min="${esc(siandien)}"></div>
+          <div class="field"><label for="ps-iki">${esc(T.poilsioIki)}</label><input id="ps-iki" type="date" min="${esc(siandien)}"></div>
+          <button class="btn btn-ghost" type="button" id="ps-prideti">${esc(T.poilsioPrideti)}</button>
+        </div>
+      </div>
+    </details>`;
+}
+
+async function keiskPoilsi(nuo, iki, poilsis) {
+  const { error } = await db.rpc('klientas_poilsio_dienos', { p_nuo: nuo, p_iki: iki, p_poilsis: poilsis });
+  if (error) { rodykToast(error.code === '22023' ? error.message : klaidaLT(error), true); return; }
+  poilsioAtidarytas = true;
+  rodykToast(poilsis ? T.poilsioPridetas : T.poilsioNuimtas);
+  await ikelk(true);
 }
 
 const sk = (n) => Number(n).toLocaleString('lt-LT');
