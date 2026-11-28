@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261202';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261203';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261202';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261202';
+} from './tekstai.js?v=20261203';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261203';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261202';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261203';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas

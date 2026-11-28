@@ -1027,3 +1027,17 @@ dialog .video-wrap { margin-top: 0; }
 .ai-eilute:first-of-type { border-top: 0; }
 .ai-eilute:hover strong { text-decoration: underline; }
 .ai-eilute-tekstas { flex: 1 1 260px; color: var(--ink-soft); font-size: 0.9375rem; }
+
+/* Filtrų juosta: atrodo kaip mygtukas su rodykle, o ne kaip pažymėtas tekstas */
+.u-filtrai-fold { margin: 0 0 var(--s-200); }
+.u-filtrai-fold > summary {
+  display: inline-flex; gap: var(--s-75); padding: 0 var(--s-200); min-height: 40px;
+  list-style: none; user-select: none; -webkit-user-select: none;
+  border-radius: var(--r-pill); box-shadow: inset 0 0 0 1px rgba(16,16,16,0.28);
+  font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.u-filtrai-fold > summary::-webkit-details-marker { display: none; }
+.u-filtrai-fold > summary::before { content: '▸'; color: var(--ink-soft); }
+.u-filtrai-fold[open] > summary::before { content: '▾'; }
+.u-filtrai-fold > summary:hover { box-shadow: inset 0 0 0 2px var(--ink); }
+.u-filtrai-fold[open] > .u-filtrai { margin-top: var(--s-200); padding: var(--s-200); background: var(--white); border-radius: var(--r-md); box-shadow: inset 0 0 0 1px var(--hair-ink); }
