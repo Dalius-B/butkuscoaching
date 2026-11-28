@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261203">
+<link rel="stylesheet" href="stilius.css?v=20261205">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261203';
+} from './app.js?v=20261205';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261203';
+} from './tekstai.js?v=20261205';
 import {
-  siandienLT, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
+  siandienLT, nustatykPoilsioDienas, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261203';
+} from './uzduociu-logika.js?v=20261205';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -164,7 +164,7 @@ function atnaujink(butinai = false) {
 }
 
 async function ikelk(tyliai = false) {
-  const [u, a, n] = await Promise.all([
+  const [u, a, n, poilsis] = await Promise.all([
     db.from('client_challenges')
       .select('id, title, description, category, is_bonus, weekdays, active, position, created_at, target, unit, step, video_url')
       .eq('active', true)
@@ -178,6 +178,7 @@ async function ikelk(tyliai = false) {
       .select('*')
       .gte('day', pridek(siandien, -14))
       .order('day', { ascending: true }),
+    db.from('rest_days').select('day').gte('day', pridek(siandien, -40)),
   ]);
   const klaida = u.error || a.error;
   if (klaida && tyliai) return; // fone nepavykęs atnaujinimas nieko neišvalo
@@ -190,6 +191,8 @@ async function ikelk(tyliai = false) {
   }
   uzduotys = u.data || [];
   atlikimai = a.data || [];
+  // Jei poilsio dienų lentelės dar nėra, tiesiog jų nėra.
+  nustatykPoilsioDienas((poilsis.error ? [] : poilsis.data || []).map((x) => x.day));
   // Nuotaikos lentelė gali dar neegzistuoti: tada tiesiog nerodome nuotaikos bloko.
   nuotaikaVeikia = !n.error;
   uzrasai = n.data || [];
