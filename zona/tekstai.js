@@ -75,6 +75,12 @@ export const T = {
   poilsioPasirinkData: 'Pasirink datą.',
   poilsioPridetas: 'Poilsio dienos pažymėtos.',
   poilsioNuimtas: 'Poilsio diena nuimta.',
+  laikmatis: 'Laikmatis',
+  laikmatisPradeti: 'Pradėti',
+  laikmatisPauze: 'Pauzė',
+  laikmatisIsNaujo: 'Iš naujo',
+  laikmatisIskaityti: (min) => `Įskaityti ${min} min.`,
+  laikmatisBaigtas: 'Laikas baigėsi, šaunuolis!',
 
   tuscia: 'Kol kas užduočių nėra',
   tusciaTekstas: 'Dalius netrukus paruoš tau užduotis. Kai tik jos atsiras, matysi jas čia.',
