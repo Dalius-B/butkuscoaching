@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261201';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261202';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261201';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261201';
+} from './tekstai.js?v=20261202';
+import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261202';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,7 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261201';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261202';
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -55,9 +55,7 @@ export async function piesUzduotis(profiliai, savasId) {
   }
   if (!klientai.some((k) => k.id === pasirinktas)) pasirinktas = klientai[0].id;
 
-  await ikelkAi();
   vieta.innerHTML = `
-    <div id="u-ai-apzvalga">${aiApzvalgaHtml(klientai)}</div>
     <div class="u-klientas-eilute">
       <label for="u-klientas">Klientas</label>
       <div class="field"><select id="u-klientas">
@@ -69,127 +67,8 @@ export async function piesUzduotis(profiliai, savasId) {
 
   $('#u-eksportas-visi').addEventListener('click', eksportuokVisus);
   $('#u-klientas').addEventListener('change', (e) => pasirinkKlienta(e.target.value));
-  for (const b of $$('.ai-eilute')) b.addEventListener('click', () => pasirinkKlienta(b.dataset.klientas));
   await gaukPaketus();
   await ikelkKliento();
-}
-
-// -----------------------------------------------------------------------------
-//  Naktinė DI analizė
-//  Kiekvieną naktį GitHub paleidžia scripts/naktine-analize.mjs: dirbtinis intelektas
-//  perskaito kliento paskutines savaites ir įrašo trumpą santrauką į lentelę
-//  ai_summaries. Čia ją tik parodome. Jungiklis (profiles.ai_analize_ijungta) yra
-//  atskiras kiekvienam klientui ir išjungtas, kol treneris jo neįjungia.
-// -----------------------------------------------------------------------------
-let aiVeikia = false;          // false, jei SQL (uzduotys-ai-analize.sql) dar nepaleistas
-let aiIjungta = new Map();     // kliento id -> ar analizė įjungta
-let aiSantraukos = [];         // visų klientų santraukos, naujausios pirmos
-
-const AI_BUKLE = {
-  gerai: { klase: 'chip-ok', tekstas: 'Viskas gerai' },
-  stebeti: { klase: 'chip-volt', tekstas: 'Stebėti' },
-  demesio: { klase: 'chip-danger', tekstas: 'Reikia dėmesio' },
-};
-
-async function ikelkAi() {
-  const [p, s] = await Promise.all([
-    db.from('profiles').select('id, ai_analize_ijungta'),
-    db.from('ai_summaries').select('client_id, day, turinys').order('day', { ascending: false }).limit(400),
-  ]);
-  aiVeikia = !p.error && !s.error;
-  aiIjungta = new Map((aiVeikia ? p.data : []).map((x) => [x.id, !!x.ai_analize_ijungta]));
-  aiSantraukos = aiVeikia ? s.data : [];
-}
-
-function aiSarasas(pavadinimas, eilutes) {
-  if (!eilutes?.length) return '';
-  return `<div class="ai-bloko"><h4>${esc(pavadinimas)}</h4><ul>${eilutes.map((e) => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
-}
-
-function aiSantraukaHtml(s) {
-  const t = s.turinys || {};
-  const b = AI_BUKLE[t.bukle] || AI_BUKLE.stebeti;
-  return `
-    <div class="ai-galva"><span class="chip ${b.klase}">${esc(b.tekstas)}</span><span class="muted">Už ${esc(dataTrumpa(s.day))}</span></div>
-    <p class="ai-santrauka">${esc(t.santrauka || '')}</p>
-    ${aiSarasas('Kas nutiko', t.kas_nutiko)}
-    ${aiSarasas('Dėsningumai', t.desniai)}
-    ${aiSarasas('Reikia dėmesio', t.demesio)}
-    ${aiSarasas('Ką daryti', t.pasiulymai)}`;
-}
-
-function aiKortele() {
-  if (!aiVeikia) return '';
-  const ijungta = aiIjungta.get(pasirinktas) === true;
-  const mano = aiSantraukos.filter((s) => s.client_id === pasirinktas);
-  let turinys;
-  if (!ijungta) {
-    turinys = `
-      <p class="muted" style="margin-bottom:var(--s-100);font-size:.875rem">Kasnakt dirbtinis intelektas perskaito kliento paskutines savaites ir parašo trumpą santrauką: kas nutiko, dėsningumus ir ką daryti.</p>
-      <p class="muted" style="margin-bottom:var(--s-200);font-size:.875rem"><strong>Prieš įjungiant:</strong> kliento užduotys, nuotaikos ir užrašai siunčiami DI paslaugos teikėjui (Anthropic). Vardas, el. paštas ir telefonas nesiunčiami. Įjunk tik gavęs kliento sutikimą.</p>
-      <button class="btn btn-ghost btn-sm" type="button" id="u-ai-ijungti">Įjungti analizę</button>`;
-  } else if (!mano.length) {
-    turinys = `
-      <p class="muted" style="margin-bottom:var(--s-200)">Analizė įjungta. Pirma santrauka atsiras rytoj ryte.</p>
-      <button class="btn btn-ghost btn-sm" type="button" id="u-ai-isjungti">Išjungti</button>`;
-  } else {
-    const [nauja, ...senos] = mano;
-    turinys = `
-      ${aiSantraukaHtml(nauja)}
-      ${senos.length ? `
-      <details class="ai-senos" data-skiltis="ai-senos"${atviros.get('ai-senos') ? ' open' : ''}>
-        <summary>Ankstesnės naktys (${senos.length})</summary>
-        ${senos.slice(0, 13).map((s) => `<div class="ai-sena">${aiSantraukaHtml(s)}</div>`).join('')}
-      </details>` : ''}
-      <button class="btn btn-ghost btn-sm" type="button" id="u-ai-isjungti" style="margin-top:var(--s-200)">Išjungti</button>`;
-  }
-  return `
-    <div class="card" style="margin-bottom:var(--s-200)">
-      <div class="card-head"><h3 class="u-panele-antraste">Naktinė analizė (DI)</h3></div>
-      ${turinys}
-    </div>`;
-}
-
-/** Visų klientų vienos eilutės: kas šiuo metu reikalauja dėmesio (viršuje, virš kliento pasirinkimo). */
-function aiApzvalgaHtml(klientai) {
-  if (!aiVeikia) return '';
-  const naujausios = new Map();
-  for (const s of aiSantraukos) if (!naujausios.has(s.client_id)) naujausios.set(s.client_id, s);
-  const eilutes = klientai
-    .map((k) => ({ k, s: naujausios.get(k.id) }))
-    .filter((x) => x.s && x.s.day >= pridek(siandienLT(), -3) && x.s.turinys?.bukle !== 'gerai')
-    .sort((a, b) => (a.s.turinys?.bukle === 'demesio' ? 0 : 1) - (b.s.turinys?.bukle === 'demesio' ? 0 : 1));
-  if (!eilutes.length) return '';
-  return `
-    <div class="card ai-apzvalga">
-      <h3 class="u-panele-antraste">Kam reikia dėmesio</h3>
-      ${eilutes.map(({ k, s }) => {
-        const b = AI_BUKLE[s.turinys.bukle] || AI_BUKLE.stebeti;
-        return `<button class="ai-eilute" type="button" data-klientas="${esc(k.id)}"><span class="chip ${b.klase}">${esc(b.tekstas)}</span><strong>${esc(k.full_name || k.email)}</strong><span class="ai-eilute-tekstas">${esc(s.turinys.santrauka || '')}</span></button>`;
-      }).join('')}
-    </div>`;
-}
-
-async function perjunkAi(ijungta) {
-  const { error } = await db.rpc('admin_set_ai', { p_client: pasirinktas, p_ijungta: ijungta });
-  if (error) { zinok(dbKlaida(error), 'error'); return; }
-  aiIjungta.set(pasirinktas, ijungta);
-  zinok(ijungta ? 'Naktinė analizė įjungta. Pirma santrauka bus rytoj ryte.' : 'Naktinė analizė išjungta.', 'ok');
-  pieskAi();
-}
-
-function pieskAi() {
-  const vieta = $('#u-ai-vieta');
-  if (vieta) { vieta.innerHTML = aiKortele(); prijunkAi(); }
-}
-
-function prijunkAi() {
-  const ijungti = $('#u-ai-ijungti');
-  ijungti?.addEventListener('click', () => {
-    if (patvirtink(ijungti, 'Taip, klientas sutiko')) perjunkAi(true);
-  });
-  $('#u-ai-isjungti')?.addEventListener('click', () => perjunkAi(false));
-  for (const d of $$('details[data-skiltis="ai-senos"]')) d.addEventListener('toggle', () => atviros.set('ai-senos', d.open));
 }
 
 function pasirinkKlienta(id) {
@@ -904,7 +783,6 @@ function pieskKliento() {
     </div>
 
     ${panele('apzvalga', `
-      <div id="u-ai-vieta">${aiKortele()}</div>
       <div class="card">
         <div class="card-head">
           <h3 class="u-panele-antraste">Kaip sekasi</h3>
@@ -1045,7 +923,6 @@ function pieskKliento() {
   $('#u-paketas-issaugoti').addEventListener('click', issaugokKaipPaketa);
   $('#u-ip-dienos')?.addEventListener('change', (e) => { ipociuDienos = Number(e.target.value); pieskKliento(); });
   pieskZinute();
-  prijunkAi();
   prijunkFiltrus();
   pieskRezultatus();
   $('#sav-atgal').addEventListener('click', () => { savaitesPradzia = pridek(savaitesPradzia, -7); pieskIstorija(); });
