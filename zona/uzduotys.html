@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="stilius.css?v=20261208">
+<link rel="stylesheet" href="stilius.css?v=20261209">
 
 <!--
   Supabase biblioteka guli kartu su projektu, o ne svetimame CDN.
@@ -78,14 +78,14 @@ setTimeout(function () {
 <script type="module">
 import {
   db, $, $$, esc, klaidaLT, reikiaSesijos, rodykNav, panaudokLaukiantiKvietima,
-} from './app.js?v=20261208';
+} from './app.js?v=20261209';
 import {
   T, KATEGORIJOS, SAVAITES_DIENOS, dataSuDiena, dataTrumpa,
-} from './tekstai.js?v=20261208';
+} from './tekstai.js?v=20261209';
 import {
   siandienLT, nustatykPoilsioDienas, privalomosDienai, papildomosDienai, apskaiciuok, tikslas, videoIterpimas,
   savaitesPazanga, savaitesPirmadienis, savaitesDiena, pridek,
-} from './uzduociu-logika.js?v=20261208';
+} from './uzduociu-logika.js?v=20261209';
 
 const vidus = $('#turinys-vidus');
 let siandien = siandienLT();
@@ -169,24 +169,27 @@ function atnaujink(butinai = false) {
 // set_by stulpelio gali dar nebūti (SQL nepaleistas iš naujo): tada skaitome tik datas.
 async function gaukPoilsi() {
   const nuo = pridek(siandien, -40);
-  const r = await db.from('rest_days').select('day, set_by').gte('day', nuo);
+  const r = await db.from('rest_days').select('day, set_by').eq('client_id', sesijosId).gte('day', nuo);
   if (!r.error) return r;
-  return db.from('rest_days').select('day').gte('day', nuo);
+  return db.from('rest_days').select('day').eq('client_id', sesijosId).gte('day', nuo);
 }
 
 async function ikelk(tyliai = false) {
   const [u, a, n, poilsis] = await Promise.all([
     db.from('client_challenges')
       .select('id, title, description, category, is_bonus, weekdays, active, position, created_at, target, unit, step, video_url')
+      .eq('client_id', sesijosId)
       .eq('active', true)
       .order('position', { ascending: true })
       .order('created_at', { ascending: true }),
     db.from('challenge_completions')
       .select('id, challenge_id, day, xp, amount')
+      .eq('client_id', sesijosId)
       .gte('day', pridek(siandien, -40))
       .order('day', { ascending: true }),
     db.from('day_notes')
       .select('*')
+      .eq('client_id', sesijosId)
       .gte('day', pridek(siandien, -14))
       .order('day', { ascending: true }),
     gaukPoilsi(),
