@@ -3,11 +3,11 @@
 //  Trenerio pusė privačiai užduočių skilčiai. Klientas ją mato tik tada, kai
 //  čia jam įjungta (Klientai skiltyje).
 // =============================================================================
-import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261203';
+import { db, $, $$, esc, klaidaLT, pranesk, patvirtink } from './app.js?v=20261205';
 import {
   T, KATEGORIJOS, SABLONAI, dataSuDiena, SAVAITES_DIENOS, SAVAITES_DIENOS_TRUMPOS, dienuSuvestine, dataTrumpa,
-} from './tekstai.js?v=20261203';
-import { apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261203';
+} from './tekstai.js?v=20261205';
+import { nustatykPoilsioDienas, apskaiciuok, siandienLT, pridek, privalomosDienai, videoIterpimas, savaitesDiena, dataLT, dienaIsLaiko, tikslas, savaitesPazanga, savaitesPirmadienis as savPirmadienis, ipociuVaizdas } from './uzduociu-logika.js?v=20261205';
 
 // Pranešimas rodomas puslapio viršuje, o forma yra apačioje, todėl po kiekvieno
 // pranešimo puslapis pastumiamas prie jo, kad jis nepaliktų nepastebėtas.
@@ -30,7 +30,9 @@ let pasirinktas = null;   // kliento id
 let uzduotys = [];
 let atlikimai = [];
 let redaguojama = null;   // užduoties id arba null
-import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261203';
+import { gaukPaketus, piesPaketuPanele, paketai } from './valdymas-paketai.js?v=20261205';
+let poilsioDienos = [];       // kliento pažymėtos poilsio dienos (datos)
+let poilsisVeikia = true;
 let uzrasai = [];          // kliento nuotaikos ir trenerio žinutės (day_notes)
 let nuotaikaVeikia = true;
 let aktyvusSkirtukas = 'apzvalga';   // kuris kliento skirtukas matomas
@@ -82,14 +84,18 @@ function pasirinkKlienta(id) {
 }
 
 async function ikelkKliento() {
-  const [u, a, n] = await Promise.all([
+  const [u, a, n, ps] = await Promise.all([
     db.from('client_challenges').select('*').eq('client_id', pasirinktas)
       .order('position', { ascending: true }).order('created_at', { ascending: true }),
     db.from('challenge_completions').select('id, challenge_id, day, xp, amount').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
     db.from('day_notes').select('*').eq('client_id', pasirinktas)
       .order('day', { ascending: true }),
+    db.from('rest_days').select('day').eq('client_id', pasirinktas),
   ]);
+  poilsisVeikia = !ps.error;
+  poilsioDienos = ps.error ? [] : (ps.data || []).map((x) => x.day);
+  nustatykPoilsioDienas(poilsioDienos);
   // Jei nuotaikos lentelės dar nėra (SQL nepaleistas), likusi dalis veikia kaip veikusi.
   nuotaikaVeikia = !n.error;
   uzrasai = n.data || [];
@@ -412,6 +418,34 @@ function savaitesPlanas() {
         <div class="pl-eil pl-sumos"><span class="pl-pav muted">Užduočių per dieną</span>${sumos}</div>
       </div>
     </div>`;
+}
+
+/** Poilsio dienos: artimiausios 14 dienų, vienas paspaudimas pažymi arba nuima. */
+function poilsioKortele() {
+  if (!poilsisVeikia) return '';
+  const siandien = siandienLT();
+  const dienos = [];
+  for (let i = 0; i < 14; i += 1) dienos.push(pridek(siandien, i));
+  return `
+    <div class="card" style="margin-top:var(--s-200)">
+      <h3 class="u-panele-antraste">Poilsio dienos</h3>
+      <p class="muted" style="margin:var(--s-50) 0 var(--s-200);font-size:.875rem">Pažymėtą dieną klientas užduočių nemato, o savaitės procentas jos neskaičiuoja.</p>
+      <div class="ps-dienos">
+        ${dienos.map((d) => {
+          const ijungta = poilsioDienos.includes(d);
+          return `<button class="ps-diena${ijungta ? ' on' : ''}" type="button" data-diena="${d}" aria-pressed="${ijungta}"><span>${esc(SAVAITES_DIENOS_TRUMPOS[savaitesDiena(d)])}</span><strong>${esc(d.slice(8))}.${esc(d.slice(5, 7))}</strong></button>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+async function perjunkPoilsi(diena) {
+  const buvo = poilsioDienos.includes(diena);
+  const { error } = await db.rpc('admin_poilsio_diena', { p_client: pasirinktas, p_day: diena, p_poilsis: !buvo });
+  if (error) { zinok(dbKlaida(error), 'error'); return; }
+  poilsioDienos = buvo ? poilsioDienos.filter((d) => d !== diena) : [...poilsioDienos, diena];
+  nustatykPoilsioDienas(poilsioDienos);
+  pieskKliento();
 }
 
 let planasUzimtas = false;
@@ -891,7 +925,8 @@ function pieskKliento() {
         <h3 class="u-panele-antraste">Savaitės planas</h3>
         <p class="muted" style="margin-bottom:var(--s-100);font-size:.875rem">Spausk langelį, kad užduotis tą dieną būtų arba nebūtų.</p>
         <div id="u-planas-vieta">${savaitesPlanas()}</div>
-      </div>`)}
+      </div>
+      ${poilsioKortele()}`)}
 
     ${panele('paketai', `
       <div class="card">
@@ -916,6 +951,7 @@ function pieskKliento() {
   $('#u-forma').addEventListener('submit', issaugok);
   $('#u-atsaukti')?.addEventListener('click', () => { redaguojama = null; pieskKliento(); });
   prijunkPlana();
+  for (const b of $$('.ps-diena')) b.addEventListener('click', () => perjunkPoilsi(b.dataset.diena));
   prijunkSkiltis();
   prijunkSkirtukus();
   $('#u-csv')?.addEventListener('click', eksportuokKlientoCsv);

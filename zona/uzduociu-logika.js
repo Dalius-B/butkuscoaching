@@ -40,14 +40,21 @@ export function pridek(iso, dienos) {
   return d.toISOString().slice(0, 10);
 }
 
+// Treneriui pažymėtos poilsio dienos (datos). Tą dieną užduočių nėra, ir ji neįeina į procentus.
+let poilsioDienos = new Set();
+export function nustatykPoilsioDienas(datos) { poilsioDienos = new Set(datos); }
+export const arPoilsioDiena = (iso) => poilsioDienos.has(iso);
+
 /** Privalomos (ne papildomos) užduotys, numatytos tai dienai. */
 export function privalomosDienai(uzduotys, iso) {
+  if (poilsioDienos.has(iso)) return [];
   const wd = savaitesDiena(iso);
   return uzduotys.filter((u) => u.active && !u.is_bonus
     && u.weekdays.includes(wd) && dienaIsLaiko(u.created_at) <= iso);
 }
 
 export function papildomosDienai(uzduotys, iso) {
+  if (poilsioDienos.has(iso)) return [];
   const wd = savaitesDiena(iso);
   return uzduotys.filter((u) => u.active && u.is_bonus && u.weekdays.includes(wd));
 }
@@ -202,7 +209,7 @@ export function ipociuVaizdas(uzduotys, atlikimai, dienu, siandien = siandienLT(
 
   const eilutes = sarasas.map((u) => {
     const langeliai = dienos.map((d) => {
-      const numatyta = u.weekdays.includes(savaitesDiena(d)) && dienaIsLaiko(u.created_at) <= d;
+      const numatyta = u.weekdays.includes(savaitesDiena(d)) && dienaIsLaiko(u.created_at) <= d && !poilsioDienos.has(d);
       const dalis = dalisPadaryta(u, st.kiekis, d);
       if (!numatyta && dalis === 0) return { d, busena: 'nera' };
       if (dalis >= 1) return { d, busena: 'padaryta', dalis, numatyta };
